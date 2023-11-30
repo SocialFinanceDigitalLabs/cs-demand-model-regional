@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "cs-demand-model-regional"
+version = "0.1.0"
+description = ""
+authors = ["Kaj Siebert <kaj@k-si.com>"]
+readme = "README.md"
+packages = []
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Django = "^4.2.7"
+django-plotly-dash = "^2.2.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
