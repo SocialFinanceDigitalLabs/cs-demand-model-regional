@@ -9,7 +9,8 @@ packages = []
 [tool.poetry.dependencies]
 python = "^3.10"
 Django = "^4.2.7"
-django-plotly-dash = "^2.2.2"
+demand-model = "^0.1.0"
+plotly = "^5.18.0"
 
 
 [build-system]
