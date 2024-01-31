@@ -3,5 +3,5 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.plotly_view, name="plotly_view"),
+    path("", views.chart_view, name="chart_view"),
 ]

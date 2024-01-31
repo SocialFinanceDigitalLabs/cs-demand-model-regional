@@ -1,0 +1,135 @@
+name: Standard 903 Demand Modelling Configuration
+version: 1.0
+description: |
+ Standard 903 Demand Modelling Configuration Baseline.
+
+ This file is a YAML file that contains the configuration for the standard 903 demand modelling configuration.
+
+config:
+  YearInDays: 365.24
+
+  PlacementCategories:
+    FOSTERING:
+      label: Fostering
+      placement_types:
+        - U1
+        - U2
+        - U3
+        - U4
+        - U5
+        - U6
+
+    RESIDENTIAL:
+      label: Residential
+      placement_types:
+        - K2
+        - R1
+
+    SUPPORTED:
+      label: Supported
+      placement_types:
+        - H5
+        - P2
+
+  AgeBrackets:
+
+    BIRTH_TO_ONE:
+      label: Birth to 1
+      max: 1
+      length_in_days: 365  # This first bracket is a special case in that it only has a max year, but is still a year long
+      categories:
+        - FOSTERING
+
+    ONE_TO_FIVE:
+      min: 1
+      max: 5
+      categories:
+        - FOSTERING
+
+    FIVE_TO_TEN:
+      min: 5
+      max: 10
+      categories:
+        - FOSTERING
+        - RESIDENTIAL
+
+    TEN_TO_SIXTEEN:
+      min: 10
+      max: 16
+      categories:
+        - FOSTERING
+        - RESIDENTIAL
+
+    SIXTEEN_TO_EIGHTEEN:
+      label: 16 to 18+
+      min: 16
+      categories:
+        - FOSTERING
+        - RESIDENTIAL
+        - SUPPORTED
+
+
+  costs:
+
+    foster_friend_relation:
+      label: Fostering (Friend/Relative)
+      category: FOSTERING
+      defaults:
+        cost_per_day: 100
+        proportion: 1
+
+    foster_in_house:
+      label: Fostering (In-house)
+      category: FOSTERING
+      defaults:
+        cost_per_day: 150
+        proportion: 1
+
+    foster_IFA:
+      label: Fostering (IFA)
+      category: FOSTERING
+      defaults:
+        cost_per_day: 250
+        proportion: 1
+
+    resi_in_house:
+      label: Residential (In-house)
+      category: RESIDENTIAL
+      defaults:
+        cost_per_day: 1000
+        proportion: 1
+
+    resi_external:
+      label: Residential (External)
+      category: RESIDENTIAL
+      defaults:
+        cost_per_day: 1000
+        proportion: 1
+
+    supported:
+      label: Supported accomodation
+      category: SUPPORTED
+      defaults:
+        cost_per_day: 1000
+        proportion: 1
+
+    secure_home:
+      label: Secure home
+      category: OTHER
+      defaults:
+        cost_per_day: 1000
+        proportion: 1
+
+    placed_with_family:
+      label: Placed with family
+      category: OTHER
+      defaults:
+        cost_per_day: 1000
+        proportion: 1
+
+    other:
+      label: Other
+      category: OTHER
+      defaults:
+        cost_per_day: 1000
+        proportion: 1
