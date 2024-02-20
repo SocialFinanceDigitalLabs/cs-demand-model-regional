@@ -1,3 +1,7 @@
+<form method="POST">
+    {% csrf_token %}
+    {{form}}
+    <button class="btn btn-primary" type="submit">Go</button>
+</form>
 
-<p>This is a sample chart</p>
 {{chart|safe}}
