@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from cs_demand_model.datastore import TableType
+from ssda903.datastore import TableType
 
 
 class Episodes:

@@ -6,9 +6,9 @@ from typing import Generator, Optional, Tuple
 
 import pandas as pd
 
-from cs_demand_model.config import Config
-from cs_demand_model.data.ssda903 import SSDA903TableType
-from cs_demand_model.datastore import DataFile, DataStore, TableType
+from ssda903.config import Config
+from ssda903.data.ssda903 import SSDA903TableType
+from ssda903.datastore import DataFile, DataStore, TableType
 from functools import lru_cache
 
 log = logging.getLogger(__name__)
@@ -283,73 +283,3 @@ class DemandModellingDataContainer:
             )
         )
         return combined
-
-    @lru_cache(maxsize=5)
-    def daily_entrants(self, start_date: date, end_date: date) -> pd.Series:
-        """
-        Returns the number of entrants and the daily_probability of entrants for each age bracket and placement type.
-        """
-        PlacementCategories = self.config.PlacementCategories
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
-
-        df = self.enriched_view
-
-        # Only look at episodes starting in analysis period
-        df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()
-
-        df["to"] = df.apply(lambda c: (c.age_bin.name, c.placement_type.name), axis=1)
-
-        # Group by age bin and placement type
-        df = (
-            df[df["placement_type_before"] == PlacementCategories.NOT_IN_CARE]
-            .groupby(["to"])
-            .size()
-        )
-        df.name = "entrants"
-
-        # Reset index
-        df = df.reset_index()
-
-        df["period_duration"] = (end_date - start_date).days
-        df["daily_entry_probability"] = df["entrants"] / df["period_duration"]
-        df["from"] = df.period_duration.apply(lambda x: tuple())
-
-        df = df.set_index(["from", "to"])
-
-        return df.daily_entry_probability
-
-    @property
-    def ageing_out(self) -> pd.Series:
-        """
-        Returns the probability of ageing out from one bin to the other.
-        """
-        ageing_out = []
-        for age_group in self.config.AgeBrackets:
-            for pt in self.config.PlacementCategories:
-                next_name = (
-                    (age_group.next.name, pt.name) if age_group.next else tuple()
-                )
-                ageing_out.append(
-                    {
-                        "from": (age_group.name, pt.name),
-                        "to": next_name,
-                        "rate": age_group.daily_probability,
-                    }
-                )
-
-        df = pd.DataFrame(ageing_out)
-        df.set_index(["from", "to"], inplace=True)
-        return df.rate
-
-    @property
-    def to_model(self):
-        df = self.enriched_view.copy()
-        df["start_bin"] = df.apply(
-            lambda c: (c.age_bin.name, c.placement_type.name), axis=1
-        )
-        df["end_bin"] = df.apply(
-            lambda c: (c.age_bin.name, c.placement_type_after.name), axis=1
-        )
-        df = df.rename(columns={"DECOM": "start_date", "DEC": "end_date"})
-        return df
