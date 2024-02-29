@@ -2,7 +2,7 @@
 name = "cs-demand-model-regional"
 version = "0.2.0"
 description = ""
-authors = ["Kaj Siebert <kaj@k-si.com>"]
+authors = ["kws", "franciscobmacedo", "amynickolls", "MichaelHanksSF"]
 readme = "README.md"
 packages = []
 
