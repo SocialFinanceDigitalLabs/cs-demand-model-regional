@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "accounts",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -68,6 +69,14 @@ TEMPLATES = [
         },
     },
 ]
+
+AUTH_USER_MODEL = "accounts.CustomUser"
+
+
+AUTHENTICATION_BACKENDS = (
+    "accounts.backends.EmailBackend",
+)
+
 
 WSGI_APPLICATION = "dm_regional_site.wsgi.application"
 

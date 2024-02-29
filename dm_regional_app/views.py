@@ -6,7 +6,8 @@ from dm_regional_app.forms import PredictFilter
 import numpy as np
 import datetime
 
-
+def home(request):
+    return render(request, "dm_regional_app/home.html")
 def chart_view(request):
     if request.method == 'POST':
         form = PredictFilter(request.POST)
