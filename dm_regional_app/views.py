@@ -14,14 +14,14 @@ def chart_view(request):
             start_date = form.cleaned_data['start_date']
             end_date = form.cleaned_data['end_date']
             # Call predict function with the provided dates
-            df = predict(
+            prediction = predict(
                 source="sample://v1.zip", # in the future, this will probably point to some S3 bucket with regiomal 903 files.
                 start=start_date,
                 end=end_date,
             )
             # Render the result along with the form
             # unstack predicted dataframe
-            df_pp = df.unstack().reset_index()
+            df_pp = prediction.population.unstack().reset_index()
             df_pp.columns = ["from", "date", "value"]
 
             # visualise prediction using unstacked dataframe
@@ -33,12 +33,12 @@ def chart_view(request):
     else:
         form = PredictFilter()
         # Call predict function with the provided dates
-        df = predict(
+        prediction = predict(
             source="sample://v1.zip", # in the future, this will probably point to some S3 bucket with regiomal 903 files.
         )
         # Render the result along with the form
         # unstack predicted dataframe
-        df_pp = df.unstack().reset_index()
+        df_pp = prediction.population.unstack().reset_index()
         df_pp.columns = ["from", "date", "value"]
 
         # visualise prediction using unstacked dataframe

@@ -10,9 +10,9 @@ from fs.errors import NoSysPath
 from fs.opener.parse import parse_fs_url
 from fs.osfs import OSFS
 
-from cs_demand_model.datastore import DataStore
-from cs_demand_model.datastore._fs import FSDataStore
-from cs_demand_model.datastore._zip import ZipDataStore
+from ssda903.datastore import DataStore
+from ssda903.datastore._fs import FSDataStore
+from ssda903.datastore._zip import ZipDataStore
 
 logger = logging.getLogger(__name__)
 

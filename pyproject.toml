@@ -1,15 +1,15 @@
 [tool.poetry]
 name = "cs-demand-model-regional"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
-authors = ["Kaj Siebert <kaj@k-si.com>"]
+authors = ["kws", "franciscobmacedo", "amynickolls", "MichaelHanksSF"]
 readme = "README.md"
 packages = []
 
 [tool.poetry.dependencies]
 python = "^3.10"
 Django = "^4.2.10"
-demand-model = "^0.1.0"
+demand-model = "^0.2.0"
 plotly = "^5.18.0"
 
 
