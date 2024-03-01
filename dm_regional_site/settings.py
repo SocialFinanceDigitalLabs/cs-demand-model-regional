@@ -75,9 +75,7 @@ TEMPLATES = [
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 
-AUTHENTICATION_BACKENDS = (
-    "accounts.backends.EmailBackend",
-)
+AUTHENTICATION_BACKENDS = ("accounts.backends.EmailBackend",)
 
 
 WSGI_APPLICATION = "dm_regional_site.wsgi.application"
@@ -124,6 +122,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "home"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

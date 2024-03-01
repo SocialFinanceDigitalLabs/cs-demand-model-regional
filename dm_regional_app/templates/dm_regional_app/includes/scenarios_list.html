@@ -1,0 +1,16 @@
+<div class="row">
+    {% for scenario in scenarios %}
+        <div class="col-sm-6 mb-3 mb-sm-0">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title ">{{ scenario.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ scenario.description }}</p>
+                    <a href="{% url 'scenario_detail' scenario.id %}"
+                        class="btn btn-primary">View</a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>

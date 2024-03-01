@@ -1,0 +1,7 @@
+{% extends "dm_regional_app/base.html" %}
+{% block content %}
+    <h1>Your saved scenarios</h1>
+    <article class="mb-3">
+        {% include 'dm_regional_app/includes/scenarios_list.html' with scenarios=scenarios %}
+    </article>
+{% endblock %}
