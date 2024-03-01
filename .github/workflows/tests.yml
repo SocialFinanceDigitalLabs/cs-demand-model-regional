@@ -1,0 +1,39 @@
+name: Unit and Integration Tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11.6
+      options: --network-alias=appserver
+    
+    steps:
+      - uses: actions/checkout@v4
+
+
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v2
+
+      - name: Cache dependencies
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-poetry-deps
+        with:
+          path: |
+            ~/.venv
+            ~/.cache/pypoetry
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/pyproject.toml', '**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Test
+        run: |
+          poetry run python manage.py test
