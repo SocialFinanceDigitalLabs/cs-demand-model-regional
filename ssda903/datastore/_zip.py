@@ -17,11 +17,10 @@ class ZipDataStore(DataStore):
         with ZipFile(self.path, "r") as zip:
             for info in zip.infolist():
                 if not info.is_dir():
-                    year, name = info.filename.split("/")
                     yield DataFile(
                         name=info.filename,
                         metadata=Metadata(
-                            name=name, size=info.file_size, year=int(year)
+                            name=info.filename, size=info.file_size
                         ),
                     )
 
