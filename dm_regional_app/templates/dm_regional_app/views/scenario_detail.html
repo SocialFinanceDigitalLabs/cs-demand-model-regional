@@ -1,0 +1,18 @@
+{% extends "dm_regional_app/base.html" %}
+
+{% block content %}
+
+<a href="{% url 'scenarios' %}" class="btn btn-secondary">← scenarios</a>
+<h1>Saved Scenario</h1>
+
+<p>Scenario Name: {{ scenario.name }}</p>
+<p>Scenario Description: {{ scenario.description }}</p>
+<p>Scenario Created at: {{ scenario.created_at }}</p>
+<p>Scenario Updated at: {{ scenario.updated_at }}</p>
+<p>Scenario Data:</p>
+
+{% for key, value in scenario.data.items %}
+    <p>{{ key }}: {{ value }}</p>
+{% endfor %}
+
+{% endblock %}
