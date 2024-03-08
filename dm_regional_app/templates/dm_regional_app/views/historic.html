@@ -1,0 +1,23 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+    {{ form.media }}
+    <form method="POST">
+        {% csrf_token %}
+        {% crispy form %}
+    </form>
+    <div class="row">
+    <div class="col">
+        <h1>Total # of entry into care</h1>
+        <p>{{ entry_into_care_count }}</p>
+    </div>
+    <div class="col">
+        <h1>Total # of exiting care</h1>
+        <p>{{ exiting_care_count }}</p>
+    </div>
+</div>
+<div class="alert alert-primary" role="alert">
+    TODO - add the relevant charts here!
+
+</div>
+{% endblock %}
