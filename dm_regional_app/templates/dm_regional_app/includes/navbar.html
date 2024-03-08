@@ -14,7 +14,7 @@
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         {% if user.is_authenticated %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='dashboard' name='Dashboard' url_names="['dashboard']" %}
-          {% include 'dm_regional_app/includes/navbar-item.html' with url='chart_view' name='Prediction' url_names="['chart_view']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='prediction' name='Prediction' url_names="['prediction']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='scenarios' name='Scenarios' url_names="['scenarios', 'scenario_detail']" %}
         {% else %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='home' name='Home' url_names="['home']" %}
