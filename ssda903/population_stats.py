@@ -128,7 +128,7 @@ class PopulationStats:
         df = pd.DataFrame(ageing_out)
         df.set_index(["from", "to"], inplace=True)
         return df.rate
-    
+
     @lru_cache(maxsize=5)
     def daily_entrants(self, start_date: date, end_date: date) -> pd.Series:
         """
@@ -139,12 +139,9 @@ class PopulationStats:
         end_date = pd.to_datetime(end_date)
 
         df = self.df
-        print(df)
-
 
         # Only look at episodes starting in analysis period
         df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()
-        print(df)
         df["to"] = df.apply(lambda c: (c.age_bin.name, c.placement_type.name), axis=1)
 
         # Group by age bin and placement type
