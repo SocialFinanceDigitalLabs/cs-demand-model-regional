@@ -1,16 +1,15 @@
 import dataclasses
 import logging
 from datetime import date
-from functools import cached_property
+from functools import cached_property, lru_cache
 from typing import Generator, Optional, Tuple
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from ssda903.config import Config
 from ssda903.data.ssda903 import SSDA903TableType
 from ssda903.datastore import DataFile, DataStore, TableType
-from functools import lru_cache
 
 log = logging.getLogger(__name__)
 
@@ -29,9 +28,7 @@ class DemandModellingDataContainer:
         for file_info in datastore.files:
             if not file_info.metadata.table:
                 table_type = self._detect_table_type(file_info)
-                metadata = dataclasses.replace(
-                    file_info.metadata, table=table_type
-                )
+                metadata = dataclasses.replace(file_info.metadata, table=table_type)
                 file_info = dataclasses.replace(file_info, metadata=metadata)
 
             # We only care about Header, Episodes and UASC
@@ -50,9 +47,7 @@ class DemandModellingDataContainer:
     def config(self) -> Config:
         return self.__config
 
-    def _detect_table_type(
-        self, file_info: DataFile
-    ) -> Optional[TableType]:
+    def _detect_table_type(self, file_info: DataFile) -> Optional[TableType]:
         """
         Detect the table type of a file by reading the first line of the file and looking for a
         known table type.
@@ -90,17 +85,7 @@ class DemandModellingDataContainer:
             if metadata.table == table_type:
                 return self.__datastore.to_dataframe(info)
 
-        raise ValueError(
-            f"Could not find table for table type {table_type}"
-        )
-
-    def get_tables_by_type(
-        self, table_type: TableType
-    ) -> Generator[pd.DataFrame, None, None]:
-        for info in self.__file_info:
-            if info.metadata.table == table_type:
-                yield self.__datastore.to_dataframe(info)
-
+        raise ValueError(f"Could not find table for table type {table_type}")
 
     def combined_datasets(self) -> pd.DataFrame:
         """
@@ -110,12 +95,12 @@ class DemandModellingDataContainer:
         """
         header = self.get_table(SSDA903TableType.HEADER)
         header = header.drop_duplicates(subset=["CHILD"])
-        header = header.drop(["LA","YEAR"], axis='columns')
+        header = header.drop(["LA", "YEAR"], axis="columns")
 
         episodes = self.get_table(SSDA903TableType.EPISODES)
 
         uasc = self.get_table(SSDA903TableType.UASC)
-        uasc = uasc.drop(["LA","YEAR"], axis='columns')
+        uasc = uasc.drop(["LA", "YEAR"], axis="columns")
         uasc = uasc.drop_duplicates(subset=["CHILD"])
 
         # TODO: This should be done when the table is first read
@@ -128,15 +113,12 @@ class DemandModellingDataContainer:
             episodes, how="inner", on="CHILD", suffixes=("_header", "_episodes")
         )
 
-        merged = merged.merge(
-            uasc[["CHILD","DUC"]], how="left", on="CHILD"
-        )
+        merged = merged.merge(uasc[["CHILD", "DUC"]], how="left", on="CHILD")
 
-        #create UASC flag if DECOM is less than DUC
-        merged["UASC"] = np.where(merged['DECOM'] < merged['DUC'], 1, 0)
+        # create UASC flag if DECOM is less than DUC
+        merged["UASC"] = np.where(merged["DECOM"] < merged["DUC"], 1, 0)
 
         return merged
-
 
     @cached_property
     def combined_data(self) -> pd.DataFrame:
@@ -153,7 +135,6 @@ class DemandModellingDataContainer:
         # Just do some basic data validation checks
         assert not combined["CHILD"].isna().any()
         assert not combined["DECOM"].isna().any()
-
 
         # Then clean up the episodes
         # We first sort by child, decom and dec, and make sure NAs are first (for dropping duplicates)
@@ -277,4 +258,3 @@ class DemandModellingDataContainer:
             )
         )
         return combined
-    
