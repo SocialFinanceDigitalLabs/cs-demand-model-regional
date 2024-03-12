@@ -7,7 +7,7 @@ def fixtures():
     user = builder.user(
         first_name="John",
         last_name="Smith",
-        email="john.smith@example.test",
+        email="john.smith@bromley.gov.uk",
         password="test",
     )
     superuser = builder.user(

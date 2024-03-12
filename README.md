@@ -31,7 +31,7 @@ python manage.py load-fixtures
 This will load some users and some fake scenarios:
 
 **Regular user**
-- email: john.smith@example.test
+- email: john.smith@bromley.gov.uk
 - password: test
 
 **Admin user**
