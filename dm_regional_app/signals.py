@@ -10,7 +10,7 @@ User = get_user_model()
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        if ".gov.uk" in instance.email:
+        if instance.email.endswith(".gov.uk"):
             la = instance.email.split("@")[1].split(".")[0]
         else:
             la = None
