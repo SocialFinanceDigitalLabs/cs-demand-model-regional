@@ -1,8 +1,9 @@
 import dataclasses
 import logging
 from datetime import date
-from functools import cached_property, lru_cache
-from typing import Generator, Optional, Tuple
+from functools import cached_property
+from typing import Optional
+
 
 import numpy as np
 import pandas as pd
@@ -193,6 +194,14 @@ class DemandModellingDataContainer:
     @cached_property
     def end_date(self) -> date:
         return self.combined_data[["DECOM", "DEC"]].max().max()
+
+    @cached_property
+    def unique_las(self) -> pd.Series:
+        return self.combined_data.LA.unique()
+
+    @cached_property
+    def unique_placement_types(self) -> pd.Series:
+        return self.enriched_view.placement_type.unique()
 
     def _add_ages(self, combined: pd.DataFrame) -> pd.DataFrame:
         """

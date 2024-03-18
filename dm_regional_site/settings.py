@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "dm_regional_app.apps.DmRegionalAppConfig",
     "crispy_forms",
     "crispy_bootstrap5",
+    "bootstrap_datepicker_plus",
 ]
 
 MIDDLEWARE = [
@@ -140,3 +141,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # crispy forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+
+# data source
+DATA_SOURCE = "sample://v1.zip"

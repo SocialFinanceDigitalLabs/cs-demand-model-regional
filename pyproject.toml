@@ -15,6 +15,7 @@ django-crispy-forms = "^2.1"
 crispy-bootstrap5 = "^2024.2"
 python-decouple = "^3.8"
 faker = "^23.3.0"
+django-bootstrap-datepicker-plus = "^5.0.5"
 
 
 [tool.poetry.group.dev.dependencies]
