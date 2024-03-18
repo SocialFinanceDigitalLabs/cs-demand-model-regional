@@ -9,3 +9,6 @@ class DmRegionalAppConfig(AppConfig):
         from .fixtures import fixtures
 
         fixtures()
+
+    def ready(self):
+        import dm_regional_app.signals

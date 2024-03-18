@@ -1,6 +1,5 @@
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.urls import reverse
 
 User = get_user_model()
 
@@ -18,3 +17,9 @@ class Scenario(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    show_instructions = models.BooleanField(default=True)
+    la = models.CharField(max_length=100, null=True, blank=True)
