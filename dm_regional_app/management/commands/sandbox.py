@@ -15,13 +15,13 @@ User = get_user_model()
 
 class Command(BaseCommand):
     def handle(self, *args, **kwargs):
-        thing = User.objects.all()
+        """thing = User.objects.all()
         for t in thing:
-            print(t.profile.la)
+            print(t.profile.la)"""
 
-        """datastore = fs_datastore("sample://v1.zip")
+        datastore = fs_datastore("sample://v1.zip")
         config = Config()
         dc = DemandModellingDataContainer(datastore, config)
+        pop = PopulationStats(dc.enriched_view, config)
 
-        
-        print(dc.enriched_view)"""
+        print(pop.stock)
