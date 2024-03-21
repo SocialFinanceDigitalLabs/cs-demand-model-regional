@@ -143,5 +143,5 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 
-# data source
-DATA_SOURCE = "sample://v1.zip"
+# data source path
+DATA_SOURCE = "samples/v1"
