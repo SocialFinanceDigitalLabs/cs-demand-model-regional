@@ -24,6 +24,7 @@ psycopg2 = "^2.9.9"
 dj-database-url = "^2.1.0"
 django-sekizai = "^4.1.0"
 gunicorn = "^23.0.0"
+django-storages = {extras = ["s3"], version = "^1.14.4"}
 
 
 [tool.poetry.group.dev.dependencies]
