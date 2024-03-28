@@ -18,6 +18,7 @@ class Metadata:
     size: int
     year: int = None
     table: TableType = None
+    path: str = None
 
 
 @dataclass

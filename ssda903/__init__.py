@@ -1,11 +1,11 @@
 from .config import Config
-from .population_stats import PopulationStats
 from .datacontainer import DemandModellingDataContainer
-from .datastore import fs_datastore
+from .datastore import StorageDataStore
+from .population_stats import PopulationStats
 
 __all__ = [
     "DemandModellingDataContainer",
     "PopulationStats",
     "Config",
-    "fs_datastore",
+    "StorageDataStore",
 ]
