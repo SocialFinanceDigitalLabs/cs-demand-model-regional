@@ -37,3 +37,5 @@ jobs:
       - name: Test
         run: |
           poetry run python manage.py test
+        env:
+          DJANGO_ENV: github_actions
