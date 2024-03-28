@@ -15,11 +15,11 @@ This tool is expected to read the data from a remote source (an S3 bucket or sim
 # Local Setup
 You need to have [python](https://www.python.org/) and [poetry](https://python-poetry).
 
-
-3. Install dependencies with `poetry install`;
-4. Launch a poetry shell so the virtual environment is active: `poetry shell`;
-5. Run `python manage.py migrate` to create the databases tables;
-6. Add the pre-commit hook by running `pre-commit install`. This will ensure your code is formatted before you commit something;
+1. Create an `.env` file by copying the `.env.example` one and editing the variables as needed.
+2. Install dependencies with `poetry install`;
+3. Launch a poetry shell so the virtual environment is active: `poetry shell`;
+4. Run `python manage.py migrate` to create the databases tables;
+5. Add the pre-commit hook by running `pre-commit install`. This will ensure your code is formatted before you commit something;
 
 ## Load fixtures
 To load some dummy data, run:
