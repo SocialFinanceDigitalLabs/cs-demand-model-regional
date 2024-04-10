@@ -24,4 +24,8 @@ class Command(BaseCommand):
         dc = DemandModellingDataContainer(datastore, config)
         pop = PopulationStats(dc.enriched_view, config)
 
-        print(pop.stock)
+        data = dc.enriched_view
+        print(data.loc[data.UASC == True])
+
+        # print(pop.stock)
+        # print(dc.enriched_view)

@@ -80,6 +80,7 @@ def historic_data(request):
             request.POST,
             la_choices=datacontainer.unique_las,
             placement_type_choices=datacontainer.unique_placement_types,
+            age_bin_choices=datacontainer.unique_age_bins,
         )
         if form.is_valid():
             data = form.apply_filters(datacontainer.enriched_view)
@@ -97,6 +98,7 @@ def historic_data(request):
             },
             la_choices=datacontainer.unique_las,
             placement_type_choices=datacontainer.unique_placement_types,
+            age_bin_choices=datacontainer.unique_age_bins,
         )
         data = datacontainer.enriched_view
 

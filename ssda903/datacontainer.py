@@ -4,7 +4,6 @@ from datetime import date
 from functools import cached_property
 from typing import Optional
 
-
 import numpy as np
 import pandas as pd
 
@@ -117,7 +116,7 @@ class DemandModellingDataContainer:
         merged = merged.merge(uasc[["CHILD", "DUC"]], how="left", on="CHILD")
 
         # create UASC flag if DECOM is less than DUC
-        merged["UASC"] = np.where(merged["DECOM"] < merged["DUC"], 1, 0)
+        merged["UASC"] = np.where(merged["DECOM"] < merged["DUC"], True, False)
 
         return merged
 
@@ -202,6 +201,10 @@ class DemandModellingDataContainer:
     @cached_property
     def unique_placement_types(self) -> pd.Series:
         return self.enriched_view.placement_type.unique()
+
+    @cached_property
+    def unique_age_bins(self) -> pd.Series:
+        return self.enriched_view.age_bin.unique()
 
     def _add_ages(self, combined: pd.DataFrame) -> pd.DataFrame:
         """
