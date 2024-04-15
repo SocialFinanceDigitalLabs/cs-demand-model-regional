@@ -22,8 +22,16 @@ User = get_user_model()
 
 class Command(BaseCommand):
     def handle(self, *args, **kwargs):
+        """thing = User.objects.all()
+        for t in thing:
+            print(t.profile.la)"""
         datastore = StorageDataStore(default_storage, settings.DATA_SOURCE)
         config = Config()
         dc = DemandModellingDataContainer(datastore, config)
+        pop = PopulationStats(dc.enriched_view, config)
 
-        print(dc.enriched_view)
+        data = dc.enriched_view
+        print(data.loc[data.UASC == True])
+
+        # print(pop.stock)
+        # print(dc.enriched_view)

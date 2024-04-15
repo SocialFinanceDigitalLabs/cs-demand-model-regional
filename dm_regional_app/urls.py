@@ -8,4 +8,5 @@ urlpatterns = [
     path("predict/", views.prediction, name="prediction"),
     path("scenario/<int:pk>", views.scenario_detail, name="scenario_detail"),
     path("scenarios", views.scenarios, name="scenarios"),
+    path("historic_data", views.historic_data, name="historic_data"),
 ]

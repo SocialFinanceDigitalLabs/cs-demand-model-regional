@@ -3,9 +3,11 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
-from dm_regional_app.charts import prediction_chart
+from dm_regional_app.charts import historic_chart, prediction_chart
 from dm_regional_app.forms import HistoricDataFilter, PredictFilter
 from dm_regional_app.models import Scenario
+from ssda903 import Config
+from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
 
@@ -78,6 +80,7 @@ def historic_data(request):
             request.POST,
             la_choices=datacontainer.unique_las,
             placement_type_choices=datacontainer.unique_placement_types,
+            age_bin_choices=datacontainer.unique_age_bins,
         )
         if form.is_valid():
             data = form.apply_filters(datacontainer.enriched_view)
@@ -95,10 +98,10 @@ def historic_data(request):
             },
             la_choices=datacontainer.unique_las,
             placement_type_choices=datacontainer.unique_placement_types,
+            age_bin_choices=datacontainer.unique_age_bins,
         )
         data = datacontainer.enriched_view
 
-    # TODO AMY - create the relevant charts from this dataset, according to the designs
     entry_into_care_count = data.loc[
         data.placement_type_before
         == datacontainer.config.PlacementCategories.NOT_IN_CARE
@@ -108,6 +111,11 @@ def historic_data(request):
         == datacontainer.config.PlacementCategories.NOT_IN_CARE
     ]["CHILD"].nunique()
 
+    config = Config()
+    stats = PopulationStats(data, config)
+
+    chart = historic_chart(stats)
+
     return render(
         request,
         "dm_regional_app/views/historic.html",
@@ -115,6 +123,7 @@ def historic_data(request):
             "form": form,
             "entry_into_care_count": entry_into_care_count,
             "exiting_care_count": exiting_care_count,
+            "chart": chart,
         },
     )
 
