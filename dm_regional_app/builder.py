@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from faker import Faker
 
+from dm_regional_app.models import SavedScenario
+
 User = get_user_model()
 DEFAULT_PASSWORD = "test"
 
@@ -35,3 +37,18 @@ class Builder:
         else:
             user = User.objects.create(**data, **kwargs)
         return user
+
+    def scenario(
+        self,
+        user: Optional[User] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        **kwargs,
+    ):
+        scenario = SavedScenario.objects.create(
+            user=user or self.user(),
+            name=name or self.fake.name(),
+            description=description or self.fake.text(),
+            **kwargs,
+        )
+        return scenario
