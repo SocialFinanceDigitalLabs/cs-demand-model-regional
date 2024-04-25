@@ -1,4 +1,3 @@
-import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Layout, Row, Submit
@@ -56,9 +55,9 @@ class HistoricDataFilter(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        la_choices = kwargs.pop("la_choices")
-        placement_type_choices = kwargs.pop("placement_type_choices")
-        age_bin_choices = kwargs.pop("age_bin_choices")
+        la_choices = kwargs.pop("la")
+        placement_type_choices = kwargs.pop("placement_types")
+        age_bin_choices = kwargs.pop("age_bins")
 
         super().__init__(*args, **kwargs)
         self.fields["la"].choices = [(la, la) for la in la_choices]
@@ -86,47 +85,3 @@ class HistoricDataFilter(forms.Form):
             ),
             Submit("submit", "Filter"),
         )
-
-    def filter_by_start_date(self, data: pd.DataFrame):
-        data = data.loc[data.DECOM.dt.date >= self.cleaned_data["start_date"]]
-        return data
-
-    def filter_by_end_date(self, data: pd.DataFrame):
-        data = data.loc[data.DEC.dt.date <= self.cleaned_data["end_date"]]
-        return data
-
-    def filter_by_la(self, data: pd.DataFrame):
-        if self.cleaned_data["la"] != []:
-            loc = data.LA.astype(str).isin(self.cleaned_data["la"])
-            data = data.loc[loc]
-        return data
-
-    def filter_by_placement_type(self, data: pd.DataFrame):
-        if self.cleaned_data["placement_types"] != []:
-            loc = data.placement_type.astype(str).isin(
-                self.cleaned_data["placement_types"]
-            )
-            data = data.loc[loc]
-        return data
-
-    def filter_by_age_bin(self, data: pd.DataFrame):
-        if self.cleaned_data["age_bins"] != []:
-            loc = data.age_bin.astype(str).isin(self.cleaned_data["age_bins"])
-            data = data.loc[loc]
-        return data
-
-    def filter_by_uasc(self, data: pd.DataFrame):
-        if self.cleaned_data["uasc"] == "True":
-            data = data.loc[data.UASC == True]
-        elif self.cleaned_data["uasc"] == "False":
-            data = data.loc[data.UASC == True]
-        return data
-
-    def apply_filters(self, data: pd.DataFrame):
-        data = self.filter_by_start_date(data)
-        data = self.filter_by_end_date(data)
-        data = self.filter_by_la(data)
-        data = self.filter_by_placement_type(data)
-        data = self.filter_by_age_bin(data)
-        data = self.filter_by_uasc(data)
-        return data

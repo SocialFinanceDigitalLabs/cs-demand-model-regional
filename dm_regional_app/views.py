@@ -1,11 +1,12 @@
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from dm_regional_app.charts import historic_chart, prediction_chart
 from dm_regional_app.forms import HistoricDataFilter, PredictFilter
-from dm_regional_app.models import Scenario
+from dm_regional_app.models import SavedScenario, SessionScenario
+from dm_regional_app.utils import apply_filters
 from ssda903 import Config
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
@@ -17,16 +18,59 @@ def home(request):
 
 
 @login_required
-def dashboard(request):
-    user = request.user
-    scenarios = Scenario.objects.filter(user=user)
-    return render(
-        request, "dm_regional_app/views/dashboard.html", {"scenarios": scenarios}
+def router_handler(request):
+    # get next url page
+    next_url_name = request.GET.get("next_url_name")
+
+    # initialise a SessionScenario when the user is coming from a direct link to any of the views
+    session_scenario_id = request.session.get("session_scenario_id", None)
+    current_user = request.user
+
+    # read data
+    datacontainer = read_data(source=settings.DATA_SOURCE)
+
+    historic_filters = {
+        "start_date": datacontainer.start_date,
+        "end_date": datacontainer.end_date,
+        "la": [],
+        "placement_types": [],
+        "age_bins": [],
+        "uasc": "all",
+    }
+
+    # this is stand in code to be edited when prediction page is improved
+    prediction_filters = {"buckets": []}
+    prediction_parameters = {
+        "start_date": datacontainer.end_date,
+        "end_date": datacontainer.end_date + relativedelta(months=12),
+        "population": [],
+        "base_rates": [],
+        "adjusted_rates": [],
+    }
+    historic_stock = {}
+    adjusted_costs = {"adjusted_costs": []}
+
+    # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
+    session_scenario, created = SessionScenario.objects.get_or_create(
+        id=session_scenario_id,
+        defaults={
+            "user_id": current_user.id,
+            "historic_filters": historic_filters,
+            "prediction_filters": prediction_filters,
+            "prediction_parameters": prediction_parameters,
+            "historic_stock": historic_stock,
+            "adjusted_costs": adjusted_costs,
+        },
     )
+
+    # update the request session
+    request.session["session_scenario_id"] = session_scenario.pk
+    return redirect(next_url_name, pk=session_scenario.pk)
 
 
 @login_required
-def prediction(request):
+def prediction(request, pk):
+    session_scenario = get_object_or_404(SessionScenario, pk=pk)
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -70,20 +114,26 @@ def prediction(request):
 
 
 @login_required
-def historic_data(request):
-    if request.method == "POST":
-        # read data
-        datacontainer = read_data(source=settings.DATA_SOURCE)
+def historic_data(request, pk):
+    session_scenario = get_object_or_404(SessionScenario, pk=pk)
+    config = Config()
+    # read data
+    datacontainer = read_data(source=settings.DATA_SOURCE)
 
+    if request.method == "POST":
         # initialize form with data
         form = HistoricDataFilter(
             request.POST,
-            la_choices=datacontainer.unique_las,
-            placement_type_choices=datacontainer.unique_placement_types,
-            age_bin_choices=datacontainer.unique_age_bins,
+            la=datacontainer.unique_las,
+            placement_types=datacontainer.unique_placement_types,
+            age_bins=datacontainer.unique_age_bins,
         )
+
         if form.is_valid():
-            data = form.apply_filters(datacontainer.enriched_view)
+            print(form.cleaned_data)
+            session_scenario.historic_filters = form.cleaned_data
+            session_scenario.save()
+            data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
         else:
             data = datacontainer.enriched_view
     else:
@@ -92,15 +142,13 @@ def historic_data(request):
 
         # initialize form with default dates
         form = HistoricDataFilter(
-            initial={
-                "start_date": datacontainer.start_date,
-                "end_date": datacontainer.end_date,
-            },
-            la_choices=datacontainer.unique_las,
-            placement_type_choices=datacontainer.unique_placement_types,
-            age_bin_choices=datacontainer.unique_age_bins,
+            initial=session_scenario.historic_filters,
+            la=datacontainer.unique_las,
+            placement_types=datacontainer.unique_placement_types,
+            age_bins=datacontainer.unique_age_bins,
         )
-        data = datacontainer.enriched_view
+        print(session_scenario.historic_filters)
+        data = apply_filters(datacontainer.enriched_view, form.initial)
 
     entry_into_care_count = data.loc[
         data.placement_type_before
@@ -131,7 +179,7 @@ def historic_data(request):
 @login_required
 def scenarios(request):
     user = request.user
-    scenarios = Scenario.objects.filter(user=user)
+    scenarios = SavedScenario.objects.filter(user=user)
     return render(
         request, "dm_regional_app/views/scenarios.html", {"scenarios": scenarios}
     )
@@ -139,7 +187,7 @@ def scenarios(request):
 
 @login_required
 def scenario_detail(request, pk):
-    scenario = get_object_or_404(Scenario, pk=pk, user=request.user)
+    scenario = get_object_or_404(SavedScenario, pk=pk, user=request.user)
     return render(
         request, "dm_regional_app/views/scenario_detail.html", {"scenario": scenario}
     )

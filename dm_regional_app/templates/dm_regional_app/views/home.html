@@ -4,6 +4,5 @@
     {% if not user.is_authenticated %}
     <a class="btn btn-primary" href="{% url 'login' %}">login</a>
     {% endif %}
-    <a class="btn btn-primary" href="{% url 'dashboard' %}">go to Dashboard</a>
-    <a class="btn btn-primary" href="{% url 'prediction' %}">go to Prediction</a>
+    <a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=prediction">go to Prediction</a>
 {% endblock %}

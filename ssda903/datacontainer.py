@@ -188,11 +188,11 @@ class DemandModellingDataContainer:
 
     @cached_property
     def start_date(self) -> date:
-        return self.combined_data[["DECOM", "DEC"]].min().min()
+        return self.combined_data[["DECOM", "DEC"]].min().min().date()
 
     @cached_property
     def end_date(self) -> date:
-        return self.combined_data[["DECOM", "DEC"]].max().max()
+        return self.combined_data[["DECOM", "DEC"]].max().max().date()
 
     @cached_property
     def unique_las(self) -> pd.Series:
