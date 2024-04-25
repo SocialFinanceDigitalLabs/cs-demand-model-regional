@@ -41,7 +41,7 @@ This will load some users:
 
 ## Delete Session Scenarios
 
-To manage data transfer between views, users are assigned a session scenario. These scenarios should be deleted weekly through a recurrant job wherever the app is deployed.
+To manage data transfer between views, users are assigned a session scenario. These scenarios should be deleted weekly through a recurrent job wherever the app is deployed.
 To run this command:
 
 ```
