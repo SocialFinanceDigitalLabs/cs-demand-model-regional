@@ -65,11 +65,12 @@ def router_handler(request):
 
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
-    return redirect(next_url_name, pk=session_scenario.pk)
+    return redirect(next_url_name)
 
 
 @login_required
-def prediction(request, pk):
+def prediction(request):
+    pk = request.session["session_scenario_id"]
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -114,7 +115,8 @@ def prediction(request, pk):
 
 
 @login_required
-def historic_data(request, pk):
+def historic_data(request):
+    pk = request.session["session_scenario_id"]
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
     config = Config()
     # read data
@@ -130,7 +132,6 @@ def historic_data(request, pk):
         )
 
         if form.is_valid():
-            print(form.cleaned_data)
             session_scenario.historic_filters = form.cleaned_data
             session_scenario.save()
             data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
@@ -147,7 +148,6 @@ def historic_data(request, pk):
             placement_types=datacontainer.unique_placement_types,
             age_bins=datacontainer.unique_age_bins,
         )
-        print(session_scenario.historic_filters)
         data = apply_filters(datacontainer.enriched_view, form.initial)
 
     entry_into_care_count = data.loc[
