@@ -2,6 +2,7 @@ from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from dm_regional_app.charts import historic_chart, prediction_chart
 from dm_regional_app.forms import HistoricDataFilter, PredictFilter
@@ -70,110 +71,124 @@ def router_handler(request):
 
 @login_required
 def prediction(request):
-    pk = request.session["session_scenario_id"]
-    session_scenario = get_object_or_404(SessionScenario, pk=pk)
-    # read data
-    datacontainer = read_data(source=settings.DATA_SOURCE)
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
 
-    if request.method == "POST":
-        # initialize form with data
-        form = PredictFilter(request.POST)
+        if request.method == "POST":
+            # initialize form with data
+            form = PredictFilter(request.POST)
 
-        if form.is_valid():
-            start_date = form.cleaned_data["start_date"]
-            end_date = form.cleaned_data["end_date"]
+            if form.is_valid():
+                start_date = form.cleaned_data["start_date"]
+                end_date = form.cleaned_data["end_date"]
+
+            else:
+                start_date = datacontainer.end_date - relativedelta(months=6)
+                end_date = datacontainer.end_date
 
         else:
+            # set default dates
             start_date = datacontainer.end_date - relativedelta(months=6)
             end_date = datacontainer.end_date
 
-    else:
-        # set default dates
-        start_date = datacontainer.end_date - relativedelta(months=6)
-        end_date = datacontainer.end_date
+            # initialize form with default dates
+            form = PredictFilter(
+                initial={
+                    "start_date": start_date,
+                    "end_date": end_date,
+                }
+            )
 
-        # initialize form with default dates
-        form = PredictFilter(
-            initial={
-                "start_date": start_date,
-                "end_date": end_date,
-            }
+        # Call predict function with default dates
+        prediction = predict(
+            data=datacontainer.enriched_view,
+            start=start_date,
+            end=end_date,
         )
 
-    # Call predict function with default dates
-    prediction = predict(
-        data=datacontainer.enriched_view,
-        start=start_date,
-        end=end_date,
-    )
-
-    # build chart
-    chart = prediction_chart(prediction)
-    return render(
-        request, "dm_regional_app/views/prediction.html", {"form": form, "chart": chart}
-    )
+        # build chart
+        chart = prediction_chart(prediction)
+        return render(
+            request,
+            "dm_regional_app/views/prediction.html",
+            {"form": form, "chart": chart},
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "prediction"
+        return redirect(redirect_url)
 
 
 @login_required
 def historic_data(request):
-    pk = request.session["session_scenario_id"]
-    session_scenario = get_object_or_404(SessionScenario, pk=pk)
-    config = Config()
-    # read data
-    datacontainer = read_data(source=settings.DATA_SOURCE)
-
-    if request.method == "POST":
-        # initialize form with data
-        form = HistoricDataFilter(
-            request.POST,
-            la=datacontainer.unique_las,
-            placement_types=datacontainer.unique_placement_types,
-            age_bins=datacontainer.unique_age_bins,
-        )
-
-        if form.is_valid():
-            session_scenario.historic_filters = form.cleaned_data
-            session_scenario.save()
-            data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
-        else:
-            data = datacontainer.enriched_view
-    else:
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        config = Config()
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
-        # initialize form with default dates
-        form = HistoricDataFilter(
-            initial=session_scenario.historic_filters,
-            la=datacontainer.unique_las,
-            placement_types=datacontainer.unique_placement_types,
-            age_bins=datacontainer.unique_age_bins,
+        if request.method == "POST":
+            # initialize form with data
+            form = HistoricDataFilter(
+                request.POST,
+                la=datacontainer.unique_las,
+                placement_types=datacontainer.unique_placement_types,
+                age_bins=datacontainer.unique_age_bins,
+            )
+
+            if form.is_valid():
+                session_scenario.historic_filters = form.cleaned_data
+                session_scenario.save()
+                data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
+            else:
+                data = datacontainer.enriched_view
+        else:
+            # read data
+            datacontainer = read_data(source=settings.DATA_SOURCE)
+
+            # initialize form with default dates
+            form = HistoricDataFilter(
+                initial=session_scenario.historic_filters,
+                la=datacontainer.unique_las,
+                placement_types=datacontainer.unique_placement_types,
+                age_bins=datacontainer.unique_age_bins,
+            )
+            data = apply_filters(datacontainer.enriched_view, form.initial)
+
+        entry_into_care_count = data.loc[
+            data.placement_type_before
+            == datacontainer.config.PlacementCategories.NOT_IN_CARE
+        ]["CHILD"].nunique()
+        exiting_care_count = data.loc[
+            data.placement_type_after
+            == datacontainer.config.PlacementCategories.NOT_IN_CARE
+        ]["CHILD"].nunique()
+
+        config = Config()
+        stats = PopulationStats(data, config)
+
+        chart = historic_chart(stats)
+
+        return render(
+            request,
+            "dm_regional_app/views/historic.html",
+            {
+                "form": form,
+                "entry_into_care_count": entry_into_care_count,
+                "exiting_care_count": exiting_care_count,
+                "chart": chart,
+            },
         )
-        data = apply_filters(datacontainer.enriched_view, form.initial)
-
-    entry_into_care_count = data.loc[
-        data.placement_type_before
-        == datacontainer.config.PlacementCategories.NOT_IN_CARE
-    ]["CHILD"].nunique()
-    exiting_care_count = data.loc[
-        data.placement_type_after
-        == datacontainer.config.PlacementCategories.NOT_IN_CARE
-    ]["CHILD"].nunique()
-
-    config = Config()
-    stats = PopulationStats(data, config)
-
-    chart = historic_chart(stats)
-
-    return render(
-        request,
-        "dm_regional_app/views/historic.html",
-        {
-            "form": form,
-            "entry_into_care_count": entry_into_care_count,
-            "exiting_care_count": exiting_care_count,
-            "chart": chart,
-        },
-    )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "historic_data"
+        return redirect(redirect_url)
 
 
 @login_required
