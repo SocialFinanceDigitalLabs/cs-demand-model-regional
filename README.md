@@ -28,7 +28,7 @@ To load some dummy data, run:
 python manage.py load-fixtures
 ```
 
-This will load some users and some fake scenarios:
+This will load some users:
 
 **Regular user**
 - email: john.smith@bromley.gov.uk
@@ -38,6 +38,15 @@ This will load some users and some fake scenarios:
 - email: admin@example.test
 - password: test
 
+
+## Delete Session Scenarios
+
+To manage data transfer between views, users are assigned a session scenario. These scenarios should be deleted weekly through a recurrent job wherever the app is deployed.
+To run this command:
+
+```
+python manage.py erase_session_scenarios
+```
 
 ## Run
 
