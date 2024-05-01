@@ -105,8 +105,8 @@ def prediction(request):
         # Call predict function with default dates
         prediction = predict(
             data=datacontainer.enriched_view,
-            start=start_date,
-            end=end_date,
+            reference_start_date=start_date,
+            reference_end_date=end_date,
         )
 
         # build chart
