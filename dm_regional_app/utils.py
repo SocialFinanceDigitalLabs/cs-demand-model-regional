@@ -5,9 +5,6 @@ import pandas as pd
 
 
 def apply_filters(data: pd.DataFrame, filters: dict):
-    data = data.loc[data.DECOM.dt.date >= filters["start_date"]]
-    data = data.loc[data.DEC.dt.date <= filters["end_date"]]
-
     if filters["la"] != []:
         loc = data.LA.astype(str).isin(filters["la"])
         data = data.loc[loc]

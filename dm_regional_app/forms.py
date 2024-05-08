@@ -6,29 +6,46 @@ from django_select2 import forms as s2forms
 
 
 class PredictFilter(forms.Form):
-    start_date = forms.DateField(
+    reference_start_date = forms.DateField(
         widget=DatePickerInput(),
-        label="Start Date",
+        label="Reference Start Date",
         required=True,
     )
-    end_date = forms.DateField(
-        widget=DatePickerInput(range_from="start_date"),
-        label="End Date",
+    reference_end_date = forms.DateField(
+        widget=DatePickerInput(),
+        label="Reference End Date",
         required=True,
     )
+    prediction_start_date = forms.DateField(
+        widget=DatePickerInput(),
+        label="Prediction Start Date",
+        required=False,
+    )
+    prediction_end_date = forms.DateField(
+        widget=DatePickerInput(),
+        label="Prediction End Date",
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Row(
+                Column("reference_start_date", css_class="form-group col-md-3 mb-0"),
+                Column("reference_end_date", css_class="form-group col-md-3 mb-0"),
+                css_class="form-row",
+            ),
+            Row(
+                Column("prediction_start_date", css_class="form-group col-md-3 mb-0"),
+                Column("prediction_end_date", css_class="form-group col-md-3 mb-0"),
+                css_class="form-row",
+            ),
+            Submit("submit", "Run model"),
+        )
 
 
 class HistoricDataFilter(forms.Form):
-    start_date = forms.DateField(
-        widget=DatePickerInput(),
-        label="Start Date",
-        required=True,
-    )
-    end_date = forms.DateField(
-        widget=DatePickerInput(range_from="start_date"),
-        label="End Date",
-        required=True,
-    )
     la = forms.MultipleChoiceField(
         widget=s2forms.Select2MultipleWidget,
         label="Local Authority",
@@ -71,11 +88,6 @@ class HistoricDataFilter(forms.Form):
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            Row(
-                Column("start_date", css_class="form-group col-md-3 mb-0"),
-                Column("end_date", css_class="form-group col-md-3 mb-0"),
-                css_class="form-row",
-            ),
             Row(
                 Column("la", css_class="form-group col-md-3 mb-0"),
                 Column("placement_types", css_class="form-group col-md-3 mb-0"),
