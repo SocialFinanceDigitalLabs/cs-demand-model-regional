@@ -1,5 +1,6 @@
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -93,7 +94,6 @@ def prediction(request):
                 if historic_form.is_valid():
                     session_scenario.historic_filters = historic_form.cleaned_data
                     session_scenario.save()
-                    print(request.POST)
 
                     historic_data = apply_filters(
                         datacontainer.enriched_view, historic_form.cleaned_data
@@ -110,8 +110,6 @@ def prediction(request):
                 if predict_form.is_valid():
                     session_scenario.prediction_parameters = predict_form.cleaned_data
                     session_scenario.save()
-                    print(request.POST)
-                    print(session_scenario.prediction_parameters)
                     historic_data = apply_filters(
                         datacontainer.enriched_view, session_scenario.historic_filters
                     )
@@ -130,16 +128,23 @@ def prediction(request):
             # initialize form with default dates
             predict_form = PredictFilter(initial=session_scenario.prediction_parameters)
 
-        config = Config()
-        stats = PopulationStats(historic_data, config)
+        if historic_data.empty:
+            empty_dataframe = True
+            chart = None
 
-        # Call predict function with default dates
-        prediction = predict(
-            data=historic_data, **session_scenario.prediction_parameters
-        )
+        else:
+            empty_dataframe = False
 
-        # build chart
-        chart = prediction_chart(stats, prediction)
+            config = Config()
+            stats = PopulationStats(historic_data, config)
+
+            # Call predict function with default dates
+            prediction = predict(
+                data=historic_data, **session_scenario.prediction_parameters
+            )
+
+            # build chart
+            chart = prediction_chart(stats, prediction)
 
         return render(
             request,
@@ -148,6 +153,7 @@ def prediction(request):
                 "predict_form": predict_form,
                 "historic_form": historic_form,
                 "chart": chart,
+                "empty_dataframe": empty_dataframe,
             },
         )
     else:
