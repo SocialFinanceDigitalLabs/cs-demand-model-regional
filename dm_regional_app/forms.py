@@ -7,13 +7,11 @@ from django_select2 import forms as s2forms
 
 class PredictFilter(forms.Form):
     reference_start_date = forms.DateField(
-        widget=DatePickerInput(),
         label="Reference Start Date",
         required=True,
         help_text="Select the period you would like the model to reference",
     )
     reference_end_date = forms.DateField(
-        widget=DatePickerInput(),
         label="Reference End Date",
         required=True,
     )
@@ -30,6 +28,9 @@ class PredictFilter(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        reference_date_min = kwargs.pop("start_date", None)
+        reference_date_max = kwargs.pop("end_date", None)
+
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -45,6 +46,33 @@ class PredictFilter(forms.Form):
             ),
             Submit("submit", "Run model"),
         )
+
+        self.fields["reference_start_date"].widget = DatePickerInput(
+            options={"minDate": reference_date_min, "maxDate": reference_date_max}
+        )
+
+        self.fields["reference_end_date"].widget = DatePickerInput(
+            options={"minDate": reference_date_min, "maxDate": reference_date_max}
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        reference_start_date = cleaned_data.get("reference_start_date")
+        reference_end_date = cleaned_data.get("reference_end_date")
+        prediction_start_date = cleaned_data.get("prediction_start_date")
+        prediction_end_date = cleaned_data.get("prediction_end_date")
+
+        if reference_start_date and reference_end_date:
+            if reference_start_date >= reference_end_date:
+                raise forms.ValidationError(
+                    "Reference start date must be before reference end date."
+                )
+
+        if prediction_start_date and prediction_end_date:
+            if prediction_start_date >= prediction_end_date:
+                raise forms.ValidationError(
+                    "Prediction start date must be before prediction end date."
+                )
 
 
 class HistoricDataFilter(forms.Form):

@@ -89,7 +89,9 @@ def prediction(request):
                     age_bins=datacontainer.unique_age_bins,
                 )
                 predict_form = PredictFilter(
-                    initial=session_scenario.prediction_parameters
+                    initial=session_scenario.prediction_parameters,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
                 )
                 if historic_form.is_valid():
                     session_scenario.historic_filters = historic_form.cleaned_data
@@ -100,19 +102,24 @@ def prediction(request):
                     )
 
             if "reference_start_date" in request.POST:
-                predict_form = PredictFilter(request.POST)
+                predict_form = PredictFilter(
+                    request.POST,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
                     placement_types=datacontainer.unique_placement_types,
                     age_bins=datacontainer.unique_age_bins,
                 )
+
+                historic_data = apply_filters(
+                    datacontainer.enriched_view, historic_form.initial
+                )
                 if predict_form.is_valid():
                     session_scenario.prediction_parameters = predict_form.cleaned_data
                     session_scenario.save()
-                    historic_data = apply_filters(
-                        datacontainer.enriched_view, session_scenario.historic_filters
-                    )
 
         else:
             historic_form = HistoricDataFilter(
@@ -126,7 +133,11 @@ def prediction(request):
             )
 
             # initialize form with default dates
-            predict_form = PredictFilter(initial=session_scenario.prediction_parameters)
+            predict_form = PredictFilter(
+                initial=session_scenario.prediction_parameters,
+                start_date=datacontainer.start_date,
+                end_date=datacontainer.end_date,
+            )
 
         if historic_data.empty:
             empty_dataframe = True
