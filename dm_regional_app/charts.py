@@ -97,7 +97,7 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     )
 
     fig.update_layout(
-        title="Base forecase", xaxis_title="Date", yaxis_title="Number of children"
+        title="Base forecast", xaxis_title="Date", yaxis_title="Number of children"
     )
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
