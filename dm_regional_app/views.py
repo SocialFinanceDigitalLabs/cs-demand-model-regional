@@ -1,5 +1,6 @@
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -31,8 +32,6 @@ def router_handler(request):
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
     historic_filters = {
-        "start_date": datacontainer.start_date,
-        "end_date": datacontainer.end_date,
         "la": [],
         "placement_types": [],
         "age_bins": [],
@@ -42,13 +41,17 @@ def router_handler(request):
     # this is stand in code to be edited when prediction page is improved
     prediction_filters = {"buckets": []}
     prediction_parameters = {
-        "start_date": datacontainer.end_date,
-        "end_date": datacontainer.end_date + relativedelta(months=12),
-        "population": [],
+        "reference_start_date": datacontainer.start_date,
+        # delete - relativedelta(months=6) just for testing before datacontainer fix
+        "reference_end_date": datacontainer.end_date - relativedelta(months=6),
+        "prediction_start_date": None,
+        "prediction_end_date": None,
+    }
+    historic_stock = {
+        "population": {},
         "base_rates": [],
         "adjusted_rates": [],
     }
-    historic_stock = {}
     adjusted_costs = {"adjusted_costs": []}
 
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
@@ -78,43 +81,93 @@ def prediction(request):
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
         if request.method == "POST":
-            # initialize form with data
-            form = PredictFilter(request.POST)
+            if "uasc" in request.POST:
+                historic_form = HistoricDataFilter(
+                    request.POST,
+                    la=datacontainer.unique_las,
+                    placement_types=datacontainer.unique_placement_types,
+                    age_bins=datacontainer.unique_age_bins,
+                )
+                predict_form = PredictFilter(
+                    initial=session_scenario.prediction_parameters,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                if historic_form.is_valid():
+                    session_scenario.historic_filters = historic_form.cleaned_data
+                    session_scenario.save()
 
-            if form.is_valid():
-                start_date = form.cleaned_data["start_date"]
-                end_date = form.cleaned_data["end_date"]
+                    historic_data = apply_filters(
+                        datacontainer.enriched_view, historic_form.cleaned_data
+                    )
 
-            else:
-                start_date = datacontainer.end_date - relativedelta(months=6)
-                end_date = datacontainer.end_date
+            if "reference_start_date" in request.POST:
+                predict_form = PredictFilter(
+                    request.POST,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                historic_form = HistoricDataFilter(
+                    initial=session_scenario.historic_filters,
+                    la=datacontainer.unique_las,
+                    placement_types=datacontainer.unique_placement_types,
+                    age_bins=datacontainer.unique_age_bins,
+                )
+
+                historic_data = apply_filters(
+                    datacontainer.enriched_view, historic_form.initial
+                )
+                if predict_form.is_valid():
+                    session_scenario.prediction_parameters = predict_form.cleaned_data
+                    session_scenario.save()
 
         else:
-            # set default dates
-            start_date = datacontainer.end_date - relativedelta(months=6)
-            end_date = datacontainer.end_date
-
-            # initialize form with default dates
-            form = PredictFilter(
-                initial={
-                    "start_date": start_date,
-                    "end_date": end_date,
-                }
+            historic_form = HistoricDataFilter(
+                initial=session_scenario.historic_filters,
+                la=datacontainer.unique_las,
+                placement_types=datacontainer.unique_placement_types,
+                age_bins=datacontainer.unique_age_bins,
+            )
+            historic_data = apply_filters(
+                datacontainer.enriched_view, historic_form.initial
             )
 
-        # Call predict function with default dates
-        prediction = predict(
-            data=datacontainer.enriched_view,
-            reference_start_date=start_date,
-            reference_end_date=end_date,
-        )
+            # initialize form with default dates
+            predict_form = PredictFilter(
+                initial=session_scenario.prediction_parameters,
+                start_date=datacontainer.start_date,
+                end_date=datacontainer.end_date,
+            )
 
-        # build chart
-        chart = prediction_chart(prediction)
+        if historic_data.empty:
+            empty_dataframe = True
+            chart = None
+
+        else:
+            empty_dataframe = False
+
+            config = Config()
+            stats = PopulationStats(historic_data, config)
+
+            # Call predict function with default dates
+            prediction = predict(
+                data=historic_data, **session_scenario.prediction_parameters
+            )
+
+            # build chart
+            chart = prediction_chart(
+                stats, prediction, **session_scenario.prediction_parameters
+            )
+
         return render(
             request,
             "dm_regional_app/views/prediction.html",
-            {"form": form, "chart": chart},
+            {
+                "predict_form": predict_form,
+                "historic_form": historic_form,
+                "chart": chart,
+                "empty_dataframe": empty_dataframe,
+            },
         )
     else:
         next_url_name = "router_handler"
@@ -142,8 +195,12 @@ def historic_data(request):
             )
 
             if form.is_valid():
+                # save cleaned data to session scenarios historic filters
                 session_scenario.historic_filters = form.cleaned_data
                 session_scenario.save()
+
+                # update reference start and end
+
                 data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
             else:
                 data = datacontainer.enriched_view

@@ -2,12 +2,42 @@
 {% load crispy_forms_tags %}
 
 
-{% block content %}
-{{ form.media }}
-<form method="POST">
-    {% csrf_token %}
-    {% crispy form %}
-</form>
 
-{{chart|safe}}
+{% block content %}
+
+<br>
+    <h1>Model Base Forecast</h1>
+    <br>
+    <p>Begin modelling your Base Forecast so you can choose the population you want the model to learn from. You can choose:
+    <ul>
+        <li>The time period you want the model to reference</li>
+        <li>When you want your forecast to start</li>
+        <li>The population the forecast will include</li>
+    </ul></p>
+    <br>
+    {% if empty_dataframe is True %}
+        <div class="alert alert-warning" role="alert">
+            <h2>There are no children in the historic dataset that match this filter selection</h2>
+        </div>
+    {% endif %}
+    <div class="alert alert-primary" role="alert">
+    {{ form.media }}
+    <form method="POST">
+        {% csrf_token %}
+        {% crispy historic_form %}
+    </form>
+    </div>
+    {{ form.media }}
+    <form method="POST">
+        {% csrf_token %}
+        {% crispy predict_form %}
+    </form>
+
+<br>
+
+{% if empty_dataframe is False %}
+<div class="alert alert-primary" role="alert">
+    {{chart|safe}}
+</div>
+{% endif %}
 {% endblock %}

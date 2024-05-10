@@ -6,29 +6,76 @@ from django_select2 import forms as s2forms
 
 
 class PredictFilter(forms.Form):
-    start_date = forms.DateField(
+    reference_start_date = forms.DateField(
+        label="Reference Start Date",
+        required=True,
+        help_text="Select the period you would like the model to reference",
+    )
+    reference_end_date = forms.DateField(
+        label="Reference End Date",
+        required=True,
+    )
+    prediction_start_date = forms.DateField(
         widget=DatePickerInput(),
-        label="Start Date",
-        required=True,
+        label="Prediction Start Date",
+        required=False,
+        help_text="Select the future date-range you want to apply your forecast to",
     )
-    end_date = forms.DateField(
-        widget=DatePickerInput(range_from="start_date"),
-        label="End Date",
-        required=True,
+    prediction_end_date = forms.DateField(
+        widget=DatePickerInput(),
+        label="Prediction End Date",
+        required=False,
     )
+
+    def __init__(self, *args, **kwargs):
+        reference_date_min = kwargs.pop("start_date", None)
+        reference_date_max = kwargs.pop("end_date", None)
+
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Row(
+                Column("reference_start_date", css_class="form-group col-md-3 mb-0"),
+                Column("reference_end_date", css_class="form-group col-md-3 mb-0"),
+                css_class="form-row",
+            ),
+            Row(
+                Column("prediction_start_date", css_class="form-group col-md-3 mb-0"),
+                Column("prediction_end_date", css_class="form-group col-md-3 mb-0"),
+                css_class="form-row",
+            ),
+            Submit("submit", "Run model"),
+        )
+
+        self.fields["reference_start_date"].widget = DatePickerInput(
+            options={"minDate": reference_date_min, "maxDate": reference_date_max}
+        )
+
+        self.fields["reference_end_date"].widget = DatePickerInput(
+            options={"minDate": reference_date_min, "maxDate": reference_date_max}
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        reference_start_date = cleaned_data.get("reference_start_date")
+        reference_end_date = cleaned_data.get("reference_end_date")
+        prediction_start_date = cleaned_data.get("prediction_start_date")
+        prediction_end_date = cleaned_data.get("prediction_end_date")
+
+        if reference_start_date and reference_end_date:
+            if reference_start_date >= reference_end_date:
+                raise forms.ValidationError(
+                    "Reference start date must be before reference end date."
+                )
+
+        if prediction_start_date and prediction_end_date:
+            if prediction_start_date >= prediction_end_date:
+                raise forms.ValidationError(
+                    "Prediction start date must be before prediction end date."
+                )
 
 
 class HistoricDataFilter(forms.Form):
-    start_date = forms.DateField(
-        widget=DatePickerInput(),
-        label="Start Date",
-        required=True,
-    )
-    end_date = forms.DateField(
-        widget=DatePickerInput(range_from="start_date"),
-        label="End Date",
-        required=True,
-    )
     la = forms.MultipleChoiceField(
         widget=s2forms.Select2MultipleWidget,
         label="Local Authority",
@@ -71,11 +118,6 @@ class HistoricDataFilter(forms.Form):
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
-            Row(
-                Column("start_date", css_class="form-group col-md-3 mb-0"),
-                Column("end_date", css_class="form-group col-md-3 mb-0"),
-                css_class="form-row",
-            ),
             Row(
                 Column("la", css_class="form-group col-md-3 mb-0"),
                 Column("placement_types", css_class="form-group col-md-3 mb-0"),
