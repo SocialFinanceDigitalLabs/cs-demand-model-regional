@@ -144,7 +144,9 @@ def prediction(request):
             )
 
             # build chart
-            chart = prediction_chart(stats, prediction)
+            chart = prediction_chart(
+                stats, prediction, **session_scenario.prediction_parameters
+            )
 
         return render(
             request,
