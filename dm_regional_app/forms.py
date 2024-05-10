@@ -10,6 +10,7 @@ class PredictFilter(forms.Form):
         widget=DatePickerInput(),
         label="Reference Start Date",
         required=True,
+        help_text="Select the period you would like the model to reference",
     )
     reference_end_date = forms.DateField(
         widget=DatePickerInput(),
@@ -20,6 +21,7 @@ class PredictFilter(forms.Form):
         widget=DatePickerInput(),
         label="Prediction Start Date",
         required=False,
+        help_text="Select the future date-range you want to apply your forecast to",
     )
     prediction_end_date = forms.DateField(
         widget=DatePickerInput(),

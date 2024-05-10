@@ -90,9 +90,9 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
             width=0,
         ),
         label=dict(
-            text="Reference period", textposition="top center", font=dict(size=15)
+            text="Reference period", textposition="top center", font=dict(size=14)
         ),
-        fillcolor="rgba(0,0,255,0.1)",
+        fillcolor="rgba(105,105,105,0.1)",
         layer="above",
     )
 
