@@ -1,0 +1,105 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags %}
+{% load table_tags %}
+
+
+{% block content %}
+
+<br>
+    <h1>Model Adjusted Forecast</h1>
+    <br>
+    <p>Use this page to start modelling your adjusted forecast. You can choose to:
+    <ul>
+        <li>Review the time period you want the model to reference</li>
+        <li>Review the dates you want your forecast to start and end</li>
+        <li>Edit the daily rate of different age groups and placement types to create an adjusted forecast</li>
+        <li>Edit the number of children into/out of each age group and placement type to create an adjusted forecast</li>
+    </ul></p>
+    <br>
+    {% if empty_dataframe is True %}
+        <div class="alert alert-warning" role="alert">
+            <h2>There are no children in the historic dataset that match this filter selection</h2>
+        </div>
+    {% endif %}
+    <div class="alert alert-primary" role="alert">
+    {{ form.media }}
+    <form method="POST">
+        {% csrf_token %}
+        {% crispy historic_form %}
+    </form>
+    </div>
+    {{ form.media }}
+    <form method="POST">
+        {% csrf_token %}
+        {% crispy predict_form %}
+    </form>
+
+<br>
+
+{% if empty_dataframe is False %}
+<div class="alert alert-primary" role="alert">
+    {{chart|safe}}
+</div>
+
+<p>
+    <p>
+    <div id="tables">
+        <div class="card border-dark mb-3">
+            <div class="card-header">
+                <h5 class="card-title">To make adjustments, you can view the table by:<br></h5>
+                <a class="btn btn-primary" data-bs-toggle="collapse" href="#entering_care" role="button" aria-expanded="false" aria-controls="entering_care">
+                    <span>Children entering<br></span>
+                      <span>care each year</span>
+                  </a>
+                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#leaving_care" aria-expanded="false" aria-controls="leaving_care">
+                      <span>Children leaving<br></span>
+                      <span>care each year</span>
+                  </button>
+                  <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#rate_change" aria-expanded="false" aria-controls="rate_change">
+                      <span>Rate of change between<br></span>
+                      <span>placement types</span>
+                  </button>
+            </div>
+            <div class="card-body">
+                <p>Once you have adjusted the table you will be able to see the base 
+forecast alongside your adjusted forecast to compare. You can 
+continue to edit the table across each of the views.</p>
+                <div class="accordion-group">
+                    <div class="collapse indent" id="entering_care" data-bs-parent="#tables">
+                        <div class="card card-body">
+                        Entering care chart placeholder
+                        </div>
+                    </div>
+                    <div class="collapse indent" id="leaving_care" data-bs-parent="#tables">
+                        <div class="card card-body">
+                        Leaving care chart placeholder
+                        </div>
+                    </div>
+                    <div class="collapse" id="rate_change" data-bs-parent="#tables">
+                        <div class="card card-body">
+                            <table id="efficiency-hub-table" class="table table-bordered dt-responsive nowrap w-100">
+                                <thead>
+                                 {{ transistion_rate_table | convert_data_frame_to_html_table_headers | safe}}
+                                </thead>
+                                <tbody>
+                                  {{transistion_rate_table | convert_data_frame_to_html_table_rows | safe}}
+                                </tbody>
+                               </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        </div>
+
+      </p>
+
+
+      <div class="d-flex bd-highlight mb-3">
+        <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="{% url 'router_handler' %}?next_url_name=prediction">Back</a></div>
+      </div>
+    </div>
+{% endif %}
+
+
+{% endblock %}

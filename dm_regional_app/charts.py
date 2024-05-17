@@ -1,3 +1,4 @@
+import django_tables2
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -14,6 +15,7 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     # dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
     df.columns = ["from", "date", "forecast"]
+    df = df[df["from"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
     df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
     df["date"] = pd.to_datetime(df["date"]).dt.date
 
@@ -123,3 +125,21 @@ def historic_chart(data: PopulationStats):
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
+
+
+def transistion_rate_table(data):
+    df = data
+
+    df.columns = pd.MultiIndex.from_tuples(df.columns, names=["Age", "Placement"])
+    df = df.reset_index()
+    df = df[df["to"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
+    df.drop("NOT_IN_CARE", axis=1, level=1, inplace=True)
+    df[["Age", "Placement"]] = pd.DataFrame(df["to"].tolist(), index=df.index)
+    placement = df.pop("Placement")
+    df.insert(0, "Placement", placement)
+    age = df.pop("Age")
+    df.insert(0, "Age", age)
+    df.drop("to", axis=1, inplace=True)
+    df = df.round(4)
+
+    return df

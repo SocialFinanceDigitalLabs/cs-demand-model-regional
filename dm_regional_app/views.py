@@ -5,7 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from dm_regional_app.charts import historic_chart, prediction_chart
+from dm_regional_app.charts import (
+    historic_chart,
+    prediction_chart,
+    transistion_rate_table,
+)
 from dm_regional_app.forms import HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
@@ -70,6 +74,113 @@ def router_handler(request):
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+@login_required
+def adjusted(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        if request.method == "POST":
+            if "uasc" in request.POST:
+                historic_form = HistoricDataFilter(
+                    request.POST,
+                    la=datacontainer.unique_las,
+                    placement_types=datacontainer.unique_placement_types,
+                    age_bins=datacontainer.unique_age_bins,
+                )
+                predict_form = PredictFilter(
+                    initial=session_scenario.prediction_parameters,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                if historic_form.is_valid():
+                    session_scenario.historic_filters = historic_form.cleaned_data
+                    session_scenario.save()
+
+                    historic_data = apply_filters(
+                        datacontainer.enriched_view, historic_form.cleaned_data
+                    )
+
+            if "reference_start_date" in request.POST:
+                predict_form = PredictFilter(
+                    request.POST,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                historic_form = HistoricDataFilter(
+                    initial=session_scenario.historic_filters,
+                    la=datacontainer.unique_las,
+                    placement_types=datacontainer.unique_placement_types,
+                    age_bins=datacontainer.unique_age_bins,
+                )
+
+                historic_data = apply_filters(
+                    datacontainer.enriched_view, historic_form.initial
+                )
+                if predict_form.is_valid():
+                    session_scenario.prediction_parameters = predict_form.cleaned_data
+                    session_scenario.save()
+
+        else:
+            historic_form = HistoricDataFilter(
+                initial=session_scenario.historic_filters,
+                la=datacontainer.unique_las,
+                placement_types=datacontainer.unique_placement_types,
+                age_bins=datacontainer.unique_age_bins,
+            )
+            historic_data = apply_filters(
+                datacontainer.enriched_view, historic_form.initial
+            )
+
+            # initialize form with default dates
+            predict_form = PredictFilter(
+                initial=session_scenario.prediction_parameters,
+                start_date=datacontainer.start_date,
+                end_date=datacontainer.end_date,
+            )
+
+        if historic_data.empty:
+            empty_dataframe = True
+            chart = None
+
+        else:
+            empty_dataframe = False
+
+            config = Config()
+            stats = PopulationStats(historic_data, config)
+
+            # Call predict function with default dates
+            prediction = predict(
+                data=historic_data, **session_scenario.prediction_parameters
+            )
+
+            # build chart
+            chart = prediction_chart(
+                stats, prediction, **session_scenario.prediction_parameters
+            )
+
+            tran_rate_table = transistion_rate_table(prediction.transition_rates)
+
+        return render(
+            request,
+            "dm_regional_app/views/adjusted.html",
+            {
+                "predict_form": predict_form,
+                "historic_form": historic_form,
+                "chart": chart,
+                "empty_dataframe": empty_dataframe,
+                "transistion_rate_table": tran_rate_table,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "adjusted"
+        return redirect(redirect_url)
 
 
 @login_required
