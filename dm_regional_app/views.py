@@ -163,7 +163,13 @@ def adjusted(request):
                 stats, prediction, **session_scenario.prediction_parameters
             )
 
-            tran_rate_table = transistion_rate_table(prediction.transition_rates)
+            tran_rate_table, tran_rate_cols = transistion_rate_table(
+                prediction.transition_rates
+            )
+
+            tran_rate_cols = tran_rate_cols
+
+            print(type(tran_rate_cols))
 
         return render(
             request,
@@ -174,6 +180,7 @@ def adjusted(request):
                 "chart": chart,
                 "empty_dataframe": empty_dataframe,
                 "transistion_rate_table": tran_rate_table,
+                "tran_rate_cols": tran_rate_cols,
             },
         )
     else:

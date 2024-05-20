@@ -77,14 +77,16 @@ continue to edit the table across each of the views.</p>
                     </div>
                     <div class="collapse" id="rate_change" data-bs-parent="#tables">
                         <div class="card card-body">
-                            <table id="efficiency-hub-table" class="table table-bordered dt-responsive nowrap w-100">
+                            <div class="table-responsive">
+                            <table id="efficiency-hub-table" class="table table-hover table-sm">
                                 <thead>
-                                 {{ transistion_rate_table | convert_data_frame_to_html_table_headers | safe}}
+                                 {{ tran_rate_cols | convert_data_frame_to_html_table_headers | safe}}
                                 </thead>
                                 <tbody>
                                   {{transistion_rate_table | convert_data_frame_to_html_table_rows | safe}}
                                 </tbody>
                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

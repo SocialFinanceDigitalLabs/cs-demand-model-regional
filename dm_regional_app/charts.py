@@ -1,4 +1,3 @@
-import django_tables2
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -141,5 +140,11 @@ def transistion_rate_table(data):
     df.insert(0, "Age", age)
     df.drop("to", axis=1, inplace=True)
     df = df.round(4)
+    df["Age"] = df["Age"].mask(df["Age"].duplicated(), "")
 
-    return df
+    cols = df.columns.to_frame().T
+    cols = cols.transpose()
+    cols["Age"] = cols["Age"].mask(cols["Age"].duplicated(), "")
+    cols = cols.transpose()
+
+    return df, cols
