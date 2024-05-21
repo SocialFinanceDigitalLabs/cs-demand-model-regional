@@ -14,10 +14,13 @@ class AbstractScenario(models.Model):
     historic_filters = models.JSONField(
         encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
     )
-    prediction_filters = models.JSONField(
+    prediction_parameters = models.JSONField(
         encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
     )
-    prediction_parameters = models.JSONField(
+    adjusted_rates = models.JSONField(
+        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+    )
+    adjusted_numbers = models.JSONField(
         encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
     )
     historic_stock = models.JSONField(

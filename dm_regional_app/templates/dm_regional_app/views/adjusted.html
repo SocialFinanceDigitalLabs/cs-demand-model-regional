@@ -83,9 +83,12 @@ continue to edit the table across each of the views.</p>
                                  {{ tran_rate_cols | convert_data_frame_to_html_table_headers | safe}}
                                 </thead>
                                 <tbody>
-                                  {{transistion_rate_table | convert_data_frame_to_html_table_rows | safe}}
+                                  {{transition_rate_table | convert_data_frame_to_html_table_rows | safe}}
                                 </tbody>
                                </table>
+                               <div class="d-flex bd-highlight mb-3">
+                                <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=transition_rates">Edit this table</a></div>
+                              </div>
                             </div>
                         </div>
                     </div>

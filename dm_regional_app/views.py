@@ -8,7 +8,7 @@ from django.urls import reverse
 from dm_regional_app.charts import (
     historic_chart,
     prediction_chart,
-    transistion_rate_table,
+    transition_rate_table,
 )
 from dm_regional_app.forms import HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
@@ -74,6 +74,76 @@ def router_handler(request):
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+@login_required
+def edit_transition(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        if request.method == "POST":
+            something = "something"
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        return render(
+            request,
+            "dm_regional_app/views/edit_transition.html",
+            {},
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        return redirect(redirect_url)
+
+
+@login_required
+def transition_rates(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        tran_rate_table, tran_rate_cols = transition_rate_table(
+            prediction.transition_rates
+        )
+
+        tran_rate_cols = tran_rate_cols
+
+        return render(
+            request,
+            "dm_regional_app/views/transition_rates.html",
+            {
+                "transition_rate_table": tran_rate_table,
+                "tran_rate_cols": tran_rate_cols,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        return redirect(redirect_url)
 
 
 @login_required
@@ -163,13 +233,11 @@ def adjusted(request):
                 stats, prediction, **session_scenario.prediction_parameters
             )
 
-            tran_rate_table, tran_rate_cols = transistion_rate_table(
+            tran_rate_table, tran_rate_cols = transition_rate_table(
                 prediction.transition_rates
             )
 
             tran_rate_cols = tran_rate_cols
-
-            print(type(tran_rate_cols))
 
         return render(
             request,
@@ -179,7 +247,7 @@ def adjusted(request):
                 "historic_form": historic_form,
                 "chart": chart,
                 "empty_dataframe": empty_dataframe,
-                "transistion_rate_table": tran_rate_table,
+                "transition_rate_table": tran_rate_table,
                 "tran_rate_cols": tran_rate_cols,
             },
         )

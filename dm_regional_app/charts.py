@@ -126,7 +126,7 @@ def historic_chart(data: PopulationStats):
     return fig_html
 
 
-def transistion_rate_table(data):
+def transition_rate_table(data):
     df = data
 
     df.columns = pd.MultiIndex.from_tuples(df.columns, names=["Age", "Placement"])

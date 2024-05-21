@@ -30,6 +30,18 @@ def convert_data_frame_to_html_table_rows(df):
     return html
 
 
+def adjustment_buttons(df):
+    html = "<tr><td></td><td></td>"
+    column_id = 0
+    row = df.iloc[0].values.flatten().tolist()
+    row_len = len(row) - 2
+    for value in range(row_len):
+        html += f'<td><a class="btn btn-primary" href="#" id={column_id}>Edit this column</a></td>'
+        column_id += 1
+    html += "</tr>"
+    return html
+
+
 register.filter(
     "convert_data_frame_to_html_table_rows", convert_data_frame_to_html_table_rows
 )
@@ -37,3 +49,5 @@ register.filter(
 register.filter(
     "convert_data_frame_to_html_table_headers", convert_data_frame_to_html_table_headers
 )
+
+register.filter("adjustment_buttons", adjustment_buttons)
