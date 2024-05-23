@@ -1,5 +1,6 @@
+import ast
 import json
-from datetime import datetime
+from datetime import date, datetime
 
 import pandas as pd
 
@@ -37,3 +38,33 @@ class DateAwareJSONDecoder(json.JSONDecoder):
                 except ValueError:
                     pass
         return obj
+
+    def parse_object(self, obj):
+        obj = self.parse_dates(obj)
+        if "__type__" in obj and obj["__type__"] == "pd.Series":
+            if all(isinstance(i, list) for i in obj["index"]):
+                index = pd.MultiIndex.from_tuples(obj["index"])
+            else:
+                index = obj["index"]
+            return pd.Series(obj["data"], index=index)
+        return obj
+
+
+class SeriesAwareJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Check if the Series has a MultiIndex
+        if isinstance(obj, pd.Series):
+            # Check if the Series has a MultiIndex
+            if isinstance(obj.index, pd.MultiIndex):
+                index = obj.index.tolist()
+            else:
+                index = obj.index.tolist()
+            return {"__type__": "pd.Series", "data": obj.tolist(), "index": index}
+        if isinstance(obj, date):
+            return obj.isoformat()
+        # Let the base class default method raise the TypeError
+        return super().default(obj)
+
+
+def str_to_tuple(string):
+    return ast.literal_eval(string)

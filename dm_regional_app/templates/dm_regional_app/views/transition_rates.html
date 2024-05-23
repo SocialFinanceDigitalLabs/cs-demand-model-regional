@@ -12,16 +12,28 @@
         Rates are applied to the daily population of children. For example, a rate of 0.5 from Fostering to Residential means
         that each day, 50% of children in Fostering will move to Residential.<br>
     </p>
+        <div class="table-responsive">
+            <table id="transition-rate" class="table table-hover">
+                <form method="post">
+                {% csrf_token %}
+                <thead>
+                {{ transition_rate_table | convert_data_frame_to_html_table_headers_form | safe}}
+                </thead>
+                <tbody>
+                {{transition_rate_table | convert_data_frame_to_html_table_rows_form:form | safe}}
+                <tr>
+                <td colspan="3">
+                    Clear button placeholder
+                </td>
+                <td>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </td>
+                </tr>
+                </tbody>
+            </form>
+            </table>
+        </div>
 
-<div class="table-responsive">
-    <table id="efficiency-hub-table" class="table table-hover table-sm">
-        <thead>
-         {{ tran_rate_cols | convert_data_frame_to_html_table_headers | safe}}
-        </thead>
-        <tbody>
-            {{transition_rate_table | convert_data_frame_to_html_table_rows | safe}}
-          {{transition_rate_table | adjustment_buttons | safe}}
-        </tbody>
-    </table>
 </div>
+
 {% endblock %}

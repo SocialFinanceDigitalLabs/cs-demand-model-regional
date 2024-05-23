@@ -1,8 +1,7 @@
 from django.contrib.auth import get_user_model
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
-from dm_regional_app.utils import DateAwareJSONDecoder
+from dm_regional_app.utils import DateAwareJSONDecoder, SeriesAwareJSONEncoder
 
 User = get_user_model()
 
@@ -12,22 +11,22 @@ class AbstractScenario(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     historic_filters = models.JSONField(
-        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     prediction_parameters = models.JSONField(
-        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     adjusted_rates = models.JSONField(
-        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     adjusted_numbers = models.JSONField(
-        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     historic_stock = models.JSONField(
-        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     adjusted_costs = models.JSONField(
-        encoder=DjangoJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
 
     class Meta:

@@ -28,7 +28,10 @@ class PopulationStats:
         day and then resampling to get the daily populations.
         """
         df = self.df.copy()
-        df["bin"] = df.apply(lambda c: (c.age_bin.name, c.placement_type.name), axis=1)
+        df["bin"] = df.apply(
+            lambda c: f"{c.age_bin.label} - {c.placement_type.label.capitalize()}",
+            axis=1,
+        )
         endings = df.groupby(["DEC", "bin"]).size()
         endings.name = "nof_decs"
 
@@ -74,10 +77,12 @@ class PopulationStats:
     def transitions(self):
         transitions = self.df.copy()
         transitions["start_bin"] = transitions.apply(
-            lambda c: (c.age_bin.name, c.placement_type.name), axis=1
+            lambda c: f"{c.age_bin.label} - {c.placement_type.label.capitalize()}",
+            axis=1,
         )
         transitions["end_bin"] = transitions.apply(
-            lambda c: (c.age_bin.name, c.placement_type_after.name), axis=1
+            lambda c: f"{c.age_bin.label} - {c.placement_type_after.label.capitalize()}",
+            axis=1,
         )
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
         transitions = (

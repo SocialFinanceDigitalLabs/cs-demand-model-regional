@@ -1,8 +1,11 @@
+import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Layout, Row, Submit
 from django import forms
 from django_select2 import forms as s2forms
+
+from dm_regional_app.utils import str_to_tuple
 
 
 class PredictFilter(forms.Form):
@@ -127,3 +130,41 @@ class HistoricDataFilter(forms.Form):
             ),
             Submit("submit", "Filter"),
         )
+
+
+class DynamicForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.dataframe = kwargs.pop("dataframe", None)
+        super(DynamicForm, self).__init__(*args, **kwargs)
+        self.initialize_fields()
+
+        rows = [Row(field, css_class="form-row") for field in self.fields]
+        self.helper = FormHelper()
+        self.helper.layout = Layout()
+        self.helper.layout.extend(rows)
+        self.helper.form_show_labels = False
+
+    def initialize_fields(self):
+        for index in self.dataframe.index:
+            self.fields[str(index)] = forms.FloatField(required=False)
+
+    def save(self):
+        transition = []
+        transition_rate = []
+        for field_name, value in self.cleaned_data.items():
+            if value:
+                transition.append(field_name)
+                transition_rate.append(value)
+        data = pd.DataFrame(
+            {
+                "transition": transition,
+                "adjusted_rate": transition_rate,
+            }
+        )
+        data["transition"] = data["transition"].apply(str_to_tuple)
+        data = data.set_index("transition")
+        # Converting the index to a MultiIndex
+        data.index = pd.MultiIndex.from_tuples(data.index, names=["from", "to"])
+        # convert dataframe to series
+        data = data.squeeze()
+        return data

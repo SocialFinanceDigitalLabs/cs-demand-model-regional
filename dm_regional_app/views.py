@@ -1,3 +1,4 @@
+import pandas as pd
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
@@ -10,7 +11,7 @@ from dm_regional_app.charts import (
     prediction_chart,
     transition_rate_table,
 )
-from dm_regional_app.forms import HistoricDataFilter, PredictFilter
+from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
 from ssda903 import Config
@@ -125,18 +126,25 @@ def transition_rates(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        tran_rate_table, tran_rate_cols = transition_rate_table(
-            prediction.transition_rates
-        )
+        tran_rate_table = transition_rate_table(prediction.transition_rates)
 
-        tran_rate_cols = tran_rate_cols
+        if request.method == "POST":
+            form = DynamicForm(request.POST, dataframe=prediction.transition_rates)
+            if form.is_valid():
+                data = form.save()
+                session_scenario.adjusted_rates = data
+                session_scenario.save()
+                return redirect("adjusted")
+
+        else:
+            form = DynamicForm(dataframe=prediction.transition_rates)
 
         return render(
             request,
             "dm_regional_app/views/transition_rates.html",
             {
                 "transition_rate_table": tran_rate_table,
-                "tran_rate_cols": tran_rate_cols,
+                "form": form,
             },
         )
     else:
@@ -233,11 +241,7 @@ def adjusted(request):
                 stats, prediction, **session_scenario.prediction_parameters
             )
 
-            tran_rate_table, tran_rate_cols = transition_rate_table(
-                prediction.transition_rates
-            )
-
-            tran_rate_cols = tran_rate_cols
+            tran_rate_table = transition_rate_table(prediction.transition_rates)
 
         return render(
             request,
@@ -248,7 +252,6 @@ def adjusted(request):
                 "chart": chart,
                 "empty_dataframe": empty_dataframe,
                 "transition_rate_table": tran_rate_table,
-                "tran_rate_cols": tran_rate_cols,
             },
         )
     else:

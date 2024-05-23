@@ -13,6 +13,7 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
 
     # dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
+
     df.columns = ["from", "date", "forecast"]
     df = df[df["from"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
     df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
@@ -129,22 +130,17 @@ def historic_chart(data: PopulationStats):
 def transition_rate_table(data):
     df = data
 
-    df.columns = pd.MultiIndex.from_tuples(df.columns, names=["Age", "Placement"])
     df = df.reset_index()
-    df = df[df["to"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
-    df.drop("NOT_IN_CARE", axis=1, level=1, inplace=True)
-    df[["Age", "Placement"]] = pd.DataFrame(df["to"].tolist(), index=df.index)
-    placement = df.pop("Placement")
-    df.insert(0, "Placement", placement)
-    age = df.pop("Age")
-    df.insert(0, "Age", age)
-    df.drop("to", axis=1, inplace=True)
+    df["To"] = df["to"]
+    df["From"] = df["from"]
+    df.set_index(["from", "to"], inplace=True)
+    df = df[df["To"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
     df = df.round(4)
-    df["Age"] = df["Age"].mask(df["Age"].duplicated(), "")
+    df["From"] = df["From"].mask(df["From"].duplicated(), "")
 
-    cols = df.columns.to_frame().T
-    cols = cols.transpose()
-    cols["Age"] = cols["Age"].mask(cols["Age"].duplicated(), "")
-    cols = cols.transpose()
+    to = df.pop("To")
+    df.insert(0, "To", to)
+    from_col = df.pop("From")
+    df.insert(0, "From", from_col)
 
-    return df, cols
+    return df

@@ -80,7 +80,7 @@ continue to edit the table across each of the views.</p>
                             <div class="table-responsive">
                             <table id="efficiency-hub-table" class="table table-hover table-sm">
                                 <thead>
-                                 {{ tran_rate_cols | convert_data_frame_to_html_table_headers | safe}}
+                                 {{ transition_rate_table | convert_data_frame_to_html_table_headers | safe}}
                                 </thead>
                                 <tbody>
                                   {{transition_rate_table | convert_data_frame_to_html_table_rows | safe}}

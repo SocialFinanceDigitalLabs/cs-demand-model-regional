@@ -4,11 +4,33 @@ register = template.Library()
 
 
 def convert_data_frame_to_html_table_headers(df):
+    html = "<tr>"
+    for value in df.columns:
+        html += f'<th><p style="font-size:14px;">{value.capitalize()}</p></th>'
+    html += "</tr>"
+    return html
+
+
+def convert_data_frame_to_html_table_headers_form(df):
+    html = "<tr>"
+    for value in df.columns:
+        html += f"<th><p>{value.capitalize()}</p></th>"
+    html += "<th><p>New rate</p></th></tr>"
+    return html
+
+
+def convert_data_frame_to_html_table_rows_form(df, form):
     html = ""
-    for row in df.values:
+    for index, row in df.iterrows():
         row_html = "<tr>"
-        for value in row:
-            row_html += f'<th><p style="font-size:14px;">{value.capitalize()}</p></th>'
+        for i, value in enumerate(row):
+            if isinstance(value, str):
+                row_html += f"<th><p>{value}</p></th>"
+            else:
+                row_html += f"<td><p>{value}</p></td>"
+            if i == 2:  # Insert the input field in the fourth column
+                field_html = str(form[str(index)])
+                row_html += f"<td>{field_html}</td>"
         row_html += "</tr>"
         html += row_html
     return html
@@ -30,24 +52,20 @@ def convert_data_frame_to_html_table_rows(df):
     return html
 
 
-def adjustment_buttons(df):
-    html = "<tr><td></td><td></td>"
-    column_id = 0
-    row = df.iloc[0].values.flatten().tolist()
-    row_len = len(row) - 2
-    for value in range(row_len):
-        html += f'<td><a class="btn btn-primary" href="#" id={column_id}>Edit this column</a></td>'
-        column_id += 1
-    html += "</tr>"
-    return html
-
-
 register.filter(
     "convert_data_frame_to_html_table_rows", convert_data_frame_to_html_table_rows
+)
+
+register.filter(
+    "convert_data_frame_to_html_table_rows_form",
+    convert_data_frame_to_html_table_rows_form,
 )
 
 register.filter(
     "convert_data_frame_to_html_table_headers", convert_data_frame_to_html_table_headers
 )
 
-register.filter("adjustment_buttons", adjustment_buttons)
+register.filter(
+    "convert_data_frame_to_html_table_headers_form",
+    convert_data_frame_to_html_table_headers_form,
+)
