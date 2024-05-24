@@ -233,7 +233,9 @@ def adjusted(request):
 
             # Call predict function with default dates
             prediction = predict(
-                data=historic_data, **session_scenario.prediction_parameters
+                data=historic_data,
+                **session_scenario.prediction_parameters,
+                rate_adjustment=session_scenario.adjusted_rates
             )
 
             # build chart

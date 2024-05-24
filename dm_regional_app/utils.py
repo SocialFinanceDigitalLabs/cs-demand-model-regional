@@ -28,7 +28,17 @@ def apply_filters(data: pd.DataFrame, filters: dict):
 
 class DateAwareJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kwargs):
-        super().__init__(object_hook=self.parse_dates, *args, **kwargs)
+        super().__init__(object_hook=self.parse_object, *args, **kwargs)
+
+    def parse_object(self, obj):
+        obj = self.parse_dates(obj)
+        if "__type__" in obj and obj["__type__"] == "pd.Series":
+            if obj.get("is_multiindex", False):
+                index = pd.MultiIndex.from_tuples(obj["index"])
+            else:
+                index = obj["index"]
+            return pd.Series(obj["data"], index=index)
+        return obj
 
     def parse_dates(self, obj):
         for key, value in obj.items():
@@ -39,27 +49,21 @@ class DateAwareJSONDecoder(json.JSONDecoder):
                     pass
         return obj
 
-    def parse_object(self, obj):
-        obj = self.parse_dates(obj)
-        if "__type__" in obj and obj["__type__"] == "pd.Series":
-            if all(isinstance(i, list) for i in obj["index"]):
-                index = pd.MultiIndex.from_tuples(obj["index"])
-            else:
-                index = obj["index"]
-            return pd.Series(obj["data"], index=index)
-        return obj
-
 
 class SeriesAwareJSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        # Check if the Series has a MultiIndex
         if isinstance(obj, pd.Series):
             # Check if the Series has a MultiIndex
             if isinstance(obj.index, pd.MultiIndex):
-                index = obj.index.tolist()
+                index = [list(tup) for tup in obj.index]
             else:
                 index = obj.index.tolist()
-            return {"__type__": "pd.Series", "data": obj.tolist(), "index": index}
+            return {
+                "__type__": "pd.Series",
+                "data": obj.tolist(),
+                "index": index,
+                "is_multiindex": isinstance(obj.index, pd.MultiIndex),
+            }
         if isinstance(obj, date):
             return obj.isoformat()
         # Let the base class default method raise the TypeError

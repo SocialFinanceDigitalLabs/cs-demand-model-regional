@@ -6,7 +6,7 @@ register = template.Library()
 def convert_data_frame_to_html_table_headers(df):
     html = "<tr>"
     for value in df.columns:
-        html += f'<th><p style="font-size:14px;">{value.capitalize()}</p></th>'
+        html += f'<th><p style="font-size:14px;">{value}</p></th>'
     html += "</tr>"
     return html
 
@@ -42,9 +42,7 @@ def convert_data_frame_to_html_table_rows(df):
         row_html = "<tr>"
         for value in row:
             if isinstance(value, str):
-                row_html += (
-                    f'<th><p style="font-size:14px;">{value.capitalize()}</p></th>'
-                )
+                row_html += f'<th><p style="font-size:14px;">{value}</p></th>'
             else:
                 row_html += f'<td><p style="font-size:14px;">{value}</p></td>'
         row_html += "</tr>"

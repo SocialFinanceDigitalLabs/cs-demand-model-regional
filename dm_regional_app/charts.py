@@ -10,12 +10,15 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     # pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
-
+    print(prediction.population)
     # dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
+    print(df)
 
     df.columns = ["from", "date", "forecast"]
-    df = df[df["from"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
+    print(df)
+    df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
+    print(df)
     df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
     df["date"] = pd.to_datetime(df["date"]).dt.date
 
@@ -99,7 +102,7 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     )
 
     fig.update_layout(
-        title="Base forecast", xaxis_title="Date", yaxis_title="Number of children"
+        title="Forecast", xaxis_title="Date", yaxis_title="Number of children"
     )
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
@@ -134,7 +137,7 @@ def transition_rate_table(data):
     df["To"] = df["to"]
     df["From"] = df["from"]
     df.set_index(["from", "to"], inplace=True)
-    df = df[df["To"].apply(lambda x: "NOT_IN_CARE" in x[1]) == False]
+    # df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
     df = df.round(4)
     df["From"] = df["From"].mask(df["From"].duplicated(), "")
 
@@ -142,5 +145,7 @@ def transition_rate_table(data):
     df.insert(0, "To", to)
     from_col = df.pop("From")
     df.insert(0, "From", from_col)
+
+    df.columns = ["From", "To", "Transition rate"]
 
     return df
