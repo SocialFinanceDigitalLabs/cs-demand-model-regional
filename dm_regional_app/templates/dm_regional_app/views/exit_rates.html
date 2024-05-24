@@ -17,12 +17,12 @@
                 <form method="post">
                 {% csrf_token %}
                 <thead>
-                {{ transition_rate_table | convert_data_frame_to_html_table_headers_form | safe}}
+                {{ exit_rate_table | convert_data_frame_to_html_table_headers_form | safe}}
                 </thead>
                 <tbody>
-                {{transition_rate_table | convert_data_frame_to_html_table_rows_form:form | safe}}
+                {{ exit_rate_table | convert_data_frame_to_html_table_rows_form:form | safe}}
                 <tr>
-                <td colspan="3">
+                <td colspan="2">
                     <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="adjusted">Back</a></div>
                 </td>
                 <td>

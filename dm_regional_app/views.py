@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from dm_regional_app.charts import (
+    exit_rate_table,
     historic_chart,
     prediction_chart,
     transition_rate_table,
@@ -78,15 +79,12 @@ def router_handler(request):
 
 
 @login_required
-def edit_transition(request):
+def exit_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-
-        if request.method == "POST":
-            something = "something"
 
         historic_data = apply_filters(
             datacontainer.enriched_view, session_scenario.historic_filters
@@ -97,10 +95,33 @@ def edit_transition(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        exit_rates = exit_rate_table(prediction.transition_rates)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=prediction.transition_rates,
+                initial_data=session_scenario.adjusted_rates,
+            )
+            if form.is_valid():
+                data = form.save()
+                session_scenario.adjusted_rates = data
+                session_scenario.save()
+                return redirect("adjusted")
+
+        else:
+            form = DynamicForm(
+                initial_data=session_scenario.adjusted_rates,
+                dataframe=prediction.transition_rates,
+            )
+
         return render(
             request,
-            "dm_regional_app/views/edit_transition.html",
-            {},
+            "dm_regional_app/views/exit_rates.html",
+            {
+                "exit_rate_table": exit_rates,
+                "form": form,
+            },
         )
     else:
         next_url_name = "router_handler"
@@ -126,10 +147,14 @@ def transition_rates(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        tran_rate_table = transition_rate_table(prediction.transition_rates)
+        transition_rates = transition_rate_table(prediction.transition_rates)
 
         if request.method == "POST":
-            form = DynamicForm(request.POST, dataframe=prediction.transition_rates)
+            form = DynamicForm(
+                request.POST,
+                dataframe=prediction.transition_rates,
+                initial_data=session_scenario.adjusted_rates,
+            )
             if form.is_valid():
                 data = form.save()
                 session_scenario.adjusted_rates = data
@@ -137,13 +162,16 @@ def transition_rates(request):
                 return redirect("adjusted")
 
         else:
-            form = DynamicForm(dataframe=prediction.transition_rates)
+            form = DynamicForm(
+                initial_data=session_scenario.adjusted_rates,
+                dataframe=prediction.transition_rates,
+            )
 
         return render(
             request,
             "dm_regional_app/views/transition_rates.html",
             {
-                "transition_rate_table": tran_rate_table,
+                "transition_rate_table": transition_rates,
                 "form": form,
             },
         )
@@ -243,7 +271,9 @@ def adjusted(request):
                 stats, prediction, **session_scenario.prediction_parameters
             )
 
-            tran_rate_table = transition_rate_table(prediction.transition_rates)
+            transition_rates = transition_rate_table(prediction.transition_rates)
+
+            exit_rates = exit_rate_table(prediction.transition_rates)
 
         return render(
             request,
@@ -253,7 +283,8 @@ def adjusted(request):
                 "historic_form": historic_form,
                 "chart": chart,
                 "empty_dataframe": empty_dataframe,
-                "transition_rate_table": tran_rate_table,
+                "transition_rate_table": transition_rates,
+                "exit_rate_table": exit_rates,
             },
         )
     else:

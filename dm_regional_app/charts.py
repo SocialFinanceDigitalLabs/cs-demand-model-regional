@@ -10,15 +10,12 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     # pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
-    print(prediction.population)
+
     # dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
-    print(df)
 
     df.columns = ["from", "date", "forecast"]
-    print(df)
     df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
-    print(df)
     df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
     df["date"] = pd.to_datetime(df["date"]).dt.date
 
@@ -137,8 +134,10 @@ def transition_rate_table(data):
     df["To"] = df["to"]
     df["From"] = df["from"]
     df.set_index(["from", "to"], inplace=True)
-    # df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
+    df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
     df = df.round(4)
+    df = df.sort_values(by=["From"])
+    df = df[df["From"] != df["To"]]
     df["From"] = df["From"].mask(df["From"].duplicated(), "")
 
     to = df.pop("To")
@@ -147,5 +146,22 @@ def transition_rate_table(data):
     df.insert(0, "From", from_col)
 
     df.columns = ["From", "To", "Transition rate"]
+
+    return df
+
+
+def exit_rate_table(data):
+    df = data
+
+    df = df.reset_index()
+    df["From"] = df["from"]
+    df = df[df["to"].apply(lambda x: "Not in care" in x)]
+    df.set_index(["from", "to"], inplace=True)
+    df = df.round(4)
+
+    placement = df.pop("From")
+    df.insert(0, "From", placement)
+
+    df.columns = ["Placement", "Exit rate"]
 
     return df

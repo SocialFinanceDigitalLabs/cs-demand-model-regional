@@ -15,7 +15,7 @@ def convert_data_frame_to_html_table_headers_form(df):
     html = "<tr>"
     for value in df.columns:
         html += f"<th><p>{value.capitalize()}</p></th>"
-    html += "<th><p>New rate</p></th></tr>"
+    html += "<th><p>Rate multiplication</p></th></tr>"
     return html
 
 
@@ -23,12 +23,11 @@ def convert_data_frame_to_html_table_rows_form(df, form):
     html = ""
     for index, row in df.iterrows():
         row_html = "<tr>"
-        for i, value in enumerate(row):
+        for value in row:
             if isinstance(value, str):
                 row_html += f"<th><p>{value}</p></th>"
             else:
                 row_html += f"<td><p>{value}</p></td>"
-            if i == 2:  # Insert the input field in the fourth column
                 field_html = str(form[str(index)])
                 row_html += f"<td>{field_html}</td>"
         row_html += "</tr>"

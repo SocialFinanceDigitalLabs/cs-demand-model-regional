@@ -135,18 +135,25 @@ class HistoricDataFilter(forms.Form):
 class DynamicForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.dataframe = kwargs.pop("dataframe", None)
+        initial_data = kwargs.pop("initial_data", pd.Series())
+
         super(DynamicForm, self).__init__(*args, **kwargs)
-        self.initialize_fields()
+        self.initialize_fields(initial_data)
 
-        rows = [Row(field, css_class="form-row") for field in self.fields]
-        self.helper = FormHelper()
-        self.helper.layout = Layout()
-        self.helper.layout.extend(rows)
-        self.helper.form_show_labels = False
-
-    def initialize_fields(self):
+    def initialize_fields(self, initial_data):
         for index in self.dataframe.index:
-            self.fields[str(index)] = forms.FloatField(required=False)
+            field_name = str(index)
+            initial_value = None
+
+            # Attempt to get the initial value using the multiindex
+            try:
+                initial_value = initial_data.loc[index]
+            except KeyError:
+                initial_value = None
+
+            self.fields[field_name] = forms.FloatField(
+                required=False, initial=initial_value
+            )
 
     def save(self):
         transition = []

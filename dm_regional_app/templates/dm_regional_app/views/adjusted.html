@@ -72,7 +72,19 @@ continue to edit the table across each of the views.</p>
                     </div>
                     <div class="collapse indent" id="leaving_care" data-bs-parent="#tables">
                         <div class="card card-body">
-                        Leaving care chart placeholder
+                            <div class="table-responsive">
+                                <table id="efficiency-hub-table" class="table table-hover table-sm">
+                                    <thead>
+                                     {{ exit_rate_table | convert_data_frame_to_html_table_headers | safe}}
+                                    </thead>
+                                    <tbody>
+                                      {{exit_rate_table | convert_data_frame_to_html_table_rows | safe}}
+                                    </tbody>
+                                </table>
+                                <div class="d-flex bd-highlight mb-3">
+                                    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="exit_rates">Edit this table</a></div>
+                                  </div>
+                            </div>    
                         </div>
                     </div>
                     <div class="collapse" id="rate_change" data-bs-parent="#tables">

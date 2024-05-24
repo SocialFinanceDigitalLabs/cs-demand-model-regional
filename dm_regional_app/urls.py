@@ -11,5 +11,5 @@ urlpatterns = [
     path("router_handler", views.router_handler, name="router_handler"),
     path("adjusted", views.adjusted, name="adjusted"),
     path("transition_rates", views.transition_rates, name="transition_rates"),
-    path("edit_transition", views.edit_transition, name="edit_transition"),
+    path("exit_rates", views.exit_rates, name="exit_rates"),
 ]
