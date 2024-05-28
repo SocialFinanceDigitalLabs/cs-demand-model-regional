@@ -141,19 +141,28 @@ class DynamicForm(forms.Form):
         self.initialize_fields(initial_data)
 
     def initialize_fields(self, initial_data):
-        for index in self.dataframe.index:
-            field_name = str(index)
-            initial_value = None
-
-            # Attempt to get the initial value using the multiindex
-            try:
-                initial_value = initial_data.loc[index]
-            except KeyError:
+        # adjusted rates will be None if user has not changed these before, so check
+        if initial_data is not None:
+            for index in self.dataframe.index:
+                field_name = str(index)
                 initial_value = None
 
-            self.fields[field_name] = forms.FloatField(
-                required=False, initial=initial_value
-            )
+                # Attempt to get the initial value using the multiindex
+                try:
+                    initial_value = initial_data.loc[index]
+                except KeyError:
+                    initial_value = None
+
+                self.fields[field_name] = forms.FloatField(
+                    required=False, initial=initial_value
+                )
+        else:
+            for index in self.dataframe.index:
+                field_name = str(index)
+                initial_value = None
+                self.fields[field_name] = forms.FloatField(
+                    required=False, initial=initial_value
+                )
 
     def save(self):
         transition = []

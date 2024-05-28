@@ -44,21 +44,19 @@ def router_handler(request):
         "uasc": "all",
     }
 
-    # this is stand in code to be edited when prediction page is improved
-    prediction_filters = {"buckets": []}
     prediction_parameters = {
         "reference_start_date": datacontainer.start_date,
-        # delete - relativedelta(months=6) just for testing before datacontainer fix
-        "reference_end_date": datacontainer.end_date - relativedelta(months=6),
+        "reference_end_date": datacontainer.end_date,
         "prediction_start_date": None,
         "prediction_end_date": None,
     }
     historic_stock = {
         "population": {},
         "base_rates": [],
-        "adjusted_rates": [],
     }
-    adjusted_costs = {"adjusted_costs": []}
+    adjusted_costs = None
+
+    adjusted_rates = None
 
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
     session_scenario, created = SessionScenario.objects.get_or_create(
@@ -66,10 +64,10 @@ def router_handler(request):
         defaults={
             "user_id": current_user.id,
             "historic_filters": historic_filters,
-            "prediction_filters": prediction_filters,
             "prediction_parameters": prediction_parameters,
             "historic_stock": historic_stock,
             "adjusted_costs": adjusted_costs,
+            "adjusted_rates": adjusted_rates,
         },
     )
 
@@ -105,8 +103,18 @@ def exit_rates(request):
             )
             if form.is_valid():
                 data = form.save()
-                session_scenario.adjusted_rates = data
-                session_scenario.save()
+
+                if session_scenario.adjusted_rates is not None:
+                    # if previous rate adjustments have been made, update old series with new adjustments
+                    rate_adjustments = session_scenario.adjusted_rates
+                    new_rates = rate_adjustments.combine_first(data)
+
+                    session_scenario.adjusted_rates = new_rates
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_rates = data
+                    session_scenario.save()
                 return redirect("adjusted")
 
         else:
@@ -157,8 +165,18 @@ def transition_rates(request):
             )
             if form.is_valid():
                 data = form.save()
-                session_scenario.adjusted_rates = data
-                session_scenario.save()
+
+                if session_scenario.adjusted_rates is not None:
+                    # if previous rate adjustments have been made, update old series with new adjustments
+                    rate_adjustments = session_scenario.adjusted_rates
+                    new_rates = rate_adjustments.combine_first(data)
+
+                    session_scenario.adjusted_rates = new_rates
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_rates = data
+                    session_scenario.save()
                 return redirect("adjusted")
 
         else:

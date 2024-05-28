@@ -17,16 +17,16 @@ class AbstractScenario(models.Model):
         encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     adjusted_rates = models.JSONField(
-        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder, null=True
     )
     adjusted_numbers = models.JSONField(
-        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder, null=True
     )
     historic_stock = models.JSONField(
         encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
     )
     adjusted_costs = models.JSONField(
-        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder, null=True
     )
 
     class Meta:

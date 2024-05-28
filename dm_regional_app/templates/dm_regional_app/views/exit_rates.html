@@ -5,12 +5,12 @@
 
 {% block content %}
 <br>
-    <h1>Adjust transition rates</h1>
+    <h1>Adjust exit rates</h1>
     <br>
-    <p>You may want to edit the number of children per year entering a placement type to give a more accurate
+    <p>You may want to edit the number of children per year exiting care to give a more accurate
         picture of future forecasting or simply to explore what changes you may expect to see. <br><br>
-        Rates are applied to the daily population of children. For example, a rate of 0.5 from Fostering to Residential means
-        that each day, 50% of children in Fostering will move to Residential.<br>
+        Rates are applied to the daily population of children. For example, a rate of 0.5 from 10-16 Fostering 
+        would mean that each day, 50% of children in Fostering will leave care.<br>
     </p>
         <div class="table-responsive">
             <table id="transition-rate" class="table table-hover">
@@ -22,7 +22,7 @@
                 <tbody>
                 {{ exit_rate_table | convert_data_frame_to_html_table_rows_form:form | safe}}
                 <tr>
-                <td colspan="2">
+                <td colspan="3">
                     <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="adjusted">Back</a></div>
                 </td>
                 <td>
