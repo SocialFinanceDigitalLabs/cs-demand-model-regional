@@ -49,11 +49,11 @@
                 <h5 class="card-title">To make adjustments, you can view the table by:<br></h5>
                 <a class="btn btn-primary" data-bs-toggle="collapse" href="#entering_care" role="button" aria-expanded="false" aria-controls="entering_care">
                     <span>Children entering<br></span>
-                      <span>care each year</span>
+                      <span>care</span>
                   </a>
                   <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#leaving_care" aria-expanded="false" aria-controls="leaving_care">
                       <span>Children leaving<br></span>
-                      <span>care each year</span>
+                      <span>care</span>
                   </button>
                   <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#rate_change" aria-expanded="false" aria-controls="rate_change">
                       <span>Rate of change between<br></span>
@@ -67,7 +67,19 @@ continue to edit the table across each of the views.</p>
                 <div class="accordion-group">
                     <div class="collapse indent" id="entering_care" data-bs-parent="#tables">
                         <div class="card card-body">
-                        Entering care chart placeholder
+                            <div class="table-responsive">
+                                <table id="efficiency-hub-table" class="table table-hover table-sm">
+                                    <thead>
+                                     {{ entry_rate_table | convert_data_frame_to_html_table_headers | safe}}
+                                    </thead>
+                                    <tbody>
+                                      {{ entry_rate_table | convert_data_frame_to_html_table_rows | safe}}
+                                    </tbody>
+                                </table>
+                                <div class="d-flex bd-highlight mb-3">
+                                    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="entry_rates">Edit this table</a></div>
+                                  </div>
+                            </div>
                         </div>
                     </div>
                     <div class="collapse indent" id="leaving_care" data-bs-parent="#tables">

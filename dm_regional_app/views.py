@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from dm_regional_app.charts import (
+    entry_rate_table,
     exit_rate_table,
     historic_chart,
     prediction_chart,
@@ -74,6 +75,68 @@ def router_handler(request):
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+@login_required
+def entry_rates(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        entry_rates = entry_rate_table(prediction.entry_rates)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=prediction.entry_rates,
+                initial_data=session_scenario.adjusted_numbers,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_numbers is not None:
+                    # if previous rate adjustments have been made, update old series with new adjustments
+                    rate_adjustments = session_scenario.adjusted_numbers
+                    new_numbers = rate_adjustments.combine_first(data)
+
+                    session_scenario.adjusted_numbers = new_numbers
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_numbers = data
+                    session_scenario.save()
+                return redirect("adjusted")
+
+        else:
+            form = DynamicForm(
+                initial_data=session_scenario.adjusted_numbers,
+                dataframe=prediction.entry_rates,
+            )
+
+        return render(
+            request,
+            "dm_regional_app/views/entry_rates.html",
+            {
+                "entry_rate_table": entry_rates,
+                "form": form,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        return redirect(redirect_url)
 
 
 @login_required
@@ -284,6 +347,8 @@ def adjusted(request):
                 rate_adjustment=session_scenario.adjusted_rates
             )
 
+            print(prediction.entry_rates)
+
             # build chart
             chart = prediction_chart(
                 stats, prediction, **session_scenario.prediction_parameters
@@ -292,6 +357,8 @@ def adjusted(request):
             transition_rates = transition_rate_table(prediction.transition_rates)
 
             exit_rates = exit_rate_table(prediction.transition_rates)
+
+            entry_rates = entry_rate_table(prediction.entry_rates)
 
         return render(
             request,
@@ -303,6 +370,7 @@ def adjusted(request):
                 "empty_dataframe": empty_dataframe,
                 "transition_rate_table": transition_rates,
                 "exit_rate_table": exit_rates,
+                "entry_rate_table": entry_rates,
             },
         )
     else:

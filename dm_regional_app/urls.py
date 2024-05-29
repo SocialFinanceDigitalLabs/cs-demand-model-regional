@@ -12,4 +12,5 @@ urlpatterns = [
     path("adjusted", views.adjusted, name="adjusted"),
     path("transition_rates", views.transition_rates, name="transition_rates"),
     path("exit_rates", views.exit_rates, name="exit_rates"),
+    path("entry_rates", views.entry_rates, name="entry_rates"),
 ]

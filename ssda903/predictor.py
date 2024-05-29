@@ -16,6 +16,7 @@ def predict(
     prediction_start_date: Optional[date] = None,
     prediction_end_date: Optional[date] = None,
     rate_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
+    number_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
 ) -> Prediction:
     """
     Analyses source between start and end, and then predicts the population at prediction_date.
@@ -41,6 +42,7 @@ def predict(
         ),
         start_date=prediction_start_date,
         rate_adjustment=rate_adjustment,
+        number_adjustment=number_adjustment,
     )
     prediction_days = (prediction_end_date - prediction_start_date).days
     prediction = predictor.predict(prediction_days, progress=False)

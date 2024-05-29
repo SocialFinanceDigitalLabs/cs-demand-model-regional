@@ -179,8 +179,10 @@ class DynamicForm(forms.Form):
         )
         data["transition"] = data["transition"].apply(str_to_tuple)
         data = data.set_index("transition")
-        # Converting the index to a MultiIndex
-        data.index = pd.MultiIndex.from_tuples(data.index, names=["from", "to"])
+
+        # if index is tuple, convert to a MultiIndex
+        if all(isinstance(idx, tuple) for idx in data.index):
+            data.index = pd.MultiIndex.from_tuples(data.index, names=["from", "to"])
         # convert dataframe to series
         data = data.squeeze()
         return data

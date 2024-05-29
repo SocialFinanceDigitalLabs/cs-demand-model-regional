@@ -71,4 +71,10 @@ class SeriesAwareJSONEncoder(json.JSONEncoder):
 
 
 def str_to_tuple(string):
-    return ast.literal_eval(string)
+    """
+    will convert string to a tuple if possible, otherwise will return string
+    """
+    try:
+        return ast.literal_eval(string)
+    except Exception:
+        return string

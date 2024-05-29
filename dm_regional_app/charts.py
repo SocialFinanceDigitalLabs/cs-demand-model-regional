@@ -174,3 +174,32 @@ def exit_rate_table(data):
     df.columns = ["Age Group", "Placement", "Exit rate"]
 
     return df
+
+
+def entry_rate_table(data):
+    df = data
+
+    df = df.reset_index()
+    df["to"] = df["index"]
+    df = df[df["to"].apply(lambda x: "Not in care" in x) == False]
+
+    df = df.round(4)
+
+    df[["Age Group", "Placement"]] = df["to"].str.split(" - ", expand=True)
+    df.set_index(["to"], inplace=True)
+
+    placement = df.pop("Placement")
+    df.insert(0, "Placement", placement)
+
+    age_group = df.pop("Age Group")
+    df.insert(0, "Age Group", age_group)
+
+    df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
+
+    df = df.drop(["index"], axis=1)
+
+    print(df)
+
+    df.columns = ["Age Group", "Placement", "Entry rate"]
+
+    return df
