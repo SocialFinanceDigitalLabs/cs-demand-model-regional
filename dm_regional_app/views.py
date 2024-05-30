@@ -9,7 +9,7 @@ from dm_regional_app.charts import historic_chart, prediction_chart
 from dm_regional_app.forms import HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
-from ssda903 import Config
+from ssda903.config import PlacementCategories
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
@@ -146,8 +146,7 @@ def prediction(request):
         else:
             empty_dataframe = False
 
-            config = Config()
-            stats = PopulationStats(historic_data, config)
+            stats = PopulationStats(historic_data)
 
             # Call predict function with default dates
             prediction = predict(
@@ -181,7 +180,6 @@ def historic_data(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
-        config = Config()
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -218,16 +216,13 @@ def historic_data(request):
             data = apply_filters(datacontainer.enriched_view, form.initial)
 
         entry_into_care_count = data.loc[
-            data.placement_type_before
-            == datacontainer.config.PlacementCategories.NOT_IN_CARE
+            data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label
         ]["CHILD"].nunique()
         exiting_care_count = data.loc[
-            data.placement_type_after
-            == datacontainer.config.PlacementCategories.NOT_IN_CARE
+            data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label
         ]["CHILD"].nunique()
 
-        config = Config()
-        stats = PopulationStats(data, config)
+        stats = PopulationStats(data)
 
         chart = historic_chart(stats)
 

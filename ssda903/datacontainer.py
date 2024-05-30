@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from ssda903.config import Config
+from ssda903.config import YEAR_IN_DAYS, AgeBrackets, PlacementCategories
 from ssda903.data.ssda903 import SSDA903TableType
 from ssda903.datastore import DataFile, DataStore, TableType
 
@@ -20,9 +20,8 @@ class DemandModellingDataContainer:
     merging data to create a single, consistent dataset.
     """
 
-    def __init__(self, datastore: DataStore, config: Config):
+    def __init__(self, datastore: DataStore):
         self.__datastore = datastore
-        self.__config = config
 
         self.__file_info = []
         for file_info in datastore.files:
@@ -42,10 +41,6 @@ class DemandModellingDataContainer:
     @property
     def file_info(self):
         return self.__file_info
-
-    @property
-    def config(self) -> Config:
-        return self.__config
 
     def _detect_table_type(self, file_info: DataFile) -> Optional[TableType]:
         """
@@ -212,12 +207,8 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-        combined["age"] = (
-            combined["DECOM"] - combined["DOB"]
-        ).dt.days / self.__config.year_in_days
-        combined["end_age"] = (
-            combined["DEC"] - combined["DOB"]
-        ).dt.days / self.__config.year_in_days
+        combined["age"] = (combined["DECOM"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
+        combined["end_age"] = (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
         return combined
 
     def _add_age_bins(self, combined: pd.DataFrame) -> pd.DataFrame:
@@ -226,9 +217,15 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-        AgeBracket = self.__config.AgeBrackets
-        combined["age_bin"] = combined["age"].apply(AgeBracket.bracket_for_age)
-        combined["end_age_bin"] = combined["end_age"].apply(AgeBracket.bracket_for_age)
+
+        def get_age_bracket_label(age):
+            age_bracket = AgeBrackets.bracket_for_age(age)
+            if age_bracket is not None:
+                return age_bracket.label
+            return None
+
+        combined["age_bin"] = combined["age"].apply(get_age_bracket_label)
+        combined["end_age_bin"] = combined["end_age"].apply(get_age_bracket_label)
         return combined
 
     def _add_related_placement_type(
@@ -239,14 +236,13 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-        PlacementCategories = self.__config.PlacementCategories
 
         combined = combined.sort_values(["CHILD", "DECOM", "DEC"], na_position="first")
 
         combined[new_column_name] = (
             combined.groupby("CHILD")["placement_type"]
             .shift(offset)
-            .fillna(PlacementCategories.NOT_IN_CARE)
+            .fillna(PlacementCategories.NOT_IN_CARE.value.label)
         )
 
         offset_mask = combined["CHILD"] == combined["CHILD"].shift(offset)
@@ -254,7 +250,9 @@ class DemandModellingDataContainer:
             offset_mask &= combined["DECOM"] != combined["DEC"].shift(offset)
         else:
             offset_mask &= combined["DEC"] != combined["DECOM"].shift(offset)
-        combined.loc[offset_mask, new_column_name] = PlacementCategories.NOT_IN_CARE
+        combined.loc[
+            offset_mask, new_column_name
+        ] = PlacementCategories.NOT_IN_CARE.value.label
         return combined
 
     def _add_placement_category(self, combined: pd.DataFrame) -> pd.DataFrame:
@@ -263,10 +261,8 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-        PlacementCategories = self.__config.PlacementCategories
+        placement_type_map = PlacementCategories.get_placement_type_map()
         combined["placement_type"] = combined["PLACE"].apply(
-            lambda x: PlacementCategories.placement_type_map.get(
-                x, PlacementCategories.OTHER
-            )
+            lambda x: placement_type_map.get(x, PlacementCategories.OTHER.value).label
         )
         return combined

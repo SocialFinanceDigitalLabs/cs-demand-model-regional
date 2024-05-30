@@ -1,5 +1,8 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Generator
+
+from ssda903.config._placement_categories import PlacementCategories, PlacementCategory
 
 
 @dataclass
@@ -10,17 +13,14 @@ class CostDefaults:
 
 @dataclass
 class CostItem:
-    id: str
     label: str
-    category: "PlacementCategory"
+    category: PlacementCategory
     defaults: CostDefaults
 
     def toJSON(self) -> dict:
         return {
-            "id": self.id,
             "label": self.label,
             "category": {
-                "name": self.category.name,
                 "label": self.category.label,
             },
             "defaults": {
@@ -30,26 +30,57 @@ class CostItem:
         }
 
 
-def _parse_config(config: "Config") -> Generator[CostItem, None, None]:
-    for key, value in config.config.costs.items():
-        category = config.PlacementCategories[value["category"]]
-        defaults = CostDefaults(**value["defaults"])
-        yield CostItem(key, value["label"], category, defaults)
+class Costs(Enum):
+    FOSTER_FRIEND_RELATION = CostItem(
+        label="Fostering (Friend/Relative)",
+        category=PlacementCategories.FOSTERING.value,
+        defaults=CostDefaults(cost_per_day=100, proportion=1),
+    )
+    FOSTER_IN_HOUSE = CostItem(
+        label="Fostering (In-house)",
+        category=PlacementCategories.FOSTERING.value,
+        defaults=CostDefaults(cost_per_day=150, proportion=1),
+    )
+    FOSTER_IFA = CostItem(
+        label="Fostering (IFA)",
+        category=PlacementCategories.FOSTERING.value,
+        defaults=CostDefaults(cost_per_day=250, proportion=1),
+    )
+    RESIDENTIAL_IN_HOUSE = CostItem(
+        label="Residential (In-house)",
+        category=PlacementCategories.RESIDENTIAL.value,
+        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+    )
+    RESIDENTIAL_EXTERNAL = CostItem(
+        label="Residential (External)",
+        category=PlacementCategories.RESIDENTIAL.value,
+        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+    )
+    SUPPORTED = CostItem(
+        label="Supported accomodation",
+        category=PlacementCategories.SUPPORTED.value,
+        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+    )
+    SECURE_HOME = CostItem(
+        label="Secure home",
+        category=PlacementCategories.OTHER.value,
+        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+    )
+    PLACED_WITH_FAMILY = CostItem(
+        label="Placed with family",
+        category=PlacementCategories.OTHER.value,
+        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+    )
+    OTHER = CostItem(
+        label="Other",
+        category=PlacementCategories.OTHER.value,
+        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+    )
 
-
-class Costs:
-    def __init__(self, config: "Config"):
-        self.costs = {cost.id: cost for cost in _parse_config(config)}
-
-    def __getitem__(self, key):
-        return self.costs[key]
-
+    @classmethod
     def by_category(
-        self, category: "PlacementCategory"
+        cls, category: "PlacementCategory"
     ) -> Generator[CostItem, None, None]:
-        for cost in self.costs.values():
-            if cost.category == category:
+        for cost in cls:
+            if cost.value.category == category:
                 yield cost
-
-    def __iter__(self):
-        return iter(self.costs.values())
