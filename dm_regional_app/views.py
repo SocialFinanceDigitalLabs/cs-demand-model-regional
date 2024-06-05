@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from dm_regional_app.charts import (
+    compare_forecast,
     entry_rate_table,
     exit_rate_table,
     historic_chart,
@@ -116,7 +117,36 @@ def entry_rates(request):
                 else:
                     session_scenario.adjusted_numbers = data
                     session_scenario.save()
-                return redirect("adjusted")
+
+                config = Config()
+                stats = PopulationStats(historic_data, config)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters
+                )
+
+                is_post = True
+
+                return render(
+                    request,
+                    "dm_regional_app/views/entry_rates.html",
+                    {
+                        "entry_rate_table": entry_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
 
         else:
             form = DynamicForm(
@@ -124,12 +154,15 @@ def entry_rates(request):
                 dataframe=prediction.entry_rates,
             )
 
+            is_post = False
+
         return render(
             request,
             "dm_regional_app/views/entry_rates.html",
             {
                 "entry_rate_table": entry_rates,
                 "form": form,
+                "is_post": is_post,
             },
         )
     else:
@@ -178,7 +211,36 @@ def exit_rates(request):
                 else:
                     session_scenario.adjusted_rates = data
                     session_scenario.save()
-                return redirect("adjusted")
+
+                config = Config()
+                stats = PopulationStats(historic_data, config)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters
+                )
+
+                is_post = True
+
+                return render(
+                    request,
+                    "dm_regional_app/views/exit_rates.html",
+                    {
+                        "exit_rate_table": exit_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
 
         else:
             form = DynamicForm(
@@ -186,12 +248,15 @@ def exit_rates(request):
                 dataframe=prediction.transition_rates,
             )
 
+            is_post = False
+
         return render(
             request,
             "dm_regional_app/views/exit_rates.html",
             {
                 "exit_rate_table": exit_rates,
                 "form": form,
+                "is_post": is_post,
             },
         )
     else:
@@ -240,7 +305,36 @@ def transition_rates(request):
                 else:
                     session_scenario.adjusted_rates = data
                     session_scenario.save()
-                return redirect("adjusted")
+
+                config = Config()
+                stats = PopulationStats(historic_data, config)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters
+                )
+
+                is_post = True
+
+                return render(
+                    request,
+                    "dm_regional_app/views/transition_rates.html",
+                    {
+                        "transition_rate_table": transition_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
 
         else:
             form = DynamicForm(
@@ -248,12 +342,15 @@ def transition_rates(request):
                 dataframe=prediction.transition_rates,
             )
 
+            is_post = False
+
         return render(
             request,
             "dm_regional_app/views/transition_rates.html",
             {
                 "transition_rate_table": transition_rates,
                 "form": form,
+                "is_post": is_post,
             },
         )
     else:
@@ -272,6 +369,7 @@ def adjusted(request):
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
         if request.method == "POST":
+            # check if it was historic data filter form that was submitted
             if "uasc" in request.POST:
                 historic_form = HistoricDataFilter(
                     request.POST,
@@ -292,6 +390,7 @@ def adjusted(request):
                         datacontainer.enriched_view, historic_form.cleaned_data
                     )
 
+            # check if it was predict filter form that was submitted
             if "reference_start_date" in request.POST:
                 predict_form = PredictFilter(
                     request.POST,

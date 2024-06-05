@@ -203,3 +203,157 @@ def entry_rate_table(data):
     df.columns = ["Age Group", "Placement", "Entry rate"]
 
     return df
+
+
+def compare_forecast(
+    historic_data: PopulationStats,
+    base_forecast: Prediction,
+    adjusted_forecast: Prediction,
+    **kwargs
+):
+    # pop start and end dates to visualise reference period
+    reference_start_date = kwargs.pop("reference_start_date")
+    reference_end_date = kwargs.pop("reference_end_date")
+
+    # dataframe containing total children in historic data
+    df_hd = historic_data.stock.unstack().reset_index()
+    df_hd.columns = ["from", "date", "historic"]
+    df_hd = df_hd[["date", "historic"]].groupby(by="date").sum().reset_index()
+    df_hd["date"] = pd.to_datetime(df_hd["date"]).dt.date
+
+    # dataframe containing total children in base forecast
+    df = base_forecast.population.unstack().reset_index()
+
+    df.columns = ["from", "date", "forecast"]
+    df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
+    df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
+    df["date"] = pd.to_datetime(df["date"]).dt.date
+
+    # dataframe containing upper and lower confidence intervals for base forecast
+    df_ci = base_forecast.variance.unstack().reset_index()
+    df_ci.columns = ["bin", "date", "variance"]
+    df_ci = df_ci[["date", "variance"]].groupby(by="date").sum().reset_index()
+    df_ci["date"] = pd.to_datetime(df_ci["date"]).dt.date
+    df_ci["upper"] = df["forecast"] + df_ci["variance"]
+    df_ci["lower"] = df["forecast"] - df_ci["variance"]
+
+    # dataframe containing total children in adjusted forecast
+    df_af = adjusted_forecast.population.unstack().reset_index()
+
+    df_af.columns = ["from", "date", "forecast"]
+    df_af = df_af[df_af["from"].apply(lambda x: "Not in care" in x) == False]
+    df_af = df_af[["date", "forecast"]].groupby(by="date").sum().reset_index()
+    df_af["date"] = pd.to_datetime(df_af["date"]).dt.date
+
+    # dataframe containing upper and lower confidence intervals for adjusted forecast
+    df_df_ci = adjusted_forecast.variance.unstack().reset_index()
+    df_df_ci.columns = ["bin", "date", "variance"]
+    df_df_ci = df_df_ci[["date", "variance"]].groupby(by="date").sum().reset_index()
+    df_df_ci["date"] = pd.to_datetime(df_df_ci["date"]).dt.date
+    df_df_ci["upper"] = df_af["forecast"] + df_df_ci["variance"]
+    df_df_ci["lower"] = df_af["forecast"] - df_df_ci["variance"]
+
+    # visualise prediction using unstacked dataframe
+    fig = go.Figure()
+
+    # Display confidence interval as filled shape
+    fig.add_trace(
+        go.Scatter(
+            x=df_ci["date"],
+            y=df_ci["lower"],
+            line_color="rgba(255,255,255,0)",
+            name="Confidence interval",
+            showlegend=False,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=df_ci["date"],
+            y=df_ci["upper"],
+            fill="tonexty",
+            fillcolor="rgba(0,176,246,0.2)",
+            line_color="rgba(255,255,255,0)",
+            name="Base confidence interval",
+            showlegend=True,
+        )
+    )
+
+    # Display confidence interval as filled shape
+    fig.add_trace(
+        go.Scatter(
+            x=df_ci["date"],
+            y=df_ci["lower"],
+            line_color="rgba(255,255,255,0)",
+            name="Confidence interval",
+            showlegend=False,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=df_ci["date"],
+            y=df_ci["upper"],
+            fill="tonexty",
+            fillcolor="rgba(0,176,246,0.2)",
+            line_color="rgba(255,255,255,0)",
+            name="Adjusted confidence interval",
+            showlegend=True,
+        )
+    )
+
+    # add base forecast for total children
+    fig.add_trace(
+        go.Scatter(
+            x=df_af["date"],
+            y=df_af["forecast"],
+            name="Adjusted Forecast",
+            line=dict(color="black", width=1.5, dash="dash"),
+        )
+    )
+
+    # add adjusted forecast for total children
+    fig.add_trace(
+        go.Scatter(
+            x=df["date"],
+            y=df["forecast"],
+            name="Base Forecast",
+            line=dict(color="black", width=1.5),
+        )
+    )
+
+    # add historic data for total children
+    fig.add_trace(
+        go.Scatter(
+            x=df_hd["date"],
+            y=df_hd["historic"],
+            name="Historic data",
+            line=dict(color="black", width=1.5, dash="dot"),
+        )
+    )
+
+    # add shaded reference period
+    fig.add_shape(
+        type="rect",
+        xref="x",
+        yref="paper",
+        x0=reference_start_date,
+        y0=0,
+        x1=reference_end_date,
+        y1=1,
+        line=dict(
+            width=0,
+        ),
+        label=dict(
+            text="Reference period", textposition="top center", font=dict(size=14)
+        ),
+        fillcolor="rgba(105,105,105,0.1)",
+        layer="above",
+    )
+
+    fig.update_layout(
+        title="Forecast", xaxis_title="Date", yaxis_title="Number of children"
+    )
+    fig.update_yaxes(rangemode="tozero")
+    fig_html = fig.to_html(full_html=False)
+    return fig_html
