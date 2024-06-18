@@ -145,7 +145,7 @@ def transition_rate_table(data):
     from_col = df.pop("From")
     df.insert(0, "From", from_col)
 
-    df.columns = ["From", "To", "Transition rate"]
+    df.columns = ["From", "To", "Base transition rate"]
 
     return df
 
@@ -171,7 +171,7 @@ def exit_rate_table(data):
 
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
-    df.columns = ["Age Group", "Placement", "Exit rate"]
+    df.columns = ["Age Group", "Placement", "Base exit rate"]
 
     return df
 
@@ -200,7 +200,7 @@ def entry_rate_table(data):
 
     print(df)
 
-    df.columns = ["Age Group", "Placement", "Entry rate"]
+    df.columns = ["Age Group", "Placement", "Base entry rate"]
 
     return df
 
