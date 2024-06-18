@@ -84,6 +84,7 @@ def clear_rate_adjustments(request):
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         session_scenario.adjusted_rates = None
+        session_scenario.adjusted_numbers = None
         session_scenario.save()
         messages.success(request, "Rate adjustments cleared.")
     return redirect("adjusted")
