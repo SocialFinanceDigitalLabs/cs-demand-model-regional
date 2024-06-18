@@ -259,10 +259,33 @@ def compare_forecast(
     # Display confidence interval as filled shape
     fig.add_trace(
         go.Scatter(
+            x=df_df_ci["date"],
+            y=df_df_ci["lower"],
+            line_color="rgba(255,255,255,0)",
+            name="Adjusted confidence interval",
+            showlegend=False,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=df_df_ci["date"],
+            y=df_df_ci["upper"],
+            fill="tonexty",
+            fillcolor="rgba(255,140,0,0.2)",
+            line_color="rgba(255,255,255,0)",
+            name="Adjusted confidence interval",
+            showlegend=True,
+        )
+    )
+
+    # Display confidence interval as filled shape
+    fig.add_trace(
+        go.Scatter(
             x=df_ci["date"],
             y=df_ci["lower"],
             line_color="rgba(255,255,255,0)",
-            name="Confidence interval",
+            name="Base confidence interval",
             showlegend=False,
         )
     )
@@ -275,29 +298,6 @@ def compare_forecast(
             fillcolor="rgba(0,176,246,0.2)",
             line_color="rgba(255,255,255,0)",
             name="Base confidence interval",
-            showlegend=True,
-        )
-    )
-
-    # Display confidence interval as filled shape
-    fig.add_trace(
-        go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["lower"],
-            line_color="rgba(255,255,255,0)",
-            name="Confidence interval",
-            showlegend=False,
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["upper"],
-            fill="tonexty",
-            fillcolor="rgba(0,176,246,0.2)",
-            line_color="rgba(255,255,255,0)",
-            name="Adjusted confidence interval",
             showlegend=True,
         )
     )
