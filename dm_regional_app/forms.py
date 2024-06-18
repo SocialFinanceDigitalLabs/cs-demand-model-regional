@@ -171,6 +171,7 @@ class DynamicForm(forms.Form):
             if value:
                 transition.append(field_name)
                 transition_rate.append(value)
+
         data = pd.DataFrame(
             {
                 "transition": transition,
@@ -184,5 +185,7 @@ class DynamicForm(forms.Form):
         if all(isinstance(idx, tuple) for idx in data.index):
             data.index = pd.MultiIndex.from_tuples(data.index, names=["from", "to"])
         # convert dataframe to series
-        data = data.squeeze()
+
+        data = pd.Series(data["adjusted_rate"].values, index=data.index)
+
         return data

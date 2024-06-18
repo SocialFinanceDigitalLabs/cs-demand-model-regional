@@ -79,6 +79,17 @@ def router_handler(request):
 
 
 @login_required
+def clear_rate_adjustments(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_rates = None
+        session_scenario.save()
+        messages.success(request, "Rate adjustments cleared.")
+    return redirect("adjusted")
+
+
+@login_required
 def entry_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
