@@ -6,7 +6,7 @@ from dateutil.relativedelta import relativedelta
 from demand_model import MultinomialPredictor
 from demand_model.multinomial.predictor import Prediction
 
-from ssda903 import Config, PopulationStats
+from ssda903 import PopulationStats
 
 
 def predict(
@@ -19,8 +19,7 @@ def predict(
     """
     Analyses source between start and end, and then predicts the population at prediction_date.
     """
-    config = Config()
-    stats = PopulationStats(data, config)
+    stats = PopulationStats(data)
     if prediction_start_date is None:
         prediction_start_date = reference_end_date
     if prediction_end_date is None:
