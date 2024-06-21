@@ -198,8 +198,6 @@ def entry_rate_table(data):
 
     df = df.drop(["index"], axis=1)
 
-    print(df)
-
     df.columns = ["Age Group", "Placement", "Base entry rate"]
 
     return df

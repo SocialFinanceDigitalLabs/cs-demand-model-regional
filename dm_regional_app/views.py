@@ -458,8 +458,6 @@ def adjusted(request):
                 rate_adjustment=session_scenario.adjusted_rates
             )
 
-            print(prediction.entry_rates)
-
             # build chart
             chart = prediction_chart(
                 stats, prediction, **session_scenario.prediction_parameters
