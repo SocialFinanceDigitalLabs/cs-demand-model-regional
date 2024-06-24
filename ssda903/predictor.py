@@ -3,10 +3,9 @@ from typing import Iterable, Optional, Union
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from demand_model import MultinomialPredictor
-from demand_model.multinomial.predictor import Prediction
 
 from ssda903 import Config, PopulationStats
+from ssda903.multinomial import MultinomialPredictor, Prediction
 
 
 def predict(
