@@ -445,6 +445,12 @@ def adjusted(request):
             empty_dataframe = True
             chart = None
 
+            transition_rates = None
+
+            exit_rates = None
+
+            entry_rates = None
+
         else:
             empty_dataframe = False
 
