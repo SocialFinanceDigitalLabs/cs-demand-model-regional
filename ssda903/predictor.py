@@ -1,12 +1,11 @@
 from datetime import date
-from typing import Optional
+from typing import Iterable, Optional, Union
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from demand_model import MultinomialPredictor
-from demand_model.multinomial.predictor import Prediction
 
-from ssda903 import PopulationStats
+from ssda903 import Config, PopulationStats
+from ssda903.multinomial import MultinomialPredictor, Prediction
 
 
 def predict(
@@ -15,6 +14,8 @@ def predict(
     reference_end_date: date,
     prediction_start_date: Optional[date] = None,
     prediction_end_date: Optional[date] = None,
+    rate_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
+    number_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
 ) -> Prediction:
     """
     Analyses source between start and end, and then predicts the population at prediction_date.
@@ -38,6 +39,8 @@ def predict(
             reference_start_date, reference_end_date
         ),
         start_date=prediction_start_date,
+        rate_adjustment=rate_adjustment,
+        number_adjustment=number_adjustment,
     )
     prediction_days = (prediction_end_date - prediction_start_date).days
     prediction = predictor.predict(prediction_days, progress=False)

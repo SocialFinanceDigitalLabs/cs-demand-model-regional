@@ -1,3 +1,4 @@
+import pandas as pd
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
@@ -5,8 +6,15 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from dm_regional_app.charts import historic_chart, prediction_chart
-from dm_regional_app.forms import HistoricDataFilter, PredictFilter
+from dm_regional_app.charts import (
+    compare_forecast,
+    entry_rate_table,
+    exit_rate_table,
+    historic_chart,
+    prediction_chart,
+    transition_rate_table,
+)
+from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
 from ssda903.config import PlacementCategories
@@ -38,21 +46,19 @@ def router_handler(request):
         "uasc": "all",
     }
 
-    # this is stand in code to be edited when prediction page is improved
-    prediction_filters = {"buckets": []}
     prediction_parameters = {
         "reference_start_date": datacontainer.start_date,
-        # delete - relativedelta(months=6) just for testing before datacontainer fix
-        "reference_end_date": datacontainer.end_date - relativedelta(months=6),
+        "reference_end_date": datacontainer.end_date,
         "prediction_start_date": None,
         "prediction_end_date": None,
     }
     historic_stock = {
         "population": {},
         "base_rates": [],
-        "adjusted_rates": [],
     }
-    adjusted_costs = {"adjusted_costs": []}
+    adjusted_costs = None
+
+    adjusted_rates = None
 
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
     session_scenario, created = SessionScenario.objects.get_or_create(
@@ -60,16 +66,433 @@ def router_handler(request):
         defaults={
             "user_id": current_user.id,
             "historic_filters": historic_filters,
-            "prediction_filters": prediction_filters,
             "prediction_parameters": prediction_parameters,
             "historic_stock": historic_stock,
             "adjusted_costs": adjusted_costs,
+            "adjusted_rates": adjusted_rates,
         },
     )
 
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+@login_required
+def clear_rate_adjustments(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_rates = None
+        session_scenario.adjusted_numbers = None
+        session_scenario.save()
+        messages.success(request, "Rate adjustments cleared.")
+    return redirect("adjusted")
+
+
+@login_required
+def entry_rates(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        entry_rates = entry_rate_table(prediction.entry_rates)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=prediction.entry_rates,
+                initial_data=session_scenario.adjusted_numbers,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_numbers is not None:
+                    # if previous rate adjustments have been made, update old series with new adjustments
+                    rate_adjustments = session_scenario.adjusted_numbers
+                    new_numbers = rate_adjustments.combine_first(data)
+
+                    session_scenario.adjusted_numbers = new_numbers
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_numbers = data
+                    session_scenario.save()
+
+                config = Config()
+                stats = PopulationStats(historic_data, config)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters
+                )
+
+                is_post = True
+
+                return render(
+                    request,
+                    "dm_regional_app/views/entry_rates.html",
+                    {
+                        "entry_rate_table": entry_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
+
+        else:
+            form = DynamicForm(
+                initial_data=session_scenario.adjusted_numbers,
+                dataframe=prediction.entry_rates,
+            )
+
+            is_post = False
+
+        return render(
+            request,
+            "dm_regional_app/views/entry_rates.html",
+            {
+                "entry_rate_table": entry_rates,
+                "form": form,
+                "is_post": is_post,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        return redirect(redirect_url)
+
+
+@login_required
+def exit_rates(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        exit_rates = exit_rate_table(prediction.transition_rates)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=prediction.transition_rates,
+                initial_data=session_scenario.adjusted_rates,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_rates is not None:
+                    # if previous rate adjustments have been made, update old series with new adjustments
+                    rate_adjustments = session_scenario.adjusted_rates
+                    new_rates = rate_adjustments.combine_first(data)
+
+                    session_scenario.adjusted_rates = new_rates
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_rates = data
+                    session_scenario.save()
+
+                config = Config()
+                stats = PopulationStats(historic_data, config)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters
+                )
+
+                is_post = True
+
+                return render(
+                    request,
+                    "dm_regional_app/views/exit_rates.html",
+                    {
+                        "exit_rate_table": exit_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
+
+        else:
+            form = DynamicForm(
+                initial_data=session_scenario.adjusted_rates,
+                dataframe=prediction.transition_rates,
+            )
+
+            is_post = False
+
+        return render(
+            request,
+            "dm_regional_app/views/exit_rates.html",
+            {
+                "exit_rate_table": exit_rates,
+                "form": form,
+                "is_post": is_post,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        return redirect(redirect_url)
+
+
+@login_required
+def transition_rates(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        transition_rates = transition_rate_table(prediction.transition_rates)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=prediction.transition_rates,
+                initial_data=session_scenario.adjusted_rates,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_rates is not None:
+                    # if previous rate adjustments have been made, update old series with new adjustments
+                    rate_adjustments = session_scenario.adjusted_rates
+                    new_rates = rate_adjustments.combine_first(data)
+
+                    session_scenario.adjusted_rates = new_rates
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_rates = data
+                    session_scenario.save()
+
+                config = Config()
+                stats = PopulationStats(historic_data, config)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters
+                )
+
+                is_post = True
+
+                return render(
+                    request,
+                    "dm_regional_app/views/transition_rates.html",
+                    {
+                        "transition_rate_table": transition_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
+
+        else:
+            form = DynamicForm(
+                initial_data=session_scenario.adjusted_rates,
+                dataframe=prediction.transition_rates,
+            )
+
+            is_post = False
+
+        return render(
+            request,
+            "dm_regional_app/views/transition_rates.html",
+            {
+                "transition_rate_table": transition_rates,
+                "form": form,
+                "is_post": is_post,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        return redirect(redirect_url)
+
+
+@login_required
+def adjusted(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        if request.method == "POST":
+            # check if it was historic data filter form that was submitted
+            if "uasc" in request.POST:
+                historic_form = HistoricDataFilter(
+                    request.POST,
+                    la=datacontainer.unique_las,
+                    placement_types=datacontainer.unique_placement_types,
+                    age_bins=datacontainer.unique_age_bins,
+                )
+                predict_form = PredictFilter(
+                    initial=session_scenario.prediction_parameters,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                if historic_form.is_valid():
+                    session_scenario.historic_filters = historic_form.cleaned_data
+                    session_scenario.save()
+
+                    historic_data = apply_filters(
+                        datacontainer.enriched_view, historic_form.cleaned_data
+                    )
+
+            # check if it was predict filter form that was submitted
+            if "reference_start_date" in request.POST:
+                predict_form = PredictFilter(
+                    request.POST,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                historic_form = HistoricDataFilter(
+                    initial=session_scenario.historic_filters,
+                    la=datacontainer.unique_las,
+                    placement_types=datacontainer.unique_placement_types,
+                    age_bins=datacontainer.unique_age_bins,
+                )
+
+                historic_data = apply_filters(
+                    datacontainer.enriched_view, historic_form.initial
+                )
+                if predict_form.is_valid():
+                    session_scenario.prediction_parameters = predict_form.cleaned_data
+                    session_scenario.save()
+
+        else:
+            historic_form = HistoricDataFilter(
+                initial=session_scenario.historic_filters,
+                la=datacontainer.unique_las,
+                placement_types=datacontainer.unique_placement_types,
+                age_bins=datacontainer.unique_age_bins,
+            )
+            historic_data = apply_filters(
+                datacontainer.enriched_view, historic_form.initial
+            )
+
+            # initialize form with default dates
+            predict_form = PredictFilter(
+                initial=session_scenario.prediction_parameters,
+                start_date=datacontainer.start_date,
+                end_date=datacontainer.end_date,
+            )
+
+        if historic_data.empty:
+            empty_dataframe = True
+            chart = None
+
+            transition_rates = None
+
+            exit_rates = None
+
+            entry_rates = None
+
+        else:
+            empty_dataframe = False
+
+            config = Config()
+            stats = PopulationStats(historic_data, config)
+
+            # Call predict function with default dates
+            prediction = predict(
+                data=historic_data,
+                **session_scenario.prediction_parameters,
+                rate_adjustment=session_scenario.adjusted_rates
+            )
+
+            # build chart
+            chart = prediction_chart(
+                stats, prediction, **session_scenario.prediction_parameters
+            )
+
+            transition_rates = transition_rate_table(prediction.transition_rates)
+
+            exit_rates = exit_rate_table(prediction.transition_rates)
+
+            entry_rates = entry_rate_table(prediction.entry_rates)
+
+        return render(
+            request,
+            "dm_regional_app/views/adjusted.html",
+            {
+                "predict_form": predict_form,
+                "historic_form": historic_form,
+                "chart": chart,
+                "empty_dataframe": empty_dataframe,
+                "transition_rate_table": transition_rates,
+                "exit_rate_table": exit_rates,
+                "entry_rate_table": entry_rates,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "adjusted"
+        return redirect(redirect_url)
 
 
 @login_required

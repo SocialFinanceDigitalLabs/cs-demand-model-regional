@@ -1,8 +1,11 @@
+import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Column, Layout, Row, Submit
 from django import forms
 from django_select2 import forms as s2forms
+
+from dm_regional_app.utils import str_to_tuple
 
 
 class PredictFilter(forms.Form):
@@ -127,3 +130,62 @@ class HistoricDataFilter(forms.Form):
             ),
             Submit("submit", "Filter"),
         )
+
+
+class DynamicForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.dataframe = kwargs.pop("dataframe", None)
+        initial_data = kwargs.pop("initial_data", pd.Series())
+
+        super(DynamicForm, self).__init__(*args, **kwargs)
+        self.initialize_fields(initial_data)
+
+    def initialize_fields(self, initial_data):
+        # adjusted rates will be None if user has not changed these before, so check
+        if initial_data is not None:
+            for index in self.dataframe.index:
+                field_name = str(index)
+                initial_value = None
+
+                # Attempt to get the initial value using the multiindex
+                try:
+                    initial_value = initial_data.loc[index]
+                except KeyError:
+                    initial_value = None
+
+                self.fields[field_name] = forms.FloatField(
+                    required=False, initial=initial_value
+                )
+        else:
+            for index in self.dataframe.index:
+                field_name = str(index)
+                initial_value = None
+                self.fields[field_name] = forms.FloatField(
+                    required=False, initial=initial_value
+                )
+
+    def save(self):
+        transition = []
+        transition_rate = []
+        for field_name, value in self.cleaned_data.items():
+            if value:
+                transition.append(field_name)
+                transition_rate.append(value)
+
+        data = pd.DataFrame(
+            {
+                "transition": transition,
+                "adjusted_rate": transition_rate,
+            }
+        )
+        data["transition"] = data["transition"].apply(str_to_tuple)
+        data = data.set_index("transition")
+
+        # if index is tuple, convert to a MultiIndex
+        if all(isinstance(idx, tuple) for idx in data.index):
+            data.index = pd.MultiIndex.from_tuples(data.index, names=["from", "to"])
+        # convert dataframe to series
+
+        data = pd.Series(data["adjusted_rate"].values, index=data.index)
+
+        return data
