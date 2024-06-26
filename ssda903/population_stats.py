@@ -1,24 +1,18 @@
 from datetime import date
 from functools import lru_cache
 
-import numpy as np
 import pandas as pd
 
-from ssda903.config import Config
+from ssda903.config import AgeBrackets, PlacementCategories
 
 
 class PopulationStats:
-    def __init__(self, df: pd.DataFrame, config: Config):
+    def __init__(self, df: pd.DataFrame):
         self.__df = df
-        self.__config = config
 
     @property
     def df(self):
         return self.__df
-
-    @property
-    def config(self) -> Config:
-        return self.__config
 
     @property
     def stock(self):
@@ -28,10 +22,9 @@ class PopulationStats:
         day and then resampling to get the daily populations.
         """
         df = self.df.copy()
-        df["bin"] = df.apply(
-            lambda c: f"{c.age_bin.label} - {c.placement_type.label.capitalize()}",
-            axis=1,
-        )
+
+        df["bin"] = df.apply(lambda c: (c.age_bin, c.placement_type), axis=1)
+
         endings = df.groupby(["DEC", "bin"]).size()
         endings.name = "nof_decs"
 
@@ -59,7 +52,6 @@ class PopulationStats:
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
         # Add the missing age bins and fill with zeros
-        # pops = pops.T.reindex(self.__config.states(as_index=True)).T.fillna(0)
 
         return pops
 
@@ -77,12 +69,11 @@ class PopulationStats:
     def transitions(self):
         transitions = self.df.copy()
         transitions["start_bin"] = transitions.apply(
-            lambda c: f"{c.age_bin.label} - {c.placement_type.label.capitalize()}",
-            axis=1,
+
+            lambda c: (c.age_bin, c.placement_type), axis=1
         )
         transitions["end_bin"] = transitions.apply(
-            lambda c: f"{c.age_bin.label} - {c.placement_type_after.label.capitalize()}",
-            axis=1,
+            lambda c: (c.age_bin, c.placement_type_after), axis=1
         )
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
         transitions = (
@@ -117,16 +108,18 @@ class PopulationStats:
         Returns the probability of ageing out from one bin to the other.
         """
         ageing_out = []
-        for age_group in self.config.AgeBrackets:
-            for pt in self.config.PlacementCategories:
+        for age_group in AgeBrackets:
+            for pt in PlacementCategories:
                 next_name = (
-                    (age_group.next.name, pt.name) if age_group.next else tuple()
+                    (age_group.next.value.label, pt.value.label)
+                    if age_group.next
+                    else tuple()
                 )
                 ageing_out.append(
                     {
-                        "from": (age_group.name, pt.name),
+                        "from": (age_group.value.label, pt.value.label),
                         "to": next_name,
-                        "rate": age_group.daily_probability,
+                        "rate": age_group.value.daily_probability,
                     }
                 )
 
@@ -139,7 +132,6 @@ class PopulationStats:
         """
         Returns the number of entrants and the daily_probability of entrants for each age bracket and placement type.
         """
-        PlacementCategories = self.__config.PlacementCategories
         start_date = pd.to_datetime(start_date)
         end_date = pd.to_datetime(end_date)
 
@@ -147,11 +139,14 @@ class PopulationStats:
 
         # Only look at episodes starting in analysis period
         df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()
-        df["to"] = df.apply(lambda c: (c.age_bin.name, c.placement_type.name), axis=1)
+        df["to"] = df.apply(lambda c: (c.age_bin, c.placement_type), axis=1)
 
         # Group by age bin and placement type
         df = (
-            df[df["placement_type_before"] == PlacementCategories.NOT_IN_CARE]
+            df[
+                df["placement_type_before"]
+                == PlacementCategories.NOT_IN_CARE.value.label
+            ]
             .groupby(["to"])
             .size()
         )
