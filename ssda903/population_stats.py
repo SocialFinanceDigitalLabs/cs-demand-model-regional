@@ -23,7 +23,10 @@ class PopulationStats:
         """
         df = self.df.copy()
 
-        df["bin"] = df.apply(lambda c: (c.age_bin, c.placement_type), axis=1)
+        df["bin"] = df.apply(
+            lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
+            axis=1,
+        )
 
         endings = df.groupby(["DEC", "bin"]).size()
         endings.name = "nof_decs"
@@ -69,11 +72,12 @@ class PopulationStats:
     def transitions(self):
         transitions = self.df.copy()
         transitions["start_bin"] = transitions.apply(
-
-            lambda c: (c.age_bin, c.placement_type), axis=1
+            lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
+            axis=1,
         )
         transitions["end_bin"] = transitions.apply(
-            lambda c: (c.age_bin, c.placement_type_after), axis=1
+            lambda c: f"{c.age_bin} - {c.placement_type_after.capitalize()}",
+            axis=1,
         )
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
         transitions = (
@@ -139,7 +143,10 @@ class PopulationStats:
 
         # Only look at episodes starting in analysis period
         df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()
-        df["to"] = df.apply(lambda c: (c.age_bin, c.placement_type), axis=1)
+        df["to"] = df.apply(
+            lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
+            axis=1,
+        )
 
         # Group by age bin and placement type
         df = (
