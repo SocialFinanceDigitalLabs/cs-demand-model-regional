@@ -34,13 +34,13 @@ class NextPrediction:
 def combine_rates(rate1: pd.Series, rate2: pd.Series) -> pd.Series:
     """'
     This has been updated to a multiplication method.
-    Fill value=1 allows any values missing from the adjustment series to remain unchanged in the transition rates
-    Any rates not present in rate1 will not be included in output
+    Excludes cases where rate1 is missing.
     """
-    rate1, rate2 = rate1.align(rate2, fill_value=1)
+    # Align the series with a left join to retain all indices from rate1
+    rate1, rate2 = rate1.align(rate2, join="left", fill_value=1)
 
-    # Create a mask to identify where rate1 is missing but rate2 is not
-    mask = (rate1 != 1) | (rate2 == 1)
+    # Create a mask to identify where rate1 is not missing
+    mask = ~rate1.isna()
 
     # Apply the mask to exclude undesired cases
     rates = (rate1 * rate2)[mask]
