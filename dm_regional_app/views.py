@@ -130,8 +130,7 @@ def entry_rates(request):
                     session_scenario.adjusted_numbers = data
                     session_scenario.save()
 
-                config = Config()
-                stats = PopulationStats(historic_data, config)
+                stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
                     data=historic_data,
@@ -224,8 +223,7 @@ def exit_rates(request):
                     session_scenario.adjusted_rates = data
                     session_scenario.save()
 
-                config = Config()
-                stats = PopulationStats(historic_data, config)
+                stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
                     data=historic_data,
@@ -318,8 +316,7 @@ def transition_rates(request):
                     session_scenario.adjusted_rates = data
                     session_scenario.save()
 
-                config = Config()
-                stats = PopulationStats(historic_data, config)
+                stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
                     data=historic_data,
@@ -454,8 +451,7 @@ def adjusted(request):
         else:
             empty_dataframe = False
 
-            config = Config()
-            stats = PopulationStats(historic_data, config)
+            stats = PopulationStats(historic_data)
 
             # Call predict function with default dates
             prediction = predict(

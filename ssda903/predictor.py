@@ -4,7 +4,7 @@ from typing import Iterable, Optional, Union
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-from ssda903 import Config, PopulationStats
+from ssda903 import PopulationStats
 from ssda903.multinomial import MultinomialPredictor, Prediction
 
 

@@ -4,7 +4,7 @@ from typing import Any, Iterable, Optional, Union
 
 import numpy as np
 import pandas as pd
-from demand_model.base import BaseModelPredictor, combine_rates
+from demand_model.base import BaseModelPredictor
 from demand_model.multinomial.utils import (
     build_transition_rates_matrix,
     fill_missing_states,
@@ -29,6 +29,23 @@ class Prediction:
 class NextPrediction:
     population: np.ndarray
     variance: np.ndarray
+
+
+def combine_rates(rate1: pd.Series, rate2: pd.Series) -> pd.Series:
+    """'
+    This has been updated to a multiplication method.
+    Excludes cases where rate1 is missing.
+    """
+    # Align the series with a left join to retain all indices from rate1
+    rate1, rate2 = rate1.align(rate2, join="left", fill_value=1)
+
+    # Create a mask to identify where rate1 is not missing
+    mask = ~rate1.isna()
+
+    # Apply the mask to exclude undesired cases
+    rates = (rate1 * rate2)[mask]
+    rates.index.names = ["from", "to"]
+    return rates
 
 
 class MultinomialPredictor(BaseModelPredictor):
