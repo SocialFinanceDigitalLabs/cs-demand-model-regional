@@ -40,13 +40,30 @@ class Command(BaseCommand):
             {
                 "Fostering (Friend/Relative)": 0.45,
                 "Fostering (In-house)": 0.35,
-                "Residential (In-house)": 1.2,
+                "Fostering (IFA)": 0.4,
+                "Residential (In-house)": 0.8,
+                "Residential (External)": 0.4,
             }
         )
 
-        costs = forecast_costs(prediction, proportion_adjustment=proportion_adjustment)
+        cost_adjustment = pd.Series(
+            {
+                "Fostering (Friend/Relative)": 120,
+                "Fostering (In-house)": 160,
+                "Residential (In-house)": 900,
+            }
+        )
 
-        print(costs)
+        proportion_adjustment = None
+
+        costs = forecast_costs(
+            prediction,
+            proportion_adjustment=proportion_adjustment,
+            cost_adjustment=cost_adjustment,
+        )
+
+        print(costs.proportions)
+        print(costs.costs)
 
         # print(pop.stock)
         # print(dc.enriched_view)

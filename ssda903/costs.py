@@ -14,7 +14,8 @@ getcontext().prec = 6
 @dataclass
 class CostForecast:
     population: pd.DataFrame
-    cost_adjustment: pd.DataFrame
+    proportions: pd.DataFrame
+    costs: pd.DataFrame
 
 
 def get_cost_items_for_category(category_label: str):
@@ -55,12 +56,10 @@ def normalize_proportions(cost_items, proportion_adjustment):
         # Set remaining proportions to 0 and scale down adjustment proportions
         scale_factor = Decimal("1") / Decimal(adjustment_total)
         for item in cost_items:
-            print(item, adjustment_total, scale_factor)
             if item.label in proportion_adjustment.index:
                 item.defaults.proportion = float(
                     Decimal(proportion_adjustment[item.label]) * scale_factor
                 )
-                print(item.defaults.proportion)
             else:
                 item.defaults.proportion = 0
     else:
@@ -71,7 +70,6 @@ def normalize_proportions(cost_items, proportion_adjustment):
             else 0
         )
         for item in cost_items:
-            print(item, adjustment_total, remaining_total, scale_factor)
             if item.label in proportion_adjustment.index:
                 item.defaults.proportion = proportion_adjustment[item.label]
             else:
@@ -90,6 +88,8 @@ def forecast_costs(
 
     forecast_population = data.population
     processed_categories = set()
+    proportions = pd.Series(dtype="float64")
+    costs = pd.Series(dtype="float64")
 
     # Filter out columns that contain the not in care population
     columns_to_keep = [
@@ -112,15 +112,25 @@ def forecast_costs(
                 processed_categories.add(category.value.label)
                 cost_items = get_cost_items_for_category(category.value.label)
 
-                # Apply proportion adjustments
-                normalize_proportions(cost_items, proportion_adjustment)
+                if proportion_adjustment is not None:
+                    # Apply proportion adjustments
+                    normalize_proportions(cost_items, proportion_adjustment)
 
                 for cost_item in cost_items:
-                    # for each cost item, multiply by cost per day and proportion, then sum together
-                    cost_per_day = cost_item.defaults.cost_per_day
+                    # check if there are cost adjustments and if so, take from this table
+                    if (
+                        cost_adjustment is not None
+                        and cost_item.label in cost_adjustment.index
+                    ):
+                        cost_per_day = cost_adjustment[cost_item.label]
+                    else:
+                        cost_per_day = cost_item.defaults.cost_per_day
                     proportion = cost_item.defaults.proportion
+                    # for each cost item, multiply by cost per day and proportion, then sum together
                     total_cost_series += (
                         forecast_population[column] * cost_per_day * proportion
                     )
+                    proportions[cost_item.label] = proportion
+                    costs[cost_item.label] = cost_per_day
         cost_forecast[column] = total_cost_series
-    return cost_forecast
+    return CostForecast(cost_forecast, proportions, costs)
