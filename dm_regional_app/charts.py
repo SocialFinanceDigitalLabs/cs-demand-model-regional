@@ -1,8 +1,8 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from demand_model.multinomial.predictor import Prediction
 
+from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
 
 
