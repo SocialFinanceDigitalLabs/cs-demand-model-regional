@@ -95,10 +95,14 @@ def costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        print(prediction.population)
+
         return render(
             request,
             "dm_regional_app/views/costs.html",
-            {},
+            {
+                "forecast_dates": session_scenario.prediction_parameters,
+            },
         )
     else:
         next_url_name = "router_handler"
