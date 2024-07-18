@@ -88,27 +88,29 @@ class DemandModellingDataContainer:
 
         :return: A pandas DataFrame containing the combined view
         """
+        # Merge header and UASC and keep most recent entry for CHILD
+        # TODO: convert to datetimes should be done when the table is first read
         header = self.get_table(SSDA903TableType.HEADER)
-        header = header.drop_duplicates(subset=["CHILD"])
-        header = header.drop(["LA", "YEAR"], axis="columns")
-
-        episodes = self.get_table(SSDA903TableType.EPISODES)
+        header["DOB"] = pd.to_datetime(header["DOB"], format="%d/%m/%Y")
 
         uasc = self.get_table(SSDA903TableType.UASC)
-        uasc = uasc.drop(["LA", "YEAR"], axis="columns")
-        uasc = uasc.drop_duplicates(subset=["CHILD"])
-
-        # TODO: This should be done when the table is first read
-        header["DOB"] = pd.to_datetime(header["DOB"], format="%d/%m/%Y")
-        episodes["DECOM"] = pd.to_datetime(episodes["DECOM"], format="%d/%m/%Y")
-        episodes["DEC"] = pd.to_datetime(episodes["DEC"], format="%d/%m/%Y")
-        uasc["DUC"] = pd.to_datetime(episodes["DEC"], format="%d/%m/%Y")
+        uasc["DUC"] = pd.to_datetime(uasc["DUC"], format="%d/%m/%Y")
 
         merged = header.merge(
-            episodes, how="inner", on="CHILD", suffixes=("_header", "_episodes")
+            uasc[["CHILD", "DUC", "YEAR"]], how="left", on=["CHILD", "YEAR"]
         )
+        merged.sort_values(by="YEAR", ascending=False, inplace=True)
+        merged = merged.drop_duplicates(subset=["CHILD"])
 
-        merged = merged.merge(uasc[["CHILD", "DUC"]], how="left", on="CHILD")
+        # Merge into episodes file
+        # TODO: convert to datetimes should be done when the table is first read
+        episodes = self.get_table(SSDA903TableType.EPISODES)
+        episodes["DECOM"] = pd.to_datetime(episodes["DECOM"], format="%d/%m/%Y")
+        episodes["DEC"] = pd.to_datetime(episodes["DEC"], format="%d/%m/%Y")
+
+        merged = episodes.merge(
+            merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
+        )
 
         # create UASC flag if DECOM is less than DUC
         merged["UASC"] = np.where(merged["DECOM"] < merged["DUC"], True, False)
