@@ -79,6 +79,35 @@ def router_handler(request):
 
 
 @login_required
+def costs(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        return render(
+            request,
+            "dm_regional_app/views/costs.html",
+            {},
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "costs"
+        return redirect(redirect_url)
+
+
+@login_required
 def clear_rate_adjustments(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
@@ -179,7 +208,7 @@ def entry_rates(request):
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "entry_rates"
         return redirect(redirect_url)
 
 
@@ -272,7 +301,7 @@ def exit_rates(request):
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "exit_rates"
         return redirect(redirect_url)
 
 
