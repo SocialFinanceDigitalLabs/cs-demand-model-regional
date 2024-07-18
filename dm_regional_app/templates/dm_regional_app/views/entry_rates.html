@@ -18,11 +18,7 @@
             <table id="transition-rate" class="table table-hover">
                 <form method="post">
                 {% csrf_token %}
-                <thead>
-                {{ entry_rate_table | convert_data_frame_to_html_table_headers_form | safe}}
-                </thead>
-                <tbody>
-                {{ entry_rate_table | convert_data_frame_to_html_table_rows_form:form | safe}}
+                {{ entry_rate_table | convert_data_frame_to_html_table_plus_form:form | safe}}
                 <tr>
                 <td colspan="3">
                     <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="adjusted">Back</a></div>
@@ -31,7 +27,6 @@
                     <div class="p-2 bd-highlight"><button type="submit" class="btn btn-primary">Save</button></div>
                 </td>
                 </tr>
-                </tbody>
             </form>
             </table>
         </div>
