@@ -19,21 +19,21 @@
           </h2>
           <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
             <div class="accordion-body">
-              <p><strong>This is a summary view of the forecast you have created.</strong> If you would like to edit this forecast, please return to the base forecast page.</p>
+              <p><strong>This is a summary view of the forecast you have created.</strong> If you would like to edit this forecast, please return to the base forecast page.
               <div class="container-sm">
                 <div class="row">
                 <div class="col-md-6">
               <table class="table table-bordered">
                 <thead>
                   <tr>
-                    <td scope="col">Reference start date</td>
-                    <td scope="col">Reference end date</td>
+                    <td scope="col" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">Reference start date</td>
+                    <td scope="col" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">Reference end date</td>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td scope="row">{{ forecast_dates.reference_start_date|date:"d/m/Y" }}</td>
-                    <td>{{ forecast_dates.reference_end_date|date:"d/m/Y" }}</td>
+                    <td scope="row" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">{{ forecast_dates.reference_start_date|date:"d/m/Y" }}</td>
+                    <td scope="row" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">{{ forecast_dates.reference_end_date|date:"d/m/Y" }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -45,20 +45,20 @@
               <table class="table table-bordered">
                 <thead>
                   <tr>
-                    <td scope="col">Forecast start date</td>
-                    <td scope="col">Forecast end date</td>
+                    <td scope="col" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">Forecast start date</td>
+                    <td scope="col" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">Forecast end date</td>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td scope="row">
+                    <td scope="row" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">
                         {% if forecast_dates.prediction_start_date %}
                             {{ forecast_dates.prediction_start_date|date:"d/m/Y" }}
                         {% else %}
                             {{ forecast_dates.reference_end_date|add_days:"1"|date:"d/m/Y" }}
                         {% endif %}
                     </td>
-                    <td>
+                    <td scope="row" style="font-size: 15px; padding-top: 5px; padding-bottom: 5px;">
                         {% if forecast_dates.prediction_end_date %}
                             {{ forecast_dates.prediction_end_date|date:"d/m/Y" }}
                         {% else %}
@@ -89,7 +89,18 @@
           </h2>
           <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
             <div class="accordion-body">
-              <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+                <p>See the current daily values in £ for each placement type per day. If you wish to edit these values go to 'edit values'. 
+                    You can toggle 5% year-on-year inflation to apply to your forecast.</p>
+                <div class="col-md-6">
+                <div class="table table-bordered">
+                    <table id="efficiency-hub-table" class="table table-hover table-sm">                         
+                         {{ daily_cost | convert_data_frame_to_html_table | safe}}
+                    </table>
+                </div>
+                <div class="d-flex bd-highlight mb-3">
+                    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=daily_costs">Edit daily costs</a></div>
+                  </div>
+                </div>
             </div>
           </div>
         </div>
@@ -101,7 +112,18 @@
           </h2>
           <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
             <div class="accordion-body">
-              <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+                <p>Placement types (fostering, residential and other) are made up of different 
+                providers.</p>
+                
+                <p>The model default will assume no change to the amount of providers within a 
+                placement. For example, if 30% of fostering placements are historically "family 
+                and friend" that will carry through to your forecast.</p>
+                
+                <p>To change the model, you can change the percentage of providers within a 
+                placement type. Otherwise, you can view the default projection.</p>
+                
+                <p>If you want to use the table below to edit the placement type breakdown by proportion.</p>
+                
             </div>
           </div>
         </div>

@@ -18,6 +18,7 @@ from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
 from ssda903.config import PlacementCategories
+from ssda903.costs import forecast_costs
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
@@ -95,19 +96,94 @@ def costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        print(prediction.population)
+        costs = forecast_costs(prediction, session_scenario.adjusted_costs)
+
+        daily_cost = pd.DataFrame(
+            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
+        )
 
         return render(
             request,
             "dm_regional_app/views/costs.html",
             {
                 "forecast_dates": session_scenario.prediction_parameters,
+                "daily_cost": daily_cost,
             },
         )
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
         redirect_url = reverse(next_url_name) + "?next_url_name=" + "costs"
+        return redirect(redirect_url)
+
+
+@login_required
+def daily_costs(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        costs = forecast_costs(prediction, session_scenario.adjusted_costs)
+
+        daily_cost = pd.DataFrame(
+            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values},
+            index=costs.costs.index,
+        )
+        placement_types = pd.DataFrame(
+            {"Placement type": daily_cost.index}, index=costs.costs.index
+        )
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=costs.costs,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_costs is not None:
+                    # if previous cost adjustments have been made, update old series with new adjustments
+                    cost_adjustments = session_scenario.adjusted_costs
+                    new_numbers = data.combine_first(cost_adjustments)
+
+                    session_scenario.adjusted_costs = new_numbers
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_costs = data
+                    session_scenario.save()
+
+                return redirect("costs")
+
+        else:
+            form = DynamicForm(
+                dataframe=costs.costs,
+                initial_data=costs.costs,
+            )
+
+            return render(
+                request,
+                "dm_regional_app/views/daily_costs.html",
+                {
+                    "form": form,
+                    "placement_types": placement_types,
+                },
+            )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "daily_costs"
         return redirect(redirect_url)
 
 
@@ -154,7 +230,7 @@ def entry_rates(request):
                 if session_scenario.adjusted_numbers is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_numbers
-                    new_numbers = rate_adjustments.combine_first(data)
+                    new_numbers = data.combine_first(rate_adjustments)
 
                     session_scenario.adjusted_numbers = new_numbers
                     session_scenario.save()
@@ -247,7 +323,7 @@ def exit_rates(request):
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = rate_adjustments.combine_first(data)
+                    new_rates = data.combine_first(rate_adjustments)
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
@@ -340,7 +416,7 @@ def transition_rates(request):
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = rate_adjustments.combine_first(data)
+                    new_rates = data.combine_first(rate_adjustments)
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
