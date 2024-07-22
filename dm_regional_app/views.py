@@ -11,6 +11,7 @@ from dm_regional_app.charts import (
     entry_rate_table,
     exit_rate_table,
     historic_chart,
+    placement_proportion_table,
     prediction_chart,
     transition_rate_table,
 )
@@ -61,6 +62,8 @@ def router_handler(request):
 
     adjusted_rates = None
 
+    adjusted_proportions = None
+
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
     session_scenario, created = SessionScenario.objects.get_or_create(
         id=session_scenario_id,
@@ -71,6 +74,7 @@ def router_handler(request):
             "historic_stock": historic_stock,
             "adjusted_costs": adjusted_costs,
             "adjusted_rates": adjusted_rates,
+            "adjusted_proportions": adjusted_proportions,
         },
     )
 
@@ -81,6 +85,53 @@ def router_handler(request):
 
 @login_required
 def costs(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        print(pk)
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+        print(session_scenario.adjusted_proportions)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        costs = forecast_costs(
+            prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
+        )
+
+        daily_cost = pd.DataFrame(
+            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
+        )
+
+        proportions = placement_proportion_table(costs)
+
+        return render(
+            request,
+            "dm_regional_app/views/costs.html",
+            {
+                "forecast_dates": session_scenario.prediction_parameters,
+                "daily_cost": daily_cost,
+                "proportions": proportions,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "costs"
+        return redirect(redirect_url)
+
+
+@login_required
+def placement_proportions(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
@@ -96,24 +147,60 @@ def costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        costs = forecast_costs(prediction, session_scenario.adjusted_costs)
-
-        daily_cost = pd.DataFrame(
-            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
+        costs = forecast_costs(
+            prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
         )
 
-        return render(
-            request,
-            "dm_regional_app/views/costs.html",
-            {
-                "forecast_dates": session_scenario.prediction_parameters,
-                "daily_cost": daily_cost,
-            },
-        )
+        proportions = placement_proportion_table(costs)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=costs.proportions,
+                initial_data=session_scenario.adjusted_proportions,
+            )
+            if form.is_valid():
+                data = form.save()
+                print(data)
+
+                if session_scenario.adjusted_proportions is not None:
+                    # if previous proportion adjustments have been made, update old series with new adjustments
+                    proportion_adjustments = session_scenario.adjusted_proportions
+                    print(proportion_adjustments)
+                    new_numbers = data.combine_first(proportion_adjustments)
+                    print(new_numbers)
+
+                    session_scenario.adjusted_proportions = new_numbers
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_proportions = data
+                    session_scenario.save()
+
+                return redirect("costs")
+
+        else:
+            form = DynamicForm(
+                dataframe=costs.proportions,
+                initial_data=session_scenario.adjusted_proportions,
+            )
+
+            return render(
+                request,
+                "dm_regional_app/views/placement_proportions.html",
+                {
+                    "form": form,
+                    "placement_types": proportions,
+                },
+            )
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "costs"
+        redirect_url = (
+            reverse(next_url_name) + "?next_url_name=" + "placement_proportions"
+        )
         return redirect(redirect_url)
 
 
@@ -134,14 +221,14 @@ def daily_costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        costs = forecast_costs(prediction, session_scenario.adjusted_costs)
-
-        daily_cost = pd.DataFrame(
-            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values},
-            index=costs.costs.index,
+        costs = forecast_costs(
+            prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
         )
+
         placement_types = pd.DataFrame(
-            {"Placement type": daily_cost.index}, index=costs.costs.index
+            {"Placement type": costs.costs.index}, index=costs.costs.index
         )
 
         if request.method == "POST":

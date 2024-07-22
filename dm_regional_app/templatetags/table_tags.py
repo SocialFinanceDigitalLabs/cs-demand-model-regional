@@ -51,7 +51,7 @@ def convert_data_frame_to_html_table_plus_form(df, form, header="Rate multiplica
             else:
                 row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{value}</td>'
         field_html = str(form[str(index)])
-        row_html += f'<td scope="row">{field_html}</td>'
+        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{field_html}</td>'
         row_html += "</tr>"
         html += row_html
     html += "</tbody>"

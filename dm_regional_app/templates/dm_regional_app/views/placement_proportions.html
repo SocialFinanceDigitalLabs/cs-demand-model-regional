@@ -8,20 +8,15 @@
     <h1>Adjust daily costs</h1>
     <br>
     <p>You may want to edit the daily cost of a child placement to give a more accurate picture of your projected spend.</p>
-    <p><ul>
-        <li>New costs will overwrite previous values.</li>
-        <li>Proportions of placement types for each proportion must sum to 1.</li>
-        <li>Entering proportions that sum to more than 1 for each placement will lead to adjustments.</li>
-        <li>Weight will be given to user entered adjustments. e.g. if you change a single placement type to 0.9, the remaining proportions will be adjusted down to allow for this.</li>
-    </ul>
+    <p>New costs will overwrite previous values.
     </p>
         <div class="table-responsive">
             <table id="transition-rate" class="table table-hover">
                 <form method="post">
                 {% csrf_token %}
-                {% convert_data_frame_to_html_table_plus_form placement_types form "Daily cost" %}
+                {% convert_data_frame_to_html_table_plus_form placement_types form "New proportion" %}
                 <tr>
-                <td colspan="1">
+                <td colspan="3">
                     <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="costs">Back</a></div>
                 </td>
                 <td>

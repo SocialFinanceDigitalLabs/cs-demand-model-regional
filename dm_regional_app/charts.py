@@ -2,8 +2,34 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from ssda903.config import Costs
+from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
+
+
+def placement_proportion_table(data: CostForecast):
+    proportions = data.proportions
+
+    categories = {item.value.label: item.value.category.label for item in Costs}
+
+    placement = proportions.index.map(categories)
+
+    proportions = pd.DataFrame(
+        {
+            "Placement": placement,
+            "Placement type": proportions.index,
+            "Current proportion": proportions.values,
+        },
+        index=proportions.index,
+    )
+
+    proportions = proportions.sort_values(by=["Placement"])
+    proportions["Placement"] = proportions["Placement"].mask(
+        proportions["Placement"].duplicated(), ""
+    )
+
+    return proportions
 
 
 def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):
@@ -169,6 +195,7 @@ def exit_rate_table(data):
 
     df = df.drop(["From"], axis=1)
 
+    df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
     df.columns = ["Age Group", "Placement", "Base exit rate"]
@@ -194,6 +221,7 @@ def entry_rate_table(data):
     age_group = df.pop("Age Group")
     df.insert(0, "Age Group", age_group)
 
+    df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
     df = df.drop(["index"], axis=1)

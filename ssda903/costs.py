@@ -44,6 +44,7 @@ def normalize_proportions(cost_items, proportion_adjustment):
     """
     adjustment_total = 0
     remaining_total = 0
+    normalised_proportions = pd.Series(dtype="float64")
 
     # Calculate the total of adjustment proportions and remaining proportions
     for item in cost_items:
@@ -54,26 +55,34 @@ def normalize_proportions(cost_items, proportion_adjustment):
 
     if adjustment_total >= 1:
         # Set remaining proportions to 0 and scale down adjustment proportions
-        scale_factor = Decimal("1") / Decimal(adjustment_total)
+        scale_factor = Decimal("1") / Decimal(str(adjustment_total))
         for item in cost_items:
             if item.label in proportion_adjustment.index:
-                item.defaults.proportion = float(
-                    Decimal(proportion_adjustment[item.label]) * scale_factor
+                proportion = float(
+                    Decimal(str(proportion_adjustment[item.label]))
+                    * Decimal(str(scale_factor))
                 )
             else:
-                item.defaults.proportion = 0
+                proportion = 0
+            normalised_proportions[item.label] = proportion
     else:
         # Adjust remaining proportions to make the total sum to 1
         scale_factor = (
-            (Decimal("1") - Decimal(adjustment_total)) / Decimal(remaining_total)
+            (Decimal("1") - Decimal(str(adjustment_total)))
+            / Decimal(str(remaining_total))
             if remaining_total > 0
             else 0
         )
         for item in cost_items:
             if item.label in proportion_adjustment.index:
-                item.defaults.proportion = proportion_adjustment[item.label]
+                proportion = proportion_adjustment[item.label]
             else:
-                item.defaults.proportion *= float(scale_factor)
+                proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                    str(scale_factor)
+                )
+            normalised_proportions[item.label] = float(proportion)
+
+    return normalised_proportions
 
 
 def forecast_costs(
@@ -114,7 +123,9 @@ def forecast_costs(
 
                 if proportion_adjustment is not None:
                     # Apply proportion adjustments
-                    normalize_proportions(cost_items, proportion_adjustment)
+                    normalised_proportions = normalize_proportions(
+                        cost_items, proportion_adjustment
+                    )
 
                 for cost_item in cost_items:
                     # check if there are cost adjustments and if so, take from this table
@@ -125,7 +136,13 @@ def forecast_costs(
                         cost_per_day = cost_adjustment[cost_item.label]
                     else:
                         cost_per_day = cost_item.defaults.cost_per_day
-                    proportion = cost_item.defaults.proportion
+                    if (
+                        proportion_adjustment is not None
+                        and cost_item.label in normalised_proportions.index
+                    ):
+                        proportion = normalised_proportions[cost_item.label]
+                    else:
+                        proportion = cost_item.defaults.proportion
                     # for each cost item, multiply by cost per day and proportion, then sum together
                     total_cost_series += (
                         forecast_population[column] * cost_per_day * proportion

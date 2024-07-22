@@ -16,4 +16,9 @@ urlpatterns = [
     path("clear_rates", views.clear_rate_adjustments, name="clear_rates"),
     path("costs", views.costs, name="costs"),
     path("daily_costs", views.daily_costs, name="daily_costs"),
+    path(
+        "placement_proportions",
+        views.placement_proportions,
+        name="placement_proportions",
+    ),
 ]

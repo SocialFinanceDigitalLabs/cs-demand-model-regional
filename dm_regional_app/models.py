@@ -28,6 +28,9 @@ class AbstractScenario(models.Model):
     adjusted_costs = models.JSONField(
         encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder, null=True
     )
+    adjusted_proportions = models.JSONField(
+        encoder=SeriesAwareJSONEncoder, decoder=DateAwareJSONDecoder, null=True
+    )
 
     class Meta:
         # if a model is abstract, it will not actually create a database table - just the non-abstract models that inherit this one will.

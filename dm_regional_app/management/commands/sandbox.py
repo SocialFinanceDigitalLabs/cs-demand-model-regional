@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 import pandas as pd
@@ -62,8 +63,8 @@ class Command(BaseCommand):
             cost_adjustment=cost_adjustment,
         )
 
-        print(costs.proportions)
-        print(costs.costs)
+        scale_factor = (Decimal("1") - Decimal(0.2)) / Decimal(0.4)
+        print(scale_factor)
 
         # print(pop.stock)
         # print(dc.enriched_view)
