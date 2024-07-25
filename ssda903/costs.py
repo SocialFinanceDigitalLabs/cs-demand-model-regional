@@ -6,6 +6,7 @@ import pandas as pd
 
 from ssda903.config import Costs, PlacementCategories
 from ssda903.multinomial import Prediction
+from ssda903.population_stats import PopulationStats
 
 # Set the precision for decimal operations
 getcontext().prec = 6
@@ -85,17 +86,20 @@ def normalize_proportions(cost_items, proportion_adjustment):
     return normalised_proportions
 
 
-def forecast_costs(
-    data: Prediction,
+def convert_population_to_cost(
+    data: Union[Prediction, PopulationStats],
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     proportion_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     # inflation? True/false
 ) -> CostForecast:
     """
-    This will take a population and translate it to a cost.
+    This will take a population via a Prediction or PopulationStats object and translate it to a cost.
     """
+    if isinstance(data, Prediction):
+        forecast_population = data.population
+    elif isinstance(data, PopulationStats):
+        forecast_population = data.stock
 
-    forecast_population = data.population
     processed_categories = set()
     proportions = pd.Series(dtype="float64")
     costs = pd.Series(dtype="float64")

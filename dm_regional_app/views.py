@@ -7,6 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from dm_regional_app.charts import (
+    area_chart_cost,
+    area_chart_population,
     compare_forecast,
     entry_rate_table,
     exit_rate_table,
@@ -19,7 +21,7 @@ from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
 from ssda903.config import PlacementCategories
-from ssda903.costs import forecast_costs
+from ssda903.costs import convert_population_to_cost
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
@@ -87,11 +89,9 @@ def router_handler(request):
 def costs(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
-        print(pk)
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-        print(session_scenario.adjusted_proportions)
 
         historic_data = apply_filters(
             datacontainer.enriched_view, session_scenario.historic_filters
@@ -102,8 +102,16 @@ def costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        costs = forecast_costs(
+        costs = convert_population_to_cost(
             prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
+        )
+
+        stats = PopulationStats(historic_data)
+
+        historic_costs = convert_population_to_cost(
+            stats,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
@@ -111,6 +119,10 @@ def costs(request):
         daily_cost = pd.DataFrame(
             {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
         )
+
+        area_numbers = area_chart_population(stats, prediction)
+
+        area_costs = area_chart_cost(historic_costs, costs)
 
         proportions = placement_proportion_table(costs)
 
@@ -121,6 +133,8 @@ def costs(request):
                 "forecast_dates": session_scenario.prediction_parameters,
                 "daily_cost": daily_cost,
                 "proportions": proportions,
+                "area_numbers": area_numbers,
+                "area_costs": area_costs,
             },
         )
     else:
@@ -147,7 +161,7 @@ def placement_proportions(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        costs = forecast_costs(
+        costs = convert_population_to_cost(
             prediction,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
@@ -163,14 +177,11 @@ def placement_proportions(request):
             )
             if form.is_valid():
                 data = form.save()
-                print(data)
 
                 if session_scenario.adjusted_proportions is not None:
                     # if previous proportion adjustments have been made, update old series with new adjustments
                     proportion_adjustments = session_scenario.adjusted_proportions
-                    print(proportion_adjustments)
                     new_numbers = data.combine_first(proportion_adjustments)
-                    print(new_numbers)
 
                     session_scenario.adjusted_proportions = new_numbers
                     session_scenario.save()
@@ -221,7 +232,7 @@ def daily_costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
-        costs = forecast_costs(
+        costs = convert_population_to_cost(
             prediction,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
