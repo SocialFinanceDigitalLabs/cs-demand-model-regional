@@ -17,6 +17,7 @@ class CostForecast:
     population: pd.DataFrame
     proportions: pd.DataFrame
     costs: pd.DataFrame
+    summary_table: pd.DataFrame
 
 
 def get_cost_items_for_category(category_label: str):
@@ -86,6 +87,22 @@ def normalize_proportions(cost_items, proportion_adjustment):
     return normalised_proportions
 
 
+def resample_summary_table(summary_table):
+    """
+    Takes daily dataframe and resamples to represent quarterly periods.
+    """
+
+    summary_table.index = pd.to_datetime(summary_table.index)
+    summary_table = summary_table.resample("Q").sum()
+
+    # Convert the DatetimeIndex to a PeriodIndex representing quarters
+    summary_table.index = summary_table.index.to_period("Q")
+
+    # Optionally convert the PeriodIndex to a string format if preferred
+    summary_table.index = summary_table.index.strftime("Q%q-%Y")
+    return sum
+
+
 def convert_population_to_cost(
     data: Union[Prediction, PopulationStats],
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
@@ -112,6 +129,7 @@ def convert_population_to_cost(
     forecast_population = forecast_population[columns_to_keep]
 
     cost_forecast = pd.DataFrame(index=forecast_population.index)
+    summary_table = pd.DataFrame(index=forecast_population.index)
     for column in forecast_population.columns:
         # for each column, create a new series where we will sum the total cost output
         total_cost_series = pd.Series(0, index=forecast_population.index)
@@ -151,7 +169,11 @@ def convert_population_to_cost(
                     total_cost_series += (
                         forecast_population[column] * cost_per_day * proportion
                     )
+                    summary_table[cost_item.label] = (
+                        forecast_population[column] * cost_per_day * proportion
+                    )
                     proportions[cost_item.label] = proportion
                     costs[cost_item.label] = cost_per_day
         cost_forecast[column] = total_cost_series
-    return CostForecast(cost_forecast, proportions, costs)
+    summary_table = resample_summary_table(summary_table)
+    return CostForecast(cost_forecast, proportions, costs, summary_table)
