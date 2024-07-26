@@ -8,25 +8,36 @@ register = template.Library()
 @register.filter
 def convert_data_frame_to_html_table(df):
     """
-    This takes a dataframe and converts it to a table
-    As this is not used for showing base rates, checks if "base" is in value and removes it
+    This takes a dataframe and converts it to a table.
+    As this is not used for showing base rates, checks if "base" is in value and removes it.
     """
+
+    def format_value(value):
+        """Formats the value to add commas for large numbers."""
+        if isinstance(value, (int, float)):
+            return f"{value:,.2f}"
+        return value
+
     html = "<thead><tr>"
     for value in df.columns:
         modified_value = value
-        if "base" in value.lower():
-            modified_value = value.lower().replace("base", "").strip().capitalize()
-        html += f'<th scope="col" style="padding-top: 8px; padding-bottom: 8px;">{modified_value}</th>'
+        if isinstance(value, str):
+            if "base" in value.lower():
+                modified_value = value.lower().replace("base", "").strip().capitalize()
+            html += f'<th scope="col" style="padding-top: 8px; padding-bottom: 8px;">{modified_value}</th>'
     html += "</tr></thead><tbody>"
+
     for row in df.values:
         row_html = "<tr>"
         for value in row:
             if isinstance(value, str):
                 row_html += f'<th scope="row" style="font-size: 15px; padding-top: 8px; padding-bottom: 8px;">{value}</th>'
             else:
-                row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px; padding-bottom: 8px;">{value}</td>'
+                formatted_value = format_value(value)
+                row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px; padding-bottom: 8px;">{formatted_value}</td>'
         row_html += "</tr>"
         html += row_html
+
     html += "</tbody>"
     return html
 

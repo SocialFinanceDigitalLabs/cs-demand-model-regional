@@ -100,7 +100,8 @@ def resample_summary_table(summary_table):
 
     # Optionally convert the PeriodIndex to a string format if preferred
     summary_table.index = summary_table.index.strftime("Q%q-%Y")
-    return sum
+    summary_table = summary_table.round(2)
+    return summary_table
 
 
 def convert_population_to_cost(

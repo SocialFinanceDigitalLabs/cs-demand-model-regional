@@ -99,7 +99,10 @@ def costs(request):
 
         # Call predict function
         prediction = predict(
-            data=historic_data, **session_scenario.prediction_parameters
+            data=historic_data,
+            **session_scenario.prediction_parameters,
+            rate_adjustment=session_scenario.adjusted_rates,
+            number_adjustment=session_scenario.adjusted_numbers
         )
 
         costs = convert_population_to_cost(
@@ -116,6 +119,15 @@ def costs(request):
             session_scenario.adjusted_proportions,
         )
 
+        base_prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        base_costs = convert_population_to_cost(
+            base_prediction,
+            session_scenario.adjusted_costs,
+        )
+
         daily_cost = pd.DataFrame(
             {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
         )
@@ -126,6 +138,24 @@ def costs(request):
 
         proportions = placement_proportion_table(costs)
 
+        summary_table = (
+            costs.summary_table.reset_index()
+            .rename(columns={"index": "Placement"})
+            .transpose()
+            .reset_index()
+        )
+        summary_table.columns = summary_table.iloc[0]
+        summary_table = summary_table[1:]
+
+        summary_table_base = (
+            base_costs.summary_table.reset_index()
+            .rename(columns={"index": "Placement"})
+            .transpose()
+            .reset_index()
+        )
+        summary_table_base.columns = summary_table_base.iloc[0]
+        summary_table_base = summary_table_base[1:]
+
         return render(
             request,
             "dm_regional_app/views/costs.html",
@@ -135,6 +165,8 @@ def costs(request):
                 "proportions": proportions,
                 "area_numbers": area_numbers,
                 "area_costs": area_costs,
+                "summary_table": summary_table,
+                "summary_table_base": summary_table_base,
             },
         )
     else:
@@ -342,7 +374,8 @@ def entry_rates(request):
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers
                 )
 
                 # build chart
@@ -435,7 +468,8 @@ def exit_rates(request):
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers
                 )
 
                 # build chart
@@ -528,7 +562,8 @@ def transition_rates(request):
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers
                 )
 
                 # build chart
@@ -664,7 +699,8 @@ def adjusted(request):
             prediction = predict(
                 data=historic_data,
                 **session_scenario.prediction_parameters,
-                rate_adjustment=session_scenario.adjusted_rates
+                rate_adjustment=session_scenario.adjusted_rates,
+                number_adjustment=session_scenario.adjusted_numbers
             )
 
             # build chart

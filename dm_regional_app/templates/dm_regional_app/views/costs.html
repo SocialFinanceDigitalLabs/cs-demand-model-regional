@@ -146,6 +146,30 @@
     from the forecast you have created. Hover over the graph to show 
     the number of children in care at any given time.</p>
 {{area_numbers|safe}}
+<h2>Cost breakdown</h2>
+<p>See cost broken down by calendar quarters. Please note that if your prediction start and end dates do not align with the beginning and end of calendar quarters then the first and last quarter in this table will not represent a total quarter figure.</p>
+<h3>Adjusted forecast breakdown</h3>
+<p>Your adjusted forecast breakdown includes all adjustments you have made to your forecast</p>
+<table id="efficiency-hub-table" class="table table-hover table-sm">                         
+    {{ summary_table | convert_data_frame_to_html_table | safe}}
+</table>
+
+<h3>Base forecast breakdown</h3>
+<p>Your base forecast breakdown shows a summary of your costs without any rate or proportion adjustments to see how changes you have made affect your projected spend. Adjustments to daily placement costs and and inflation are included in this projection.</p>
+<p>This forecast includes:<ul>
+    <li>Any filtering applied to your reference data</li>
+    <li>The dates you selected for reference and your forecast dates</li>
+    <li>Any change to daily placement costs</li>
+    <li>Inflation, if you have opted to include this</li>
+</ul>This forecast does not include:<ul>
+    <li>Changes to entry or exit rates from care</li>
+    <li>Changes to transition rates between care</li>
+    <li>Adjustments you have made to placement provider proportions</li>
+</ul>
+<table id="efficiency-hub-table" class="table table-hover table-sm">                         
+    {{ summary_table_base | convert_data_frame_to_html_table | safe}}
+</table>
+
       <div class="d-flex bd-highlight mb-3">
         <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="{% url 'router_handler' %}?next_url_name=adjusted">Back</a></div>
       </div>
