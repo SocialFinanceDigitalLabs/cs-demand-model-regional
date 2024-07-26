@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from dm_regional_app.utils import clean_population
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -19,20 +20,7 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
         ignore_index=False,
     )
 
-    # remove age categories from placement strings
-    df_forecast["Placement"] = df_forecast["Placement"].apply(
-        lambda x: re.sub(r"\bto\b", "", re.sub(r"[^a-zA-Z ]", "", x)).replace(" ", "")
-    )
-    # filter out not in care population
-    df_forecast = df_forecast[
-        df_forecast["Placement"].apply(lambda x: "Notincare" in x) == False
-    ]
-    # group together remaining placements (this creates a multi-index)
-    df_forecast = df_forecast.groupby([df_forecast.index, "Placement"]).sum()
-    # reset index to be the date column
-    df_forecast = df_forecast.reset_index().set_index("level_0")
-    # ensures index date format matches
-    df_forecast.index = pd.to_datetime(df_forecast.index)
+    df_forecast = clean_population(df_forecast)
 
     # extract prediction start date
     prediction_start_date = df_forecast.index.min()
@@ -44,16 +32,9 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
         value_name="Cost",
         ignore_index=False,
     )
-    df_historic["Placement"] = df_historic["Placement"].apply(
-        lambda x: re.sub(r"\bto\b", "", re.sub(r"[^a-zA-Z ]", "", x)).replace(" ", "")
-    )
-    df_historic = df_historic[
-        df_historic["Placement"].apply(lambda x: "Notincare" in x) == False
-    ]
-    df_historic = df_historic.groupby([df_historic.index, "Placement"]).sum()
-    df_historic = df_historic.reset_index().set_index("date")
 
-    df_historic.index = pd.to_datetime(df_historic.index)
+    df_historic = clean_population(df_historic)
+
     # filter any data after the prediction start date
     df_historic = df_historic[df_historic.index <= prediction_start_date]
 
@@ -65,9 +46,7 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
         x=combined_df.index,
         y="Cost",
         color="Placement",
-        labels={
-            "date": "Date",
-        },
+        labels={"index": "Date", "Cost": "Cost in £"},
     )
     fig.add_vline(
         x=prediction_start_date, line_width=1, line_dash="dash", line_color="black"
@@ -86,20 +65,7 @@ def area_chart_population(historic_data: PopulationStats, prediction: Prediction
         ignore_index=False,
     )
 
-    # remove age categories from placement strings
-    df_forecast["Placement"] = df_forecast["Placement"].apply(
-        lambda x: re.sub(r"\bto\b", "", re.sub(r"[^a-zA-Z ]", "", x)).replace(" ", "")
-    )
-    # filter out not in care population
-    df_forecast = df_forecast[
-        df_forecast["Placement"].apply(lambda x: "Notincare" in x) == False
-    ]
-    # group together remaining placements (this creates a multi-index)
-    df_forecast = df_forecast.groupby([df_forecast.index, "Placement"]).sum()
-    # reset index to be the date column
-    df_forecast = df_forecast.reset_index().set_index("level_0")
-    # ensures index date format matches
-    df_forecast.index = pd.to_datetime(df_forecast.index)
+    df_forecast = clean_population(df_forecast)
 
     # extract prediction start date
     prediction_start_date = df_forecast.index.min()
@@ -111,16 +77,8 @@ def area_chart_population(historic_data: PopulationStats, prediction: Prediction
         value_name="Population",
         ignore_index=False,
     )
-    df_historic["Placement"] = df_historic["Placement"].apply(
-        lambda x: re.sub(r"\bto\b", "", re.sub(r"[^a-zA-Z ]", "", x)).replace(" ", "")
-    )
-    df_historic = df_historic[
-        df_historic["Placement"].apply(lambda x: "Notincare" in x) == False
-    ]
-    df_historic = df_historic.groupby([df_historic.index, "Placement"]).sum()
-    df_historic = df_historic.reset_index().set_index("date")
+    df_historic = clean_population(df_historic)
 
-    df_historic.index = pd.to_datetime(df_historic.index)
     # filter any data after the prediction start date
     df_historic = df_historic[df_historic.index <= prediction_start_date]
 
@@ -133,7 +91,7 @@ def area_chart_population(historic_data: PopulationStats, prediction: Prediction
         y="Population",
         color="Placement",
         labels={
-            "date": "Date",
+            "index": "Date",
         },
     )
     fig.add_vline(
