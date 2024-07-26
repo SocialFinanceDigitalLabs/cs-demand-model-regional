@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Generator
 
+import pandas as pd
+
 from ssda903.config._placement_categories import PlacementCategories, PlacementCategory
 
 
@@ -34,27 +36,27 @@ class Costs(Enum):
     FOSTER_FRIEND_RELATION = CostItem(
         label="Fostering (Friend/Relative)",
         category=PlacementCategories.FOSTERING.value,
-        defaults=CostDefaults(cost_per_day=100, proportion=1),
+        defaults=CostDefaults(cost_per_day=100, proportion=0.3),
     )
     FOSTER_IN_HOUSE = CostItem(
         label="Fostering (In-house)",
         category=PlacementCategories.FOSTERING.value,
-        defaults=CostDefaults(cost_per_day=150, proportion=1),
+        defaults=CostDefaults(cost_per_day=150, proportion=0.3),
     )
     FOSTER_IFA = CostItem(
         label="Fostering (IFA)",
         category=PlacementCategories.FOSTERING.value,
-        defaults=CostDefaults(cost_per_day=250, proportion=1),
+        defaults=CostDefaults(cost_per_day=250, proportion=0.4),
     )
     RESIDENTIAL_IN_HOUSE = CostItem(
         label="Residential (In-house)",
         category=PlacementCategories.RESIDENTIAL.value,
-        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+        defaults=CostDefaults(cost_per_day=1000, proportion=0.5),
     )
     RESIDENTIAL_EXTERNAL = CostItem(
         label="Residential (External)",
         category=PlacementCategories.RESIDENTIAL.value,
-        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+        defaults=CostDefaults(cost_per_day=1000, proportion=0.5),
     )
     SUPPORTED = CostItem(
         label="Supported accomodation",
@@ -64,17 +66,17 @@ class Costs(Enum):
     SECURE_HOME = CostItem(
         label="Secure home",
         category=PlacementCategories.OTHER.value,
-        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+        defaults=CostDefaults(cost_per_day=1000, proportion=0.3),
     )
     PLACED_WITH_FAMILY = CostItem(
         label="Placed with family",
         category=PlacementCategories.OTHER.value,
-        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+        defaults=CostDefaults(cost_per_day=1000, proportion=0.3),
     )
     OTHER = CostItem(
         label="Other",
         category=PlacementCategories.OTHER.value,
-        defaults=CostDefaults(cost_per_day=1000, proportion=1),
+        defaults=CostDefaults(cost_per_day=1000, proportion=0.4),
     )
 
     @classmethod
@@ -84,3 +86,11 @@ class Costs(Enum):
         for cost in cls:
             if cost.value.category == category:
                 yield cost
+
+    @classmethod
+    def to_dataframe(cls):
+        data = {
+            "cost": {item.value.label: item.value.defaults.cost_per_day for item in cls}
+        }
+        df = pd.DataFrame(data)
+        return df
