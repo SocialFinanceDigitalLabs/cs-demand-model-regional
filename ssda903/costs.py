@@ -137,11 +137,7 @@ def convert_population_to_cost(
 
         for category in PlacementCategories:
             # for each category, check if the category label is in the column header
-            if (
-                category.value.label in column
-                and category.value.label not in processed_categories
-            ):
-                processed_categories.add(category.value.label)
+            if category.value.label in column:
                 cost_items = get_cost_items_for_category(category.value.label)
 
                 if proportion_adjustment is not None:

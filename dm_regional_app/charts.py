@@ -11,6 +11,31 @@ from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
 
 
+def year_one_costs(df: CostForecast):
+    """
+    This function takes a CostForecast and filters to only values in the first year, returning a single sum of those values.
+    """
+
+    df = df.population
+
+    # Ensure the index is a DatetimeIndex
+    df.index = pd.to_datetime(df.index)
+
+    # Find the first date in the DataFrame index
+    first_date = df.index.min()
+
+    # Calculate the end date (one year from the first date)
+    end_date = first_date + pd.DateOffset(years=1)
+
+    # Filter the DataFrame
+    df = df[(df.index >= first_date) & (df.index < end_date)]
+
+    # Sum all values in the DataFrame, round to 2 decimal places
+    total_sum = df.to_numpy().sum().round(2)
+
+    return total_sum
+
+
 def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
     df_forecast = prediction.population
 
@@ -124,6 +149,30 @@ def placement_proportion_table(data: CostForecast):
     )
 
     return proportions
+
+
+def summary_tables(df):
+    """
+    takes Costs.summary_table as input and transforms for display
+    """
+    # round to 2 decimal places
+    df = df.round(2)
+
+    # Add a total column
+    df["Total"] = df.sum(axis=1)
+
+    # Add a total row
+    df.loc["Total"] = df.sum()
+
+    df = (
+        df.reset_index()
+        .rename(columns={"index": "Placement"})
+        .transpose()
+        .reset_index()
+    )
+    df.columns = df.iloc[0]
+    df = df[1:]
+    return df
 
 
 def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):

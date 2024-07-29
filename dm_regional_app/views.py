@@ -15,11 +15,13 @@ from dm_regional_app.charts import (
     historic_chart,
     placement_proportion_table,
     prediction_chart,
+    summary_tables,
     transition_rate_table,
+    year_one_costs,
 )
 from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
-from dm_regional_app.utils import apply_filters
+from dm_regional_app.utils import apply_filters, number_format
 from ssda903.config import PlacementCategories
 from ssda903.costs import convert_population_to_cost
 from ssda903.population_stats import PopulationStats
@@ -138,23 +140,19 @@ def costs(request):
 
         proportions = placement_proportion_table(costs)
 
-        summary_table = (
-            costs.summary_table.reset_index()
-            .rename(columns={"index": "Placement"})
-            .transpose()
-            .reset_index()
-        )
-        summary_table.columns = summary_table.iloc[0]
-        summary_table = summary_table[1:]
+        summary_table = summary_tables(costs.summary_table)
 
-        summary_table_base = (
-            base_costs.summary_table.reset_index()
-            .rename(columns={"index": "Placement"})
-            .transpose()
-            .reset_index()
-        )
-        summary_table_base.columns = summary_table_base.iloc[0]
-        summary_table_base = summary_table_base[1:]
+        summary_table_base = summary_tables(base_costs.summary_table)
+
+        summary_table_difference = costs.summary_table - base_costs.summary_table
+        summary_table_difference = summary_tables(summary_table_difference)
+
+        year_one_cost = year_one_costs(costs)
+        year_one_cost_base = year_one_costs(base_costs)
+        year_one_cost_difference = year_one_cost - year_one_cost_base
+        year_one_cost = number_format(year_one_cost)
+        year_one_cost_base = number_format(year_one_cost_base)
+        year_one_cost_difference = number_format(year_one_cost_difference)
 
         return render(
             request,
@@ -167,6 +165,10 @@ def costs(request):
                 "area_costs": area_costs,
                 "summary_table": summary_table,
                 "summary_table_base": summary_table_base,
+                "summary_table_difference": summary_table_difference,
+                "year_one_cost": year_one_cost,
+                "year_one_cost_base": year_one_cost_base,
+                "year_one_cost_difference": year_one_cost_difference,
             },
         )
     else:

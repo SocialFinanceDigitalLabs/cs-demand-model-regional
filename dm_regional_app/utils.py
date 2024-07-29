@@ -103,3 +103,10 @@ def clean_population(df):
     # ensures index date format matches
     df.index = pd.to_datetime(df.index)
     return df
+
+
+def number_format(value):
+    if value < 0:
+        return f"-£{abs(value):,.2f}"
+    else:
+        return f"£{value:,.2f}"

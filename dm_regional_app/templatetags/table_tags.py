@@ -14,7 +14,7 @@ def convert_data_frame_to_html_table(df):
 
     def format_value(value):
         """Formats the value to add commas for large numbers."""
-        if isinstance(value, (int, float)):
+        if isinstance(value, (int, float)) and (value > 1 or value < -1):
             return f"{value:,.2f}"
         return value
 
