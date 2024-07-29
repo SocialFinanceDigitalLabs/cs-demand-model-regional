@@ -166,9 +166,14 @@ def convert_population_to_cost(
                     total_cost_series += (
                         forecast_population[column] * cost_per_day * proportion
                     )
-                    summary_table[cost_item.label] = (
-                        forecast_population[column] * cost_per_day * proportion
-                    )
+                    if cost_item.label in summary_table.columns:
+                        summary_table[cost_item.label] += (
+                            forecast_population[column] * cost_per_day * proportion
+                        )
+                    else:
+                        summary_table[cost_item.label] = (
+                            forecast_population[column] * cost_per_day * proportion
+                        )
                     proportions[cost_item.label] = proportion
                     costs[cost_item.label] = cost_per_day
         cost_forecast[column] = total_cost_series
