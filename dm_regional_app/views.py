@@ -99,6 +99,8 @@ def costs(request):
             datacontainer.enriched_view, session_scenario.historic_filters
         )
 
+        historic_filters = session_scenario.historic_filters
+
         # Call predict function
         prediction = predict(
             data=historic_data,
@@ -106,6 +108,8 @@ def costs(request):
             rate_adjustment=session_scenario.adjusted_rates,
             number_adjustment=session_scenario.adjusted_numbers
         )
+
+        print(session_scenario.historic_filters)
 
         costs = convert_population_to_cost(
             prediction,
@@ -169,6 +173,7 @@ def costs(request):
                 "year_one_cost": year_one_cost,
                 "year_one_cost_base": year_one_cost_base,
                 "year_one_cost_difference": year_one_cost_difference,
+                "historic_filters": historic_filters,
             },
         )
     else:
