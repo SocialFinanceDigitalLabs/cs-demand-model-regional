@@ -10,12 +10,15 @@ from dm_regional_app.charts import (
     area_chart_cost,
     area_chart_population,
     compare_forecast,
+    entry_rate_changes,
     entry_rate_table,
+    exit_rate_changes,
     exit_rate_table,
     historic_chart,
     placement_proportion_table,
     prediction_chart,
     summary_tables,
+    transition_rate_changes,
     transition_rate_table,
     year_one_costs,
 )
@@ -109,8 +112,6 @@ def costs(request):
             number_adjustment=session_scenario.adjusted_numbers
         )
 
-        print(session_scenario.historic_filters)
-
         costs = convert_population_to_cost(
             prediction,
             session_scenario.adjusted_costs,
@@ -158,6 +159,24 @@ def costs(request):
         year_one_cost_base = number_format(year_one_cost_base)
         year_one_cost_difference = number_format(year_one_cost_difference)
 
+        if session_scenario.adjusted_rates is not None:
+            transition_rate_table = transition_rate_changes(
+                base_prediction.transition_rates, prediction.transition_rates
+            )
+            exit_rate_table = exit_rate_changes(
+                base_prediction.transition_rates, prediction.transition_rates
+            )
+        else:
+            transition_rate_table = None
+            exit_rate_table = None
+
+        if session_scenario.adjusted_numbers is not None:
+            entry_rate_table = entry_rate_changes(
+                base_prediction.entry_rates, prediction.entry_rates
+            )
+        else:
+            entry_rate_table = None
+
         return render(
             request,
             "dm_regional_app/views/costs.html",
@@ -174,6 +193,9 @@ def costs(request):
                 "year_one_cost_base": year_one_cost_base,
                 "year_one_cost_difference": year_one_cost_difference,
                 "historic_filters": historic_filters,
+                "transition_rate_table": transition_rate_table,
+                "exit_rate_table": exit_rate_table,
+                "entry_rate_table": entry_rate_table,
             },
         )
     else:

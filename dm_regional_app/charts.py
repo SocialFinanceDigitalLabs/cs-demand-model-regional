@@ -304,7 +304,6 @@ def transition_rate_table(data):
     df["From"] = df["from"]
     df.set_index(["from", "to"], inplace=True)
     df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
-    df = df.round(4)
     df = df.sort_values(by=["From"])
     df = df[df["From"] != df["To"]]
     df["From"] = df["From"].mask(df["From"].duplicated(), "")
@@ -314,7 +313,9 @@ def transition_rate_table(data):
     from_col = df.pop("From")
     df.insert(0, "From", from_col)
 
-    df.columns = ["From", "To", "Base transition rate"]
+    if df.shape[1] == 3:
+        df.columns = ["From", "To", "Base transition rate"]
+        df = df.round(4)
 
     return df
 
@@ -326,7 +327,6 @@ def exit_rate_table(data):
     df["From"] = df["from"]
     df = df[df["to"].apply(lambda x: "Not in care" in x)]
     df.set_index(["from", "to"], inplace=True)
-    df = df.round(4)
 
     df[["Age Group", "Placement"]] = df["From"].str.split(" - ", expand=True)
 
@@ -341,7 +341,9 @@ def exit_rate_table(data):
     df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
-    df.columns = ["Age Group", "Placement", "Base exit rate"]
+    if df.shape[1] == 3:
+        df.columns = ["Age Group", "Placement", "Base exit rate"]
+        df = df.round(4)
 
     return df
 
@@ -352,8 +354,6 @@ def entry_rate_table(data):
     df = df.reset_index()
     df["to"] = df["index"]
     df = df[df["to"].apply(lambda x: "Not in care" in x) == False]
-
-    df = df.round(4)
 
     df[["Age Group", "Placement"]] = df["to"].str.split(" - ", expand=True)
     df.set_index(["to"], inplace=True)
@@ -369,7 +369,9 @@ def entry_rate_table(data):
 
     df = df.drop(["index"], axis=1)
 
-    df.columns = ["Age Group", "Placement", "Base entry rate"]
+    if df.shape[1] == 3:
+        df.columns = ["Age Group", "Placement", "Base entry rate"]
+        df = df.round(4)
 
     return df
 
@@ -526,3 +528,69 @@ def compare_forecast(
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
+
+
+def transition_rate_changes(base, adjusted):
+    """
+    Takes base and adjusted rate series.
+    Combines series
+    Transforms
+    Filters for only where changes have been made
+    Returns None if no changes
+    """
+    df = pd.concat([base, adjusted], axis=1)
+
+    df = transition_rate_table(df)
+
+    df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
+    df = df[df["Base transition rate"] != df["Adjusted transition rate"]]
+
+    if df.empty:
+        return None
+    else:
+        df = df.round(4)
+        return df
+
+
+def exit_rate_changes(base, adjusted):
+    """
+    Takes base and adjusted rate series.
+    Combines series
+    Transforms
+    Filters for only where changes have been made
+    Returns None if no changes
+    """
+    df = pd.concat([base, adjusted], axis=1)
+
+    df = exit_rate_table(df)
+
+    df.columns = ["From", "To", "Base exit rate", "Adjusted exit rate"]
+    df = df[df["Base exit rate"] != df["Adjusted exit rate"]]
+
+    if df.empty:
+        return None
+    else:
+        df = df.round(4)
+        return df
+
+
+def entry_rate_changes(base, adjusted):
+    """
+    Takes base and adjusted rate series.
+    Combines series
+    Transforms
+    Filters for only where changes have been made
+    Returns None if no changes
+    """
+    df = pd.concat([base, adjusted], axis=1)
+
+    df = entry_rate_table(df)
+
+    df.columns = ["From", "To", "Base entry rate", "Adjusted entry rate"]
+    df = df[df["Base entry rate"] != df["Adjusted entry rate"]]
+
+    if df.empty:
+        return None
+    else:
+        df = df.round(4)
+        return df

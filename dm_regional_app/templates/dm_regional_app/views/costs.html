@@ -8,7 +8,17 @@
 <br>
     <h1>Projecting Spend</h1>
     <br>
-    <p>Enter values for weekly provider costs to attribute a projected spend for the forecast you have created.</p>
+    <p>View and edit your projected spend for your forecast. On this page you can:
+        <ul>
+            <li>View a summary of your forecast and any adjustments made so far</li>
+            <li>Review and edit daily costs by placement providers</li>
+            <li>Review and edit historic proportions of placement providers by placement</li>
+            <li>View your cost forecast</li>
+            <li>View child placement numbers</li>
+            <li>View a quartly forecast breakdown</li>
+            <li>Compare how adjustments have changed your cost forecast, if you have made adjustements</li>
+        </ul>
+    </p>
     <br>
     <div class="accordion" id="accordionExample">
         <div class="accordion-item">
@@ -80,6 +90,94 @@
                 <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=prediction">Return to base forecast</a></div>
               </div>
             </div>
+
+
+            {% if exit_rate_table is not None or entry_rate_table is not None or transition_rate_table is not None %}
+
+            <div id="tables">
+                <div class="card border-dark mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title">You have made adjustments to the following rates, please click to view:<br></h5>
+                        {% if entry_rate_table %}
+                        <a class="btn btn-primary" data-bs-toggle="collapse" href="#entering_care" role="button" aria-expanded="false" aria-controls="entering_care">
+                            <span>Children entering<br></span>
+                              <span>care</span>
+                          </a>
+                          {% endif %}
+                          {% if exit_rate_table is not None %}
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#leaving_care" aria-expanded="false" aria-controls="leaving_care">
+                              <span>Children leaving<br></span>
+                              <span>care</span>
+                          </button>
+                          {% endif %}
+                          {% if transition_rate_table is not None %}
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#rate_change" aria-expanded="false" aria-controls="rate_change">
+                              <span>Rate of change between<br></span>
+                              <span>placement types</span>
+                          </button>
+                          {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <p>Only rate changes are shown on this page. To view all the rates affecting your forecast and make further changes please return to the adjusted forecast.</p>
+                        <p>Please note that editing these tables will return you to the adjust forecast page.</p>
+                        <div class="d-flex bd-highlight mb-3">
+                            <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=adjusted">Return to adjust forecast</a></div>
+                          </div>
+                        
+                        <div class="accordion-group">
+                            {% if entry_rate_table is not None %}
+                            <div class="collapse indent" id="entering_care" data-bs-parent="#tables">
+                                <div class="card card-body">
+                                    <div class="table-responsive">
+                                        <table id="efficiency-hub-table" class="table table-hover table-sm">
+                                             {{ entry_rate_table | convert_data_frame_to_html_table | safe}}
+                                        </table>
+                                        <div class="d-flex bd-highlight mb-3">
+                                            <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_rates">Clear all rate adjustments</a></div>
+                                            <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="entry_rates">Edit this table</a></div>
+                                          </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if exit_rate_table is not None %}
+                            <div class="collapse indent" id="leaving_care" data-bs-parent="#tables">
+                                <div class="card card-body">
+                                    <div class="table-responsive">
+                                        <table id="efficiency-hub-table" class="table table-hover table-sm">                         
+                                             {{ exit_rate_table | convert_data_frame_to_html_table | safe}}
+                                        </table>
+                                        <div class="d-flex bd-highlight mb-3">
+                                            <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_rates">Clear all rate adjustments</a></div>
+                                            <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="exit_rates">Edit this table</a></div>
+                                          </div>
+                                    </div>    
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% if transition_rate_table is not None %}
+                            <div class="collapse" id="rate_change" data-bs-parent="#tables">
+                                <div class="card card-body">
+                                    <div class="table-responsive">
+                                    <table id="efficiency-hub-table" class="table table-hover table-sm">
+                                          {{transition_rate_table | convert_data_frame_to_html_table | safe}}
+                                       </table>
+                                       <div class="d-flex bd-highlight mb-3">
+                                        <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_rates">Clear all rate adjustments</a></div>
+                                        <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=transition_rates">Edit this table</a></div>
+                                      </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+
+
           </div>
         </div>
     </div>
@@ -153,29 +251,38 @@
 <h2 class="text-center">Year one forecast totals</h3>
     <br>
 <div class="d-flex justify-content-around">
+    <! -- TO DO : update logic to include proportions in proportion issue -->
+{% if exit_rate_table is not None or entry_rate_table is not None or transition_rate_table is not None %}
     <div class="p-2 bd-highlight text-center">
 <button type="button" class="btn btn-secondary btn-lg">{{year_one_cost}}</button>
 <p>Adjusted Spend</p>
     </div>
+{% endif %}
     <div class="p-2 bd-highlight text-center">
 <button type="button" class="btn btn-secondary btn-lg">{{year_one_cost_base}}</button>
 <p>Base Spend</p>
 </div>
+<! -- TO DO : update logic to include proportions in proportion issue -->
+{% if exit_rate_table is not None or entry_rate_table is not None or transition_rate_table is not None %}
 <div class="p-2 bd-highlight text-center">
 <button type="button" class="{% if '-' in year_one_cost_difference %}btn btn-success btn-lg{% else %}btn btn-warning btn-lg{% endif %}">{% if '-' in year_one_cost_difference %}{% else %}+{% endif %}{{year_one_cost_difference}}</button>
 <p>Adjusted minus Base</p>
 </div>
+{% endif %}
 </div>
 <br>
 <h2>Cost breakdown</h2>
 <p>Please note that if your prediction start and end dates do not align with the beginning and end of calendar quarters then the first and last quarter in the following tables will not represent a total quarter figure.</p>
 <br>
+<! -- TO DO : update logic to include proportions in proportion issue -->
+{% if exit_rate_table is not None or entry_rate_table is not None or transition_rate_table is not None %}
 <h3>Adjusted forecast breakdown</h3>
 <p>Your adjusted forecast breakdown includes all adjustments you have made to your forecast</p>
 <table id="efficiency-hub-table" class="table table-hover table-sm">                         
     {{ summary_table | convert_data_frame_to_html_table | safe}}
 </table>
 <br>
+{% endif %}
 <h3>Base forecast breakdown</h3>
 <p>Your base forecast breakdown shows a summary of your costs without any rate or proportion adjustments to see how changes you have made affect your projected spend. 
     Adjustments to daily placement costs and and inflation are included in this projection.</p>
@@ -193,13 +300,15 @@
     {{ summary_table_base | convert_data_frame_to_html_table | safe}}
 </table>
 <br>
+<! -- TO DO : update logic to include proportions in proportion issue -->
+{% if exit_rate_table is not None or entry_rate_table is not None or transition_rate_table is not None %}
 <h3>Difference between adjusted and base forecast</h3>
 <p>This table show the difference between your base and adjusted forecast by subtracting the base from the adjustments. 
     Negative numbers represent savings made via your adjustments and positive numbers are additional costs incurred by the adjustments.</p>
 <table id="efficiency-hub-table" class="table table-hover table-sm">                         
     {{ summary_table_difference | convert_data_frame_to_html_table | safe}}
 </table>
-
+{% endif %}
       <div class="d-flex bd-highlight mb-3">
         <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="{% url 'router_handler' %}?next_url_name=adjusted">Back</a></div>
       </div>
