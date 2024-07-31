@@ -71,6 +71,11 @@ def router_handler(request):
 
     adjusted_proportions = None
 
+    inflation_parameters = {
+        "inflation": True,
+        "inflation_rate": 0.1,
+    }
+
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
     session_scenario, created = SessionScenario.objects.get_or_create(
         id=session_scenario_id,
@@ -82,6 +87,7 @@ def router_handler(request):
             "adjusted_costs": adjusted_costs,
             "adjusted_rates": adjusted_rates,
             "adjusted_proportions": adjusted_proportions,
+            "inflation_parameters": inflation_parameters,
         },
     )
 
