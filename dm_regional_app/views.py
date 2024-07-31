@@ -7,17 +7,26 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from dm_regional_app.charts import (
+    area_chart_cost,
+    area_chart_population,
     compare_forecast,
+    entry_rate_changes,
     entry_rate_table,
+    exit_rate_changes,
     exit_rate_table,
     historic_chart,
+    placement_proportion_table,
     prediction_chart,
+    summary_tables,
+    transition_rate_changes,
     transition_rate_table,
+    year_one_costs,
 )
 from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
 from dm_regional_app.models import SavedScenario, SessionScenario
-from dm_regional_app.utils import apply_filters
+from dm_regional_app.utils import apply_filters, number_format
 from ssda903.config import PlacementCategories
+from ssda903.costs import convert_population_to_cost
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
@@ -60,6 +69,8 @@ def router_handler(request):
 
     adjusted_rates = None
 
+    adjusted_proportions = None
+
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
     session_scenario, created = SessionScenario.objects.get_or_create(
         id=session_scenario_id,
@@ -70,12 +81,269 @@ def router_handler(request):
             "historic_stock": historic_stock,
             "adjusted_costs": adjusted_costs,
             "adjusted_rates": adjusted_rates,
+            "adjusted_proportions": adjusted_proportions,
         },
     )
 
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+@login_required
+def costs(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        historic_filters = session_scenario.historic_filters
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data,
+            **session_scenario.prediction_parameters,
+            rate_adjustment=session_scenario.adjusted_rates,
+            number_adjustment=session_scenario.adjusted_numbers
+        )
+
+        costs = convert_population_to_cost(
+            prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
+        )
+
+        stats = PopulationStats(historic_data)
+
+        historic_costs = convert_population_to_cost(
+            stats,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
+        )
+
+        base_prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        base_costs = convert_population_to_cost(
+            base_prediction,
+            session_scenario.adjusted_costs,
+        )
+
+        daily_cost = pd.DataFrame(
+            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
+        )
+
+        area_numbers = area_chart_population(stats, prediction)
+
+        area_costs = area_chart_cost(historic_costs, costs)
+
+        proportions = placement_proportion_table(costs)
+
+        summary_table = summary_tables(costs.summary_table)
+
+        summary_table_base = summary_tables(base_costs.summary_table)
+
+        summary_table_difference = costs.summary_table - base_costs.summary_table
+        summary_table_difference = summary_tables(summary_table_difference)
+
+        year_one_cost = year_one_costs(costs)
+        year_one_cost_base = year_one_costs(base_costs)
+        year_one_cost_difference = year_one_cost - year_one_cost_base
+        year_one_cost = number_format(year_one_cost)
+        year_one_cost_base = number_format(year_one_cost_base)
+        year_one_cost_difference = number_format(year_one_cost_difference)
+
+        if session_scenario.adjusted_rates is not None:
+            transition_rate_table = transition_rate_changes(
+                base_prediction.transition_rates, prediction.transition_rates
+            )
+            exit_rate_table = exit_rate_changes(
+                base_prediction.transition_rates, prediction.transition_rates
+            )
+        else:
+            transition_rate_table = None
+            exit_rate_table = None
+
+        if session_scenario.adjusted_numbers is not None:
+            entry_rate_table = entry_rate_changes(
+                base_prediction.entry_rates, prediction.entry_rates
+            )
+        else:
+            entry_rate_table = None
+
+        return render(
+            request,
+            "dm_regional_app/views/costs.html",
+            {
+                "forecast_dates": session_scenario.prediction_parameters,
+                "daily_cost": daily_cost,
+                "proportions": proportions,
+                "area_numbers": area_numbers,
+                "area_costs": area_costs,
+                "summary_table": summary_table,
+                "summary_table_base": summary_table_base,
+                "summary_table_difference": summary_table_difference,
+                "year_one_cost": year_one_cost,
+                "year_one_cost_base": year_one_cost_base,
+                "year_one_cost_difference": year_one_cost_difference,
+                "historic_filters": historic_filters,
+                "transition_rate_table": transition_rate_table,
+                "exit_rate_table": exit_rate_table,
+                "entry_rate_table": entry_rate_table,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "costs"
+        return redirect(redirect_url)
+
+
+@login_required
+def placement_proportions(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        costs = convert_population_to_cost(
+            prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
+        )
+
+        proportions = placement_proportion_table(costs)
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=costs.proportions,
+                initial_data=session_scenario.adjusted_proportions,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_proportions is not None:
+                    # if previous proportion adjustments have been made, update old series with new adjustments
+                    proportion_adjustments = session_scenario.adjusted_proportions
+                    new_numbers = data.combine_first(proportion_adjustments)
+
+                    session_scenario.adjusted_proportions = new_numbers
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_proportions = data
+                    session_scenario.save()
+
+                return redirect("costs")
+
+        else:
+            form = DynamicForm(
+                dataframe=costs.proportions,
+                initial_data=session_scenario.adjusted_proportions,
+            )
+
+            return render(
+                request,
+                "dm_regional_app/views/placement_proportions.html",
+                {
+                    "form": form,
+                    "placement_types": proportions,
+                },
+            )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = (
+            reverse(next_url_name) + "?next_url_name=" + "placement_proportions"
+        )
+        return redirect(redirect_url)
+
+
+@login_required
+def daily_costs(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        # read data
+        datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        historic_data = apply_filters(
+            datacontainer.enriched_view, session_scenario.historic_filters
+        )
+
+        # Call predict function
+        prediction = predict(
+            data=historic_data, **session_scenario.prediction_parameters
+        )
+
+        costs = convert_population_to_cost(
+            prediction,
+            session_scenario.adjusted_costs,
+            session_scenario.adjusted_proportions,
+        )
+
+        placement_types = pd.DataFrame(
+            {"Placement type": costs.costs.index}, index=costs.costs.index
+        )
+
+        if request.method == "POST":
+            form = DynamicForm(
+                request.POST,
+                dataframe=costs.costs,
+            )
+            if form.is_valid():
+                data = form.save()
+
+                if session_scenario.adjusted_costs is not None:
+                    # if previous cost adjustments have been made, update old series with new adjustments
+                    cost_adjustments = session_scenario.adjusted_costs
+                    new_numbers = data.combine_first(cost_adjustments)
+
+                    session_scenario.adjusted_costs = new_numbers
+                    session_scenario.save()
+
+                else:
+                    session_scenario.adjusted_costs = data
+                    session_scenario.save()
+
+                return redirect("costs")
+
+        else:
+            form = DynamicForm(
+                dataframe=costs.costs,
+                initial_data=costs.costs,
+            )
+
+            return render(
+                request,
+                "dm_regional_app/views/daily_costs.html",
+                {
+                    "form": form,
+                    "placement_types": placement_types,
+                },
+            )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "daily_costs"
+        return redirect(redirect_url)
 
 
 @login_required
@@ -121,7 +389,7 @@ def entry_rates(request):
                 if session_scenario.adjusted_numbers is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_numbers
-                    new_numbers = rate_adjustments.combine_first(data)
+                    new_numbers = data.combine_first(rate_adjustments)
 
                     session_scenario.adjusted_numbers = new_numbers
                     session_scenario.save()
@@ -135,7 +403,8 @@ def entry_rates(request):
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers
                 )
 
                 # build chart
@@ -179,7 +448,7 @@ def entry_rates(request):
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "entry_rates"
         return redirect(redirect_url)
 
 
@@ -214,7 +483,7 @@ def exit_rates(request):
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = rate_adjustments.combine_first(data)
+                    new_rates = data.combine_first(rate_adjustments)
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
@@ -228,7 +497,8 @@ def exit_rates(request):
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers
                 )
 
                 # build chart
@@ -272,7 +542,7 @@ def exit_rates(request):
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "transition_rates"
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "exit_rates"
         return redirect(redirect_url)
 
 
@@ -307,7 +577,7 @@ def transition_rates(request):
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = rate_adjustments.combine_first(data)
+                    new_rates = data.combine_first(rate_adjustments)
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
@@ -321,7 +591,8 @@ def transition_rates(request):
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers
                 )
 
                 # build chart
@@ -457,7 +728,8 @@ def adjusted(request):
             prediction = predict(
                 data=historic_data,
                 **session_scenario.prediction_parameters,
-                rate_adjustment=session_scenario.adjusted_rates
+                rate_adjustment=session_scenario.adjusted_rates,
+                number_adjustment=session_scenario.adjusted_numbers
             )
 
             # build chart

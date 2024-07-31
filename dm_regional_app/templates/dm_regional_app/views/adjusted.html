@@ -81,12 +81,7 @@
                         <div class="card card-body">
                             <div class="table-responsive">
                                 <table id="efficiency-hub-table" class="table table-hover table-sm">
-                                    <thead>
-                                     {{ entry_rate_table | convert_data_frame_to_html_table_headers | safe}}
-                                    </thead>
-                                    <tbody>
-                                      {{ entry_rate_table | convert_data_frame_to_html_table_rows | safe}}
-                                    </tbody>
+                                     {{ entry_rate_table | convert_data_frame_to_html_table | safe}}
                                 </table>
                                 <div class="d-flex bd-highlight mb-3">
                                     <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_rates">Clear all rate adjustments</a></div>
@@ -98,13 +93,8 @@
                     <div class="collapse indent" id="leaving_care" data-bs-parent="#tables">
                         <div class="card card-body">
                             <div class="table-responsive">
-                                <table id="efficiency-hub-table" class="table table-hover table-sm">
-                                    <thead>
-                                     {{ exit_rate_table | convert_data_frame_to_html_table_headers | safe}}
-                                    </thead>
-                                    <tbody>
-                                      {{exit_rate_table | convert_data_frame_to_html_table_rows | safe}}
-                                    </tbody>
+                                <table id="efficiency-hub-table" class="table table-hover table-sm">                         
+                                     {{ exit_rate_table | convert_data_frame_to_html_table | safe}}
                                 </table>
                                 <div class="d-flex bd-highlight mb-3">
                                     <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_rates">Clear all rate adjustments</a></div>
@@ -117,12 +107,7 @@
                         <div class="card card-body">
                             <div class="table-responsive">
                             <table id="efficiency-hub-table" class="table table-hover table-sm">
-                                <thead>
-                                 {{ transition_rate_table | convert_data_frame_to_html_table_headers | safe}}
-                                </thead>
-                                <tbody>
-                                  {{transition_rate_table | convert_data_frame_to_html_table_rows | safe}}
-                                </tbody>
+                                  {{transition_rate_table | convert_data_frame_to_html_table | safe}}
                                </table>
                                <div class="d-flex bd-highlight mb-3">
                                 <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_rates">Clear all rate adjustments</a></div>
@@ -141,6 +126,8 @@
 
       <div class="d-flex bd-highlight mb-3">
         <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="{% url 'router_handler' %}?next_url_name=prediction">Back</a></div>
+
+        <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=costs">Next</a></div>
       </div>
     </div>
 {% endif %}

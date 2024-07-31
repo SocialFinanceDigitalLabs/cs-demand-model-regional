@@ -1,0 +1,33 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags %}
+{% load table_tags %}
+
+
+{% block content %}
+<br>
+    <h1>Adjust daily costs</h1>
+    <br>
+    <p>You may want to edit the daily cost of a child placement to give a more accurate picture of your projected spend.</p>
+    <p>New costs will overwrite previous values.
+    </p>
+        <div class="table-responsive">
+            <table id="transition-rate" class="table table-hover">
+                <form method="post">
+                {% csrf_token %}
+                {% convert_data_frame_to_html_table_plus_form placement_types form "New proportion" %}
+                <tr>
+                <td colspan="3">
+                    <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="costs">Back</a></div>
+                </td>
+                <td>
+                    <div class="p-2 bd-highlight"><button type="submit" class="btn btn-primary">Save</button></div>
+                </td>
+                </tr>
+            </form>
+            </table>
+        </div>
+
+
+</div>
+
+{% endblock %}

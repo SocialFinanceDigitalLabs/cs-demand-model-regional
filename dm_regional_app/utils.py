@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 from datetime import date, datetime
 
 import pandas as pd
@@ -78,3 +79,34 @@ def str_to_tuple(string):
         return ast.literal_eval(string)
     except Exception:
         return string
+
+
+def clean_population(df):
+    """
+    - remove age categories from placement strings
+    - filter out not in care population
+    - group together remaining placements
+    - ensures index date format matches
+    """
+
+    # remove age categories from placement strings
+    df["Placement"] = df["Placement"].apply(
+        lambda x: re.sub(r"\bto\b", "", re.sub(r"[^a-zA-Z ]", "", x)).replace(" ", "")
+    )
+    # filter out not in care population
+    df = df[df["Placement"].apply(lambda x: "Notincare" in x) == False]
+    # group together remaining placements (this creates a multi-index)
+    df = df.groupby([df.index, "Placement"]).sum()
+    # reset index to be the date column
+    df = df.reset_index()
+    df = df.set_index(df.columns[0])
+    # ensures index date format matches
+    df.index = pd.to_datetime(df.index)
+    return df
+
+
+def number_format(value):
+    if value < 0:
+        return f"-£{abs(value):,.2f}"
+    else:
+        return f"£{value:,.2f}"

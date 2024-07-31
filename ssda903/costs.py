@@ -6,6 +6,7 @@ import pandas as pd
 
 from ssda903.config import Costs, PlacementCategories
 from ssda903.multinomial import Prediction
+from ssda903.population_stats import PopulationStats
 
 # Set the precision for decimal operations
 getcontext().prec = 6
@@ -16,6 +17,7 @@ class CostForecast:
     population: pd.DataFrame
     proportions: pd.DataFrame
     costs: pd.DataFrame
+    summary_table: pd.DataFrame
 
 
 def get_cost_items_for_category(category_label: str):
@@ -44,6 +46,7 @@ def normalize_proportions(cost_items, proportion_adjustment):
     """
     adjustment_total = 0
     remaining_total = 0
+    normalised_proportions = pd.Series(dtype="float64")
 
     # Calculate the total of adjustment proportions and remaining proportions
     for item in cost_items:
@@ -54,39 +57,67 @@ def normalize_proportions(cost_items, proportion_adjustment):
 
     if adjustment_total >= 1:
         # Set remaining proportions to 0 and scale down adjustment proportions
-        scale_factor = Decimal("1") / Decimal(adjustment_total)
+        scale_factor = Decimal("1") / Decimal(str(adjustment_total))
         for item in cost_items:
             if item.label in proportion_adjustment.index:
-                item.defaults.proportion = float(
-                    Decimal(proportion_adjustment[item.label]) * scale_factor
+                proportion = float(
+                    Decimal(str(proportion_adjustment[item.label]))
+                    * Decimal(str(scale_factor))
                 )
             else:
-                item.defaults.proportion = 0
+                proportion = 0
+            normalised_proportions[item.label] = proportion
     else:
         # Adjust remaining proportions to make the total sum to 1
         scale_factor = (
-            (Decimal("1") - Decimal(adjustment_total)) / Decimal(remaining_total)
+            (Decimal("1") - Decimal(str(adjustment_total)))
+            / Decimal(str(remaining_total))
             if remaining_total > 0
             else 0
         )
         for item in cost_items:
             if item.label in proportion_adjustment.index:
-                item.defaults.proportion = proportion_adjustment[item.label]
+                proportion = proportion_adjustment[item.label]
             else:
-                item.defaults.proportion *= float(scale_factor)
+                proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                    str(scale_factor)
+                )
+            normalised_proportions[item.label] = float(proportion)
+
+    return normalised_proportions
 
 
-def forecast_costs(
-    data: Prediction,
+def resample_summary_table(summary_table):
+    """
+    Takes daily dataframe and resamples to represent quarterly periods.
+    """
+
+    summary_table.index = pd.to_datetime(summary_table.index)
+    summary_table = summary_table.resample("Q").sum()
+
+    # Convert the DatetimeIndex to a PeriodIndex representing quarters
+    summary_table.index = summary_table.index.to_period("Q")
+
+    # Optionally convert the PeriodIndex to a string format if preferred
+    summary_table.index = summary_table.index.strftime("Q%q-%Y")
+    summary_table = summary_table.round(2)
+    return summary_table
+
+
+def convert_population_to_cost(
+    data: Union[Prediction, PopulationStats],
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     proportion_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     # inflation? True/false
 ) -> CostForecast:
     """
-    This will take a population and translate it to a cost.
+    This will take a population via a Prediction or PopulationStats object and translate it to a cost.
     """
+    if isinstance(data, Prediction):
+        forecast_population = data.population
+    elif isinstance(data, PopulationStats):
+        forecast_population = data.stock
 
-    forecast_population = data.population
     processed_categories = set()
     proportions = pd.Series(dtype="float64")
     costs = pd.Series(dtype="float64")
@@ -99,22 +130,21 @@ def forecast_costs(
     forecast_population = forecast_population[columns_to_keep]
 
     cost_forecast = pd.DataFrame(index=forecast_population.index)
+    summary_table = pd.DataFrame(index=forecast_population.index)
     for column in forecast_population.columns:
         # for each column, create a new series where we will sum the total cost output
         total_cost_series = pd.Series(0, index=forecast_population.index)
 
         for category in PlacementCategories:
             # for each category, check if the category label is in the column header
-            if (
-                category.value.label in column
-                and category.value.label not in processed_categories
-            ):
-                processed_categories.add(category.value.label)
+            if category.value.label in column:
                 cost_items = get_cost_items_for_category(category.value.label)
 
                 if proportion_adjustment is not None:
                     # Apply proportion adjustments
-                    normalize_proportions(cost_items, proportion_adjustment)
+                    normalised_proportions = normalize_proportions(
+                        cost_items, proportion_adjustment
+                    )
 
                 for cost_item in cost_items:
                     # check if there are cost adjustments and if so, take from this table
@@ -125,12 +155,27 @@ def forecast_costs(
                         cost_per_day = cost_adjustment[cost_item.label]
                     else:
                         cost_per_day = cost_item.defaults.cost_per_day
-                    proportion = cost_item.defaults.proportion
+                    if (
+                        proportion_adjustment is not None
+                        and cost_item.label in normalised_proportions.index
+                    ):
+                        proportion = normalised_proportions[cost_item.label]
+                    else:
+                        proportion = cost_item.defaults.proportion
                     # for each cost item, multiply by cost per day and proportion, then sum together
                     total_cost_series += (
                         forecast_population[column] * cost_per_day * proportion
                     )
+                    if cost_item.label in summary_table.columns:
+                        summary_table[cost_item.label] += (
+                            forecast_population[column] * cost_per_day * proportion
+                        )
+                    else:
+                        summary_table[cost_item.label] = (
+                            forecast_population[column] * cost_per_day * proportion
+                        )
                     proportions[cost_item.label] = proportion
                     costs[cost_item.label] = cost_per_day
         cost_forecast[column] = total_cost_series
-    return CostForecast(cost_forecast, proportions, costs)
+    summary_table = resample_summary_table(summary_table)
+    return CostForecast(cost_forecast, proportions, costs, summary_table)

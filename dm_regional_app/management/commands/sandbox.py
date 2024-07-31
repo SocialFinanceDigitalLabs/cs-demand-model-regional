@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import Optional
 
 import pandas as pd
@@ -9,10 +10,11 @@ from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 from django.shortcuts import get_object_or_404
 
+from dm_regional_app.charts import area_chart
 from dm_regional_app.models import SavedScenario, SessionScenario
 from ssda903 import DemandModellingDataContainer, PopulationStats, StorageDataStore
 from ssda903.config import Costs
-from ssda903.costs import forecast_costs
+from ssda903.costs import convert_population_to_cost
 from ssda903.predictor import predict
 
 User = get_user_model()
@@ -56,14 +58,13 @@ class Command(BaseCommand):
 
         proportion_adjustment = None
 
-        costs = forecast_costs(
+        costs = convert_population_to_cost(
             prediction,
             proportion_adjustment=proportion_adjustment,
             cost_adjustment=cost_adjustment,
         )
 
-        print(costs.proportions)
-        print(costs.costs)
+        area_chart(prediction)
 
         # print(pop.stock)
         # print(dc.enriched_view)

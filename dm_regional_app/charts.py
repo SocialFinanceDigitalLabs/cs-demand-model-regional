@@ -1,9 +1,178 @@
+import re
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from dm_regional_app.utils import clean_population
+from ssda903.config import Costs
+from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
+
+
+def year_one_costs(df: CostForecast):
+    """
+    This function takes a CostForecast and filters to only values in the first year, returning a single sum of those values.
+    """
+
+    df = df.population
+
+    # Ensure the index is a DatetimeIndex
+    df.index = pd.to_datetime(df.index)
+
+    # Find the first date in the DataFrame index
+    first_date = df.index.min()
+
+    # Calculate the end date (one year from the first date)
+    end_date = first_date + pd.DateOffset(years=1)
+
+    # Filter the DataFrame
+    df = df[(df.index >= first_date) & (df.index < end_date)]
+
+    # Sum all values in the DataFrame, round to 2 decimal places
+    total_sum = df.to_numpy().sum().round(2)
+
+    return total_sum
+
+
+def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
+    df_forecast = prediction.population
+
+    df_forecast = df_forecast.melt(
+        var_name="Placement",
+        value_name="Cost",
+        ignore_index=False,
+    )
+
+    df_forecast = clean_population(df_forecast)
+
+    # extract prediction start date
+    prediction_start_date = df_forecast.index.min()
+
+    # repeat transformation for historic data
+    df_historic = historic_data.population
+    df_historic = df_historic.melt(
+        var_name="Placement",
+        value_name="Cost",
+        ignore_index=False,
+    )
+
+    df_historic = clean_population(df_historic)
+
+    # filter any data after the prediction start date
+    df_historic = df_historic[df_historic.index <= prediction_start_date]
+
+    # combine Costs
+    combined_df = df_forecast.combine_first(df_historic)
+
+    fig = px.area(
+        combined_df,
+        x=combined_df.index,
+        y="Cost",
+        color="Placement",
+        labels={"index": "Date", "Cost": "Cost in £"},
+    )
+    fig.add_vline(
+        x=prediction_start_date, line_width=1, line_dash="dash", line_color="black"
+    )
+    fig.update_layout(title="Child placement costs")
+    fig_html = fig.to_html(full_html=False)
+    return fig_html
+
+
+def area_chart_population(historic_data: PopulationStats, prediction: Prediction):
+    df_forecast = prediction.population
+
+    df_forecast = df_forecast.melt(
+        var_name="Placement",
+        value_name="Population",
+        ignore_index=False,
+    )
+
+    df_forecast = clean_population(df_forecast)
+
+    # extract prediction start date
+    prediction_start_date = df_forecast.index.min()
+
+    # repeat transformation for historic data
+    df_historic = historic_data.stock
+    df_historic = df_historic.melt(
+        var_name="Placement",
+        value_name="Population",
+        ignore_index=False,
+    )
+    df_historic = clean_population(df_historic)
+
+    # filter any data after the prediction start date
+    df_historic = df_historic[df_historic.index <= prediction_start_date]
+
+    # combine populations
+    combined_df = df_forecast.combine_first(df_historic)
+
+    fig = px.area(
+        combined_df,
+        x=combined_df.index,
+        y="Population",
+        color="Placement",
+        labels={
+            "index": "Date",
+        },
+    )
+    fig.add_vline(
+        x=prediction_start_date, line_width=1, line_dash="dash", line_color="black"
+    )
+    fig.update_layout(title="Child placement numbers")
+    fig_html = fig.to_html(full_html=False)
+    return fig_html
+
+
+def placement_proportion_table(data: CostForecast):
+    proportions = data.proportions
+
+    categories = {item.value.label: item.value.category.label for item in Costs}
+
+    placement = proportions.index.map(categories)
+
+    proportions = pd.DataFrame(
+        {
+            "Placement": placement,
+            "Placement type": proportions.index,
+            "Current proportion": proportions.values,
+        },
+        index=proportions.index,
+    )
+
+    proportions = proportions.sort_values(by=["Placement"])
+    proportions["Placement"] = proportions["Placement"].mask(
+        proportions["Placement"].duplicated(), ""
+    )
+
+    return proportions
+
+
+def summary_tables(df):
+    """
+    takes Costs.summary_table as input and transforms for display
+    """
+    # round to 2 decimal places
+    df = df.round(2)
+
+    # Add a total column
+    df["Total"] = df.sum(axis=1)
+
+    # Add a total row
+    df.loc["Total"] = df.sum()
+
+    df = (
+        df.reset_index()
+        .rename(columns={"index": "Placement"})
+        .transpose()
+        .reset_index()
+    )
+    df.columns = df.iloc[0]
+    df = df[1:]
+    return df
 
 
 def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):
@@ -135,7 +304,6 @@ def transition_rate_table(data):
     df["From"] = df["from"]
     df.set_index(["from", "to"], inplace=True)
     df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
-    df = df.round(4)
     df = df.sort_values(by=["From"])
     df = df[df["From"] != df["To"]]
     df["From"] = df["From"].mask(df["From"].duplicated(), "")
@@ -145,7 +313,9 @@ def transition_rate_table(data):
     from_col = df.pop("From")
     df.insert(0, "From", from_col)
 
-    df.columns = ["From", "To", "Base transition rate"]
+    if df.shape[1] == 3:
+        df.columns = ["From", "To", "Base transition rate"]
+        df = df.round(4)
 
     return df
 
@@ -157,7 +327,6 @@ def exit_rate_table(data):
     df["From"] = df["from"]
     df = df[df["to"].apply(lambda x: "Not in care" in x)]
     df.set_index(["from", "to"], inplace=True)
-    df = df.round(4)
 
     df[["Age Group", "Placement"]] = df["From"].str.split(" - ", expand=True)
 
@@ -169,9 +338,12 @@ def exit_rate_table(data):
 
     df = df.drop(["From"], axis=1)
 
+    df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
-    df.columns = ["Age Group", "Placement", "Base exit rate"]
+    if df.shape[1] == 3:
+        df.columns = ["Age Group", "Placement", "Base exit rate"]
+        df = df.round(4)
 
     return df
 
@@ -183,8 +355,6 @@ def entry_rate_table(data):
     df["to"] = df["index"]
     df = df[df["to"].apply(lambda x: "Not in care" in x) == False]
 
-    df = df.round(4)
-
     df[["Age Group", "Placement"]] = df["to"].str.split(" - ", expand=True)
     df.set_index(["to"], inplace=True)
 
@@ -194,11 +364,14 @@ def entry_rate_table(data):
     age_group = df.pop("Age Group")
     df.insert(0, "Age Group", age_group)
 
+    df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
     df = df.drop(["index"], axis=1)
 
-    df.columns = ["Age Group", "Placement", "Base entry rate"]
+    if df.shape[1] == 3:
+        df.columns = ["Age Group", "Placement", "Base entry rate"]
+        df = df.round(4)
 
     return df
 
@@ -355,3 +528,69 @@ def compare_forecast(
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
+
+
+def transition_rate_changes(base, adjusted):
+    """
+    Takes base and adjusted rate series.
+    Combines series
+    Transforms
+    Filters for only where changes have been made
+    Returns None if no changes
+    """
+    df = pd.concat([base, adjusted], axis=1)
+
+    df = transition_rate_table(df)
+
+    df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
+    df = df[df["Base transition rate"] != df["Adjusted transition rate"]]
+
+    if df.empty:
+        return None
+    else:
+        df = df.round(4)
+        return df
+
+
+def exit_rate_changes(base, adjusted):
+    """
+    Takes base and adjusted rate series.
+    Combines series
+    Transforms
+    Filters for only where changes have been made
+    Returns None if no changes
+    """
+    df = pd.concat([base, adjusted], axis=1)
+
+    df = exit_rate_table(df)
+
+    df.columns = ["From", "To", "Base exit rate", "Adjusted exit rate"]
+    df = df[df["Base exit rate"] != df["Adjusted exit rate"]]
+
+    if df.empty:
+        return None
+    else:
+        df = df.round(4)
+        return df
+
+
+def entry_rate_changes(base, adjusted):
+    """
+    Takes base and adjusted rate series.
+    Combines series
+    Transforms
+    Filters for only where changes have been made
+    Returns None if no changes
+    """
+    df = pd.concat([base, adjusted], axis=1)
+
+    df = entry_rate_table(df)
+
+    df.columns = ["From", "To", "Base entry rate", "Adjusted entry rate"]
+    df = df[df["Base entry rate"] != df["Adjusted entry rate"]]
+
+    if df.empty:
+        return None
+    else:
+        df = df.round(4)
+        return df
