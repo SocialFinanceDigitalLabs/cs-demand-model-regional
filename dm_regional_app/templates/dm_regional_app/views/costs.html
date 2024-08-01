@@ -190,7 +190,7 @@
           <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
             <div class="accordion-body">
                 <p>See the current daily values in £ for each placement type per day. If you wish to edit these values go to 'edit values'. 
-                    You can toggle 5% year-on-year inflation to apply to your forecast.</p>
+                    You choose to apply a year-on-year inflation to your forecast.</p>
                 <div class="col-md-6">
                 <div class="table table-bordered">
                     <table id="efficiency-hub-table" class="table table-hover table-sm">                         
@@ -200,6 +200,18 @@
                 <div class="d-flex bd-highlight mb-3">
                     <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=daily_costs">Edit daily costs</a></div>
                   </div>
+
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">Inflation parameters</h5>
+                      <br>
+                  <form method="post">
+                    {% csrf_token %}
+                    {% crispy form %}
+                </form>
+              </div>
+            </div>
+
                 </div>
             </div>
           </div>
@@ -272,7 +284,8 @@
 </div>
 <br>
 <h2>Cost breakdown</h2>
-<p>Please note that if your prediction start and end dates do not align with the beginning and end of calendar quarters then the first and last quarter in the following tables will not represent a total quarter figure.</p>
+<p>Please note that if your prediction start and end dates do not align with the beginning and end of calendar quarters then the first and last quarter in the following 
+  tables will not represent a total quarter figure.</p>
 <br>
 <! -- TO DO : update logic to include proportions in proportion issue -->
 {% if exit_rate_table is not None or entry_rate_table is not None or transition_rate_table is not None %}

@@ -195,18 +195,26 @@ def convert_population_to_cost(
                             )
 
                             if cost_item.label in summary_table.columns:
-                                summary_table.at[current_date, cost_item.label] += (
-                                    forecast_population.at[current_date, column]
-                                    * cost_per_day
-                                    * proportion
-                                )
+                                if pd.isna(
+                                    summary_table.at[current_date, cost_item.label]
+                                ):
+                                    summary_table.at[current_date, cost_item.label] = (
+                                        forecast_population.at[current_date, column]
+                                        * cost_per_day
+                                        * proportion
+                                    )
+                                else:
+                                    summary_table.at[current_date, cost_item.label] += (
+                                        forecast_population.at[current_date, column]
+                                        * cost_per_day
+                                        * proportion
+                                    )
                             else:
                                 summary_table.at[current_date, cost_item.label] = (
                                     forecast_population.at[current_date, column]
                                     * cost_per_day
                                     * proportion
                                 )
-
                     else:
                         # for each cost item, multiply by cost per day and proportion, then sum together
                         total_cost_series += (
@@ -222,5 +230,6 @@ def convert_population_to_cost(
                             )
 
         cost_forecast[column] = total_cost_series
+    print(summary_table)
     summary_table = resample_summary_table(summary_table)
     return CostForecast(cost_forecast, proportions, costs, summary_table)
