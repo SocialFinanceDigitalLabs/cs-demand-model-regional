@@ -98,7 +98,7 @@
                 <div class="card border-dark mb-3">
                     <div class="card-header">
                         <h5 class="card-title">You have made adjustments to the following rates, please click to view:<br></h5>
-                        {% if entry_rate_table %}
+                        {% if entry_rate_table is not None %}
                         <a class="btn btn-primary" data-bs-toggle="collapse" href="#entering_care" role="button" aria-expanded="false" aria-controls="entering_care">
                             <span>Children entering<br></span>
                               <span>care</span>

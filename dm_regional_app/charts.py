@@ -538,12 +538,12 @@ def transition_rate_changes(base, adjusted):
     Filters for only where changes have been made
     Returns None if no changes
     """
-    df = pd.concat([base, adjusted], axis=1)
+    df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
+    df = df[df["base"] != df["adjusted"]]
 
     df = transition_rate_table(df)
 
     df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
-    df = df[df["Base transition rate"] != df["Adjusted transition rate"]]
 
     if df.empty:
         return None
@@ -560,12 +560,12 @@ def exit_rate_changes(base, adjusted):
     Filters for only where changes have been made
     Returns None if no changes
     """
-    df = pd.concat([base, adjusted], axis=1)
+    df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
+    df = df[df["Base exit rate"] != df["Adjusted exit rate"]]
 
     df = exit_rate_table(df)
 
     df.columns = ["From", "To", "Base exit rate", "Adjusted exit rate"]
-    df = df[df["Base exit rate"] != df["Adjusted exit rate"]]
 
     if df.empty:
         return None
@@ -582,12 +582,12 @@ def entry_rate_changes(base, adjusted):
     Filters for only where changes have been made
     Returns None if no changes
     """
-    df = pd.concat([base, adjusted], axis=1)
+    df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
+    df = df[df["base"] != df["adjusted"]]
 
     df = entry_rate_table(df)
 
     df.columns = ["From", "To", "Base entry rate", "Adjusted entry rate"]
-    df = df[df["Base entry rate"] != df["Adjusted entry rate"]]
 
     if df.empty:
         return None
