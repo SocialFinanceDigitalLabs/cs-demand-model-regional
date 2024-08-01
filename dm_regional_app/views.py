@@ -191,7 +191,6 @@ def costs(request):
             entry_rate_table = None
 
         form = InflationForm(initial=session_scenario.inflation_parameters)
-        print(session_scenario.inflation_parameters)
 
         return render(
             request,

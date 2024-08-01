@@ -230,6 +230,5 @@ def convert_population_to_cost(
                             )
 
         cost_forecast[column] = total_cost_series
-    print(summary_table)
     summary_table = resample_summary_table(summary_table)
     return CostForecast(cost_forecast, proportions, costs, summary_table)

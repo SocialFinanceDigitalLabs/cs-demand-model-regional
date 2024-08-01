@@ -561,7 +561,7 @@ def exit_rate_changes(base, adjusted):
     Returns None if no changes
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
-    df = df[df["Base exit rate"] != df["Adjusted exit rate"]]
+    df = df[df["base"] != df["adjusted"]]
 
     df = exit_rate_table(df)
 
