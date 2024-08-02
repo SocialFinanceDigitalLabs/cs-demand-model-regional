@@ -106,6 +106,16 @@ def costs(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
+        if request.method == "POST":
+            form = InflationForm(request.POST)
+            if form.is_valid():
+                session_scenario.inflation_parameters = form.cleaned_data
+                session_scenario.save()
+
+        else:
+            form = InflationForm(initial=session_scenario.inflation_parameters)
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -189,8 +199,6 @@ def costs(request):
             )
         else:
             entry_rate_table = None
-
-        form = InflationForm(initial=session_scenario.inflation_parameters)
 
         return render(
             request,
