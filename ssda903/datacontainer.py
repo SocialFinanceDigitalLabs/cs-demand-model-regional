@@ -160,6 +160,38 @@ class DemandModellingDataContainer:
         change_ix = combined["DEC"].isna() | combined["DEC"].gt(decom_next)
         combined.loc[change_ix, "DEC"] = decom_next[change_ix]
 
+        # Mark episodes that represent only a change in legal status or placement status
+        combined["Skip_Episode"] = np.where(
+            (combined["RNE"].isin(["L", "T", "U"]))
+            & (combined["CHILD"] == combined["CHILD"].shift(1))
+            & (combined["DECOM"] == combined["DEC"].shift(1)),
+            True,
+            False,
+        )
+
+        # Keep episodes with Skip_Episode == FALSE, but update their closing info (DEC, REC and REASON_PLACE_CHANGE) to equal to last skipped episode
+        kept_rows = []
+        skipped_episode = False
+        last_skipped_dec = None
+        last_skipped_rec = None
+        last_skipped_rpc = None
+
+        for index, row in combined.iterrows():
+            if row["Skip_Episode"] == False:
+                if skipped_episode == True:
+                    kept_rows[-1]["DEC"] = last_skipped_dec
+                    kept_rows[-1]["REC"] = last_skipped_rec
+                    kept_rows[-1]["REASON_PLACE_CHANGE"] = last_skipped_rpc
+                    skipped_episode = False
+                kept_rows.append(row)
+            else:
+                skipped_episode = True
+                last_skipped_dec = row["DEC"]
+                last_skipped_rec = row["REC"]
+                last_skipped_rpc = row["REASON_PLACE_CHANGE"]
+
+        combined = pd.DataFrame(kept_rows)
+
         return combined
 
     @cached_property
