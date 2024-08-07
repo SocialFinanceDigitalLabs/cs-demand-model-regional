@@ -164,15 +164,10 @@ def summary_tables(df):
     # Add a total row
     df.loc["Total"] = df.sum()
 
-    df = (
-        df.reset_index()
-        .rename(columns={"index": "Placement"})
-        .transpose()
-        .reset_index()
-    )
-    df.columns = df.iloc[0]
-    df = df[1:]
-    return df
+    df_transposed = df.T
+    df_transposed = df_transposed.reset_index().rename(columns={"index": "Placement"})
+
+    return df_transposed
 
 
 def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):
@@ -299,21 +294,27 @@ def historic_chart(data: PopulationStats):
 def transition_rate_table(data):
     df = data
 
+    # ensures series has accessible column after resetting
+    if isinstance(df, pd.Series):
+        df = df.rename("rates")
+
+    # reset index, create duplicate columns, and set index back to original
     df = df.reset_index()
     df["To"] = df["to"]
     df["From"] = df["from"]
     df.set_index(["from", "to"], inplace=True)
+
+    # filter out children leaving care and rates for children remaining in the placement
     df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
-    df = df.sort_values(by=["From"])
     df = df[df["From"] != df["To"]]
+
+    # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
+    df = df.sort_values(by=["From"])
     df["From"] = df["From"].mask(df["From"].duplicated(), "")
 
-    to = df.pop("To")
-    df.insert(0, "To", to)
-    from_col = df.pop("From")
-    df.insert(0, "From", from_col)
-
+    # if dataframe has 3 columns, order and rename them and round values
     if df.shape[1] == 3:
+        df = df[["From", "To", "rates"]]
         df.columns = ["From", "To", "Base transition rate"]
         df = df.round(4)
 
@@ -321,55 +322,69 @@ def transition_rate_table(data):
 
 
 def exit_rate_table(data):
+    """
+    Creates columns with duplicate values from index
+    Sorts and masks columns to replicate multiindex look
+    """
     df = data
 
+    # ensures series has accessible column after resetting
+    if isinstance(df, pd.Series):
+        df = df.rename("rates")
+    # reset index
     df = df.reset_index()
-    df["From"] = df["from"]
+
+    # keeps only data where children are leaving care
     df = df[df["to"].apply(lambda x: "Not in care" in x)]
+
+    # creates new columns for age and placement from buckets
+    df[["Age Group", "Placement"]] = df["from"].str.split(" - ", expand=True)
+
+    # sets multiindex
     df.set_index(["from", "to"], inplace=True)
 
-    df[["Age Group", "Placement"]] = df["From"].str.split(" - ", expand=True)
-
-    placement = df.pop("Placement")
-    df.insert(0, "Placement", placement)
-
-    age_group = df.pop("Age Group")
-    df.insert(0, "Age Group", age_group)
-
-    df = df.drop(["From"], axis=1)
-
+    # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
     df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
+    # if dataframe has 3 columns, order and rename them and round values
     if df.shape[1] == 3:
-        df.columns = ["Age Group", "Placement", "Base exit rate"]
+        df = df[["Age Group", "Placement", "rates"]]
+        df.columns = ["Age Group", "Placement", "Base entry rate"]
         df = df.round(4)
 
     return df
 
 
 def entry_rate_table(data):
+    """
+    Creates columns with duplicate values from index
+    Sorts and masks columns to replicate multiindex look
+    """
     df = data
+    # ensures series has accessible column after resetting
+    if isinstance(df, pd.Series):
+        df = df.rename("rates")
 
-    df = df.reset_index()
-    df["to"] = df["index"]
+    # reset index and rename to 'to'
+    df = df.reset_index().rename(columns={"index": "to"})
+
+    # filter out not in care population
     df = df[df["to"].apply(lambda x: "Not in care" in x) == False]
 
+    # split buckets into age group and placement
     df[["Age Group", "Placement"]] = df["to"].str.split(" - ", expand=True)
+
+    # set 'to' back to index
     df.set_index(["to"], inplace=True)
 
-    placement = df.pop("Placement")
-    df.insert(0, "Placement", placement)
-
-    age_group = df.pop("Age Group")
-    df.insert(0, "Age Group", age_group)
-
+    # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
     df = df.sort_values(by=["Age Group"])
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
-    df = df.drop(["index"], axis=1)
-
+    # if dataframe has 3 columns, order and rename them and round values
     if df.shape[1] == 3:
+        df = df[["Age Group", "Placement", "rates"]]
         df.columns = ["Age Group", "Placement", "Base entry rate"]
         df = df.round(4)
 
@@ -539,10 +554,11 @@ def transition_rate_changes(base, adjusted):
     Returns None if no changes
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
-    df = df[df["base"] != df["adjusted"]]
 
     df = transition_rate_table(df)
+    df = df[df["base"] != df["adjusted"]]
 
+    df = df[["From", "To", "base", "adjusted"]]
     df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
 
     if df.empty:
@@ -561,11 +577,12 @@ def exit_rate_changes(base, adjusted):
     Returns None if no changes
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
-    df = df[df["base"] != df["adjusted"]]
 
     df = exit_rate_table(df)
+    df = df[df["base"] != df["adjusted"]]
 
-    df.columns = ["From", "To", "Base exit rate", "Adjusted exit rate"]
+    df = df[["Age Group", "Placement", "base", "adjusted"]]
+    df.columns = ["Age Group", "Placement" "Base exit rate", "Adjusted exit rate"]
 
     if df.empty:
         return None
@@ -583,11 +600,12 @@ def entry_rate_changes(base, adjusted):
     Returns None if no changes
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
-    df = df[df["base"] != df["adjusted"]]
 
     df = entry_rate_table(df)
+    df = df[df["base"] != df["adjusted"]]
 
-    df.columns = ["From", "To", "Base entry rate", "Adjusted entry rate"]
+    df = df[["Age Group", "Placement", "base", "adjusted"]]
+    df.columns = ["Age Group", "Placement", "Base entry rate", "Adjusted entry rate"]
 
     if df.empty:
         return None

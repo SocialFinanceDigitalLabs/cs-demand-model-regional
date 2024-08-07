@@ -20,11 +20,10 @@ def convert_data_frame_to_html_table(df):
 
     html = "<thead><tr>"
     for value in df.columns:
-        modified_value = value
         if isinstance(value, str):
             if "base" in value.lower():
-                modified_value = value.lower().replace("base", "").strip().capitalize()
-            html += f'<th scope="col" style="padding-top: 8px; padding-bottom: 8px;">{modified_value}</th>'
+                value = value.lower().replace("base", "").strip().capitalize()
+            html += f'<th scope="col" style="padding-top: 8px; padding-bottom: 8px;">{value}</th>'
     html += "</tr></thead><tbody>"
 
     for row in df.values:
