@@ -34,9 +34,9 @@ def get_cost_items_for_category(category_label: str):
 
 def normalize_proportions(cost_items, proportion_adjustment):
     """
-    This function makes sure the proportions for each category sum to 1
+    This function makes sure the proportions for each category sum to 1.
 
-    It will prioritise proportions in the proportion adjustment series, eg
+    It will prioritize proportions in the proportion adjustment series, e.g.,
     If proportion adjustments sum to less than 1 but total proportions sum to
     more than 1, this will be adjusted via changing proportions not in the
     adjustment series.
@@ -44,6 +44,9 @@ def normalize_proportions(cost_items, proportion_adjustment):
     If the adjustment total sums to more than 1, other proportions will
     scale to 0 and the proportions in the adjustment series will be scaled
     to sum to 1.
+
+    If the total proportions sum to less than 1, keep adjustment proportions
+    unchanged and scale up the remaining proportions.
     """
     adjustment_total = 0
     remaining_total = 0
@@ -56,7 +59,16 @@ def normalize_proportions(cost_items, proportion_adjustment):
         else:
             remaining_total += item.defaults.proportion
 
-    if adjustment_total >= 1:
+    total_proportion = adjustment_total + remaining_total
+
+    if total_proportion == 1:
+        # If the total is exactly 1, return the proportions as they are
+        for item in cost_items:
+            if item.label in proportion_adjustment.index:
+                normalised_proportions[item.label] = proportion_adjustment[item.label]
+            else:
+                normalised_proportions[item.label] = item.defaults.proportion
+    elif adjustment_total >= 1:
         # Set remaining proportions to 0 and scale down adjustment proportions
         scale_factor = Decimal("1") / Decimal(str(adjustment_total))
         for item in cost_items:
@@ -69,21 +81,38 @@ def normalize_proportions(cost_items, proportion_adjustment):
                 proportion = 0
             normalised_proportions[item.label] = proportion
     else:
-        # Adjust remaining proportions to make the total sum to 1
-        scale_factor = (
-            (Decimal("1") - Decimal(str(adjustment_total)))
-            / Decimal(str(remaining_total))
-            if remaining_total > 0
-            else 0
-        )
-        for item in cost_items:
-            if item.label in proportion_adjustment.index:
-                proportion = proportion_adjustment[item.label]
-            else:
-                proportion = Decimal(str(item.defaults.proportion)) * Decimal(
-                    str(scale_factor)
-                )
-            normalised_proportions[item.label] = float(proportion)
+        if total_proportion > 1:
+            # Adjust remaining proportions to make the total sum to 1
+            scale_factor = (
+                (Decimal("1") - Decimal(str(adjustment_total)))
+                / Decimal(str(remaining_total))
+                if remaining_total > 0
+                else 0
+            )
+            for item in cost_items:
+                if item.label in proportion_adjustment.index:
+                    proportion = proportion_adjustment[item.label]
+                else:
+                    proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                        str(scale_factor)
+                    )
+                normalised_proportions[item.label] = float(proportion)
+        else:
+            # Scale up remaining proportions to make the total sum to 1 while keeping adjustment proportions unchanged
+            scale_factor = (
+                (Decimal("1") - Decimal(str(adjustment_total)))
+                / Decimal(str(remaining_total))
+                if remaining_total > 0
+                else 0
+            )
+            for item in cost_items:
+                if item.label in proportion_adjustment.index:
+                    proportion = proportion_adjustment[item.label]
+                else:
+                    proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                        str(scale_factor)
+                    )
+                normalised_proportions[item.label] = float(proportion)
 
     return normalised_proportions
 
