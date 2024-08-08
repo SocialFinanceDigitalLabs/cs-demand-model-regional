@@ -158,10 +158,10 @@ def costs(request):
             **session_scenario.inflation_parameters,
         )
 
-        daily_cost = pd.DataFrame(
+        weekly_cost = pd.DataFrame(
             {
                 "Placement type": costs.cost_summary.index,
-                "Daily cost": costs.cost_summary.values,
+                "Weekly cost": costs.cost_summary.values,
             }
         )
 
@@ -208,7 +208,7 @@ def costs(request):
             "dm_regional_app/views/costs.html",
             {
                 "forecast_dates": session_scenario.prediction_parameters,
-                "daily_cost": daily_cost,
+                "weekly_cost": weekly_cost,
                 "proportions": proportions,
                 "area_numbers": area_numbers,
                 "area_costs": area_costs,

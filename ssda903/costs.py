@@ -191,11 +191,13 @@ def convert_population_to_cost(
                         cost_adjustment is not None
                         and cost_item.label in cost_adjustment.index
                     ):
-                        cost_per_day = cost_adjustment[cost_item.label]
+                        cost_per_week = cost_adjustment[cost_item.label]
                     else:
-                        cost_per_day = cost_item.defaults.cost_per_day
-                    # add original daily cost to costs output
-                    costs[cost_item.label] = cost_per_day
+                        cost_per_week = cost_item.defaults.cost_per_week
+                    # work out daily cost
+                    cost_per_day = cost_per_week / 7
+                    # add original weekly cost to costs output
+                    costs[cost_item.label] = cost_per_week
 
                     if (
                         proportion_adjustment is not None
