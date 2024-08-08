@@ -135,7 +135,7 @@ class HistoricDataFilter(forms.Form):
 class DynamicForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.dataframe = kwargs.pop("dataframe", None)
-        initial_data = kwargs.pop("initial_data", pd.Series())
+        initial_data = kwargs.pop("initial_data", pd.Series)
 
         super(DynamicForm, self).__init__(*args, **kwargs)
         self.initialize_fields(initial_data)
