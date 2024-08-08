@@ -15,10 +15,11 @@ getcontext().prec = 6
 
 @dataclass
 class CostForecast:
-    population: pd.DataFrame
-    proportions: pd.DataFrame
     costs: pd.DataFrame
+    proportions: pd.DataFrame
+    cost_summary: pd.DataFrame
     summary_table: pd.DataFrame
+    population: pd.DataFrame
 
 
 def get_cost_items_for_category(category_label: str):
@@ -167,12 +168,11 @@ def convert_population_to_cost(
     forecast_population = forecast_population[columns_to_keep]
 
     cost_forecast = pd.DataFrame(index=forecast_population.index)
-    summary_table = pd.DataFrame(index=forecast_population.index)
+    proportion_population = pd.DataFrame(index=forecast_population.index)
     start_date = forecast_population.index[0]
 
     for column in forecast_population.columns:
         # for each column, create a new series where we will sum the total cost output
-        total_cost_series = pd.Series(0, index=forecast_population.index)
 
         for category in PlacementCategories:
             # for each category, check if the category label is in the column header
@@ -217,47 +217,48 @@ def convert_population_to_cost(
                                 )
                                 anniversary = current_date
 
-                            total_cost_series[i] += (
-                                forecast_population.at[current_date, column]
-                                * cost_per_day
-                                * proportion
-                            )
-
-                            if cost_item.label in summary_table.columns:
+                            if cost_item.label in cost_forecast.columns:
                                 if pd.isna(
-                                    summary_table.at[current_date, cost_item.label]
+                                    cost_forecast.at[current_date, cost_item.label]
                                 ):
-                                    summary_table.at[current_date, cost_item.label] = (
+                                    cost_forecast.at[current_date, cost_item.label] = (
                                         forecast_population.at[current_date, column]
                                         * cost_per_day
                                         * proportion
                                     )
                                 else:
-                                    summary_table.at[current_date, cost_item.label] += (
+                                    cost_forecast.at[current_date, cost_item.label] += (
                                         forecast_population.at[current_date, column]
                                         * cost_per_day
                                         * proportion
                                     )
                             else:
-                                summary_table.at[current_date, cost_item.label] = (
+                                cost_forecast.at[current_date, cost_item.label] = (
                                     forecast_population.at[current_date, column]
                                     * cost_per_day
                                     * proportion
                                 )
                     else:
                         # for each cost item, multiply by cost per day and proportion, then sum together
-                        total_cost_series += (
-                            forecast_population[column] * cost_per_day * proportion
-                        )
-                        if cost_item.label in summary_table.columns:
-                            summary_table[cost_item.label] += (
+                        if cost_item.label in cost_forecast.columns:
+                            cost_forecast[cost_item.label] += (
                                 forecast_population[column] * cost_per_day * proportion
                             )
                         else:
-                            summary_table[cost_item.label] = (
+                            cost_forecast[cost_item.label] = (
                                 forecast_population[column] * cost_per_day * proportion
                             )
+                    # for each cost item, multiply by proportion, then sum together for proportioned population
+                    if cost_item.label in proportion_population.columns:
+                        proportion_population[cost_item.label] += (
+                            forecast_population[column] * proportion
+                        )
+                    else:
+                        proportion_population[cost_item.label] = (
+                            forecast_population[column] * proportion
+                        )
 
-        cost_forecast[column] = total_cost_series
-    summary_table = resample_summary_table(summary_table)
-    return CostForecast(cost_forecast, proportions, costs, summary_table)
+    summary_table = resample_summary_table(cost_forecast)
+    return CostForecast(
+        cost_forecast, proportions, costs, summary_table, proportion_population
+    )

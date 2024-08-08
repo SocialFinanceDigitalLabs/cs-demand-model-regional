@@ -159,10 +159,13 @@ def costs(request):
         )
 
         daily_cost = pd.DataFrame(
-            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
+            {
+                "Placement type": costs.cost_summary.index,
+                "Daily cost": costs.cost_summary.values,
+            }
         )
 
-        area_numbers = area_chart_population(stats, prediction)
+        area_numbers = area_chart_population(historic_costs, costs)
 
         area_costs = area_chart_cost(historic_costs, costs)
 
@@ -324,13 +327,13 @@ def daily_costs(request):
         )
 
         placement_types = pd.DataFrame(
-            {"Placement type": costs.costs.index}, index=costs.costs.index
+            {"Placement type": costs.cost_summary.index}, index=costs.cost_summary.index
         )
 
         if request.method == "POST":
             form = DynamicForm(
                 request.POST,
-                dataframe=costs.costs,
+                dataframe=costs.cost_summary,
             )
             if form.is_valid():
                 data = form.save()
@@ -351,8 +354,8 @@ def daily_costs(request):
 
         else:
             form = DynamicForm(
-                dataframe=costs.costs,
-                initial_data=costs.costs,
+                dataframe=costs.cost_summary,
+                initial_data=costs.cost_summary,
             )
 
             return render(

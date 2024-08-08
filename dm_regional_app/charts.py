@@ -16,7 +16,7 @@ def year_one_costs(df: CostForecast):
     This function takes a CostForecast and filters to only values in the first year, returning a single sum of those values.
     """
 
-    df = df.population
+    df = df.costs
 
     # Ensure the index is a DatetimeIndex
     df.index = pd.to_datetime(df.index)
@@ -37,7 +37,7 @@ def year_one_costs(df: CostForecast):
 
 
 def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
-    df_forecast = prediction.population
+    df_forecast = prediction.costs
 
     df_forecast = df_forecast.melt(
         var_name="Placement",
@@ -45,20 +45,16 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
         ignore_index=False,
     )
 
-    df_forecast = clean_population(df_forecast)
-
     # extract prediction start date
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.population
+    df_historic = historic_data.costs
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Cost",
         ignore_index=False,
     )
-
-    df_historic = clean_population(df_historic)
 
     # filter any data after the prediction start date
     df_historic = df_historic[df_historic.index <= prediction_start_date]
@@ -81,7 +77,7 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
     return fig_html
 
 
-def area_chart_population(historic_data: PopulationStats, prediction: Prediction):
+def area_chart_population(historic_data: CostForecast, prediction: CostForecast):
     df_forecast = prediction.population
 
     df_forecast = df_forecast.melt(
@@ -89,20 +85,19 @@ def area_chart_population(historic_data: PopulationStats, prediction: Prediction
         value_name="Population",
         ignore_index=False,
     )
-
-    df_forecast = clean_population(df_forecast)
+    df_forecast.index = pd.to_datetime(df_forecast.index)
 
     # extract prediction start date
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.stock
+    df_historic = historic_data.population
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Population",
         ignore_index=False,
     )
-    df_historic = clean_population(df_historic)
+    df_historic.index = pd.to_datetime(df_historic.index)
 
     # filter any data after the prediction start date
     df_historic = df_historic[df_historic.index <= prediction_start_date]
