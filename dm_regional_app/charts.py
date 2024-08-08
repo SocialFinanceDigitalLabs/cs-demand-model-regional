@@ -1,10 +1,7 @@
-import re
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dm_regional_app.utils import clean_population
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
