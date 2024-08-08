@@ -304,7 +304,7 @@ def placement_proportions(request):
 
 
 @login_required
-def daily_costs(request):
+def weekly_costs(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
@@ -360,7 +360,7 @@ def daily_costs(request):
 
             return render(
                 request,
-                "dm_regional_app/views/daily_costs.html",
+                "dm_regional_app/views/weekly_costs.html",
                 {
                     "form": form,
                     "placement_types": placement_types,
@@ -369,7 +369,7 @@ def daily_costs(request):
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "daily_costs"
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "weekly_costs"
         return redirect(redirect_url)
 
 
