@@ -164,6 +164,21 @@ class DynamicForm(forms.Form):
                     required=False, initial=initial_value
                 )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        negative_numbers = []
+
+        for field_name in self.fields:
+            value = cleaned_data.get(field_name)
+            if value is not None and value < 0:
+                negative_numbers.append(field_name)
+                self.add_error(field_name, "Negative numbers are not allowed!")
+
+        if negative_numbers:
+            raise forms.ValidationError(
+                "Form not saved, negative numbers cannot be entered."
+            )
+
     def save(self):
         transition = []
         transition_rate = []

@@ -547,15 +547,14 @@ def transition_rate_changes(base, adjusted):
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
 
-    df = transition_rate_table(df)
     df = df[df["base"] != df["adjusted"]]
-
-    df = df[["From", "To", "base", "adjusted"]]
-    df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
 
     if df.empty:
         return None
     else:
+        df = transition_rate_table(df)
+        df = df[["From", "To", "base", "adjusted"]]
+        df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
         df = df.round(4)
         return df
 
@@ -570,15 +569,14 @@ def exit_rate_changes(base, adjusted):
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
 
-    df = exit_rate_table(df)
     df = df[df["base"] != df["adjusted"]]
-
-    df = df[["Age Group", "Placement", "base", "adjusted"]]
-    df.columns = ["Age Group", "Placement" "Base exit rate", "Adjusted exit rate"]
 
     if df.empty:
         return None
     else:
+        df = exit_rate_table(df)
+        df = df[["Age Group", "Placement", "base", "adjusted"]]
+        df.columns = ["Age Group", "Placement", "Base exit rate", "Adjusted exit rate"]
         df = df.round(4)
         return df
 
@@ -593,14 +591,18 @@ def entry_rate_changes(base, adjusted):
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
 
-    df = entry_rate_table(df)
     df = df[df["base"] != df["adjusted"]]
-
-    df = df[["Age Group", "Placement", "base", "adjusted"]]
-    df.columns = ["Age Group", "Placement", "Base entry rate", "Adjusted entry rate"]
 
     if df.empty:
         return None
     else:
+        df = entry_rate_table(df)
+        df = df[["Age Group", "Placement", "base", "adjusted"]]
+        df.columns = [
+            "Age Group",
+            "Placement",
+            "Base entry rate",
+            "Adjusted entry rate",
+        ]
         df = df.round(4)
         return df

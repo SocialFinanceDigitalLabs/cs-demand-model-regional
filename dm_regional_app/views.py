@@ -280,6 +280,23 @@ def placement_proportions(request):
 
                 return redirect("costs")
 
+            else:
+                form = DynamicForm(
+                    request.POST,
+                    dataframe=costs.proportions,
+                    initial_data=session_scenario.adjusted_proportions,
+                )
+                messages.warning(request, "Form not saved, positive numbers only")
+
+                return render(
+                    request,
+                    "dm_regional_app/views/placement_proportions.html",
+                    {
+                        "form": form,
+                        "placement_types": proportions,
+                    },
+                )
+
         else:
             form = DynamicForm(
                 dataframe=costs.proportions,
@@ -334,6 +351,7 @@ def weekly_costs(request):
             form = DynamicForm(
                 request.POST,
                 dataframe=costs.cost_summary,
+                initial_data=costs.cost_summary,
             )
             if form.is_valid():
                 data = form.save()
@@ -351,6 +369,17 @@ def weekly_costs(request):
                     session_scenario.save()
 
                 return redirect("costs")
+
+            else:
+                messages.warning(request, "Form not saved, positive numbers only")
+                return render(
+                    request,
+                    "dm_regional_app/views/weekly_costs.html",
+                    {
+                        "form": form,
+                        "placement_types": placement_types,
+                    },
+                )
 
         else:
             form = DynamicForm(
@@ -454,6 +483,25 @@ def entry_rates(request):
                         "is_post": is_post,
                     },
                 )
+            else:
+                messages.warning(request, "Form not saved, positive numbers only")
+                form = DynamicForm(
+                    request.POST,
+                    initial_data=session_scenario.adjusted_numbers,
+                    dataframe=prediction.entry_rates,
+                )
+
+                is_post = False
+
+                return render(
+                    request,
+                    "dm_regional_app/views/entry_rates.html",
+                    {
+                        "entry_rate_table": entry_rates,
+                        "form": form,
+                        "is_post": is_post,
+                    },
+                )
 
         else:
             form = DynamicForm(
@@ -549,6 +597,26 @@ def exit_rates(request):
                     },
                 )
 
+            else:
+                form = DynamicForm(
+                    request.POST,
+                    initial_data=session_scenario.adjusted_rates,
+                    dataframe=prediction.transition_rates,
+                )
+                messages.warning(request, "Form not saved, positive numbers only")
+
+                is_post = False
+
+            return render(
+                request,
+                "dm_regional_app/views/exit_rates.html",
+                {
+                    "exit_rate_table": exit_rates,
+                    "form": form,
+                    "is_post": is_post,
+                },
+            )
+
         else:
             form = DynamicForm(
                 initial_data=session_scenario.adjusted_rates,
@@ -642,6 +710,26 @@ def transition_rates(request):
                         "is_post": is_post,
                     },
                 )
+
+            else:
+                form = DynamicForm(
+                    request.POST,
+                    initial_data=session_scenario.adjusted_rates,
+                    dataframe=prediction.transition_rates,
+                )
+
+                is_post = False
+                messages.warning(request, "Form not saved, positive numbers only")
+
+            return render(
+                request,
+                "dm_regional_app/views/transition_rates.html",
+                {
+                    "transition_rate_table": transition_rates,
+                    "form": form,
+                    "is_post": is_post,
+                },
+            )
 
         else:
             form = DynamicForm(
