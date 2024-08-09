@@ -10,7 +10,6 @@ from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 from django.shortcuts import get_object_or_404
 
-from dm_regional_app.charts import area_chart
 from dm_regional_app.models import SavedScenario, SessionScenario
 from ssda903 import DemandModellingDataContainer, PopulationStats, StorageDataStore
 from ssda903.config import Costs
@@ -32,10 +31,13 @@ class Command(BaseCommand):
         data = dc.enriched_view
         # print(data.columns)
 
+        prediction_end_date = dc.end_date + relativedelta(years=3)
+
         prediction = predict(
             data=data,
             reference_start_date=dc.start_date,
             reference_end_date=dc.end_date,
+            prediction_end_date=prediction_end_date,
         )
 
         proportion_adjustment = pd.Series(
@@ -62,9 +64,17 @@ class Command(BaseCommand):
             prediction,
             proportion_adjustment=proportion_adjustment,
             cost_adjustment=cost_adjustment,
+            inflation=False,
+            inflation_rate=0.1,
         )
 
-        area_chart(prediction)
+        costs = convert_population_to_cost(
+            prediction,
+            proportion_adjustment=proportion_adjustment,
+            cost_adjustment=cost_adjustment,
+            inflation=True,
+            inflation_rate=0.1,
+        )
 
         # print(pop.stock)
         # print(dc.enriched_view)

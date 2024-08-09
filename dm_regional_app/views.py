@@ -22,7 +22,12 @@ from dm_regional_app.charts import (
     transition_rate_table,
     year_one_costs,
 )
-from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
+from dm_regional_app.forms import (
+    DynamicForm,
+    HistoricDataFilter,
+    InflationForm,
+    PredictFilter,
+)
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters, number_format
 from ssda903.config import PlacementCategories
@@ -71,6 +76,11 @@ def router_handler(request):
 
     adjusted_proportions = None
 
+    inflation_parameters = {
+        "inflation": False,
+        "inflation_rate": 0.1,
+    }
+
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
     session_scenario, created = SessionScenario.objects.get_or_create(
         id=session_scenario_id,
@@ -82,6 +92,7 @@ def router_handler(request):
             "adjusted_costs": adjusted_costs,
             "adjusted_rates": adjusted_rates,
             "adjusted_proportions": adjusted_proportions,
+            "inflation_parameters": inflation_parameters,
         },
     )
 
@@ -95,6 +106,16 @@ def costs(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
+        if request.method == "POST":
+            form = InflationForm(request.POST)
+            if form.is_valid():
+                session_scenario.inflation_parameters = form.cleaned_data
+                session_scenario.save()
+
+        else:
+            form = InflationForm(initial=session_scenario.inflation_parameters)
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -109,13 +130,14 @@ def costs(request):
             data=historic_data,
             **session_scenario.prediction_parameters,
             rate_adjustment=session_scenario.adjusted_rates,
-            number_adjustment=session_scenario.adjusted_numbers
+            number_adjustment=session_scenario.adjusted_numbers,
         )
 
         costs = convert_population_to_cost(
             prediction,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
+            **session_scenario.inflation_parameters,
         )
 
         stats = PopulationStats(historic_data)
@@ -133,6 +155,7 @@ def costs(request):
         base_costs = convert_population_to_cost(
             base_prediction,
             session_scenario.adjusted_costs,
+            **session_scenario.inflation_parameters,
         )
 
         daily_cost = pd.DataFrame(
@@ -196,6 +219,7 @@ def costs(request):
                 "transition_rate_table": transition_rate_table,
                 "exit_rate_table": exit_rate_table,
                 "entry_rate_table": entry_rate_table,
+                "form": form,
             },
         )
     else:
@@ -404,7 +428,7 @@ def entry_rates(request):
                     data=historic_data,
                     **session_scenario.prediction_parameters,
                     rate_adjustment=session_scenario.adjusted_rates,
-                    number_adjustment=session_scenario.adjusted_numbers
+                    number_adjustment=session_scenario.adjusted_numbers,
                 )
 
                 # build chart
@@ -412,7 +436,7 @@ def entry_rates(request):
                     stats,
                     prediction,
                     adjusted_prediction,
-                    **session_scenario.prediction_parameters
+                    **session_scenario.prediction_parameters,
                 )
 
                 is_post = True
@@ -498,7 +522,7 @@ def exit_rates(request):
                     data=historic_data,
                     **session_scenario.prediction_parameters,
                     rate_adjustment=session_scenario.adjusted_rates,
-                    number_adjustment=session_scenario.adjusted_numbers
+                    number_adjustment=session_scenario.adjusted_numbers,
                 )
 
                 # build chart
@@ -506,7 +530,7 @@ def exit_rates(request):
                     stats,
                     prediction,
                     adjusted_prediction,
-                    **session_scenario.prediction_parameters
+                    **session_scenario.prediction_parameters,
                 )
 
                 is_post = True
@@ -592,7 +616,7 @@ def transition_rates(request):
                     data=historic_data,
                     **session_scenario.prediction_parameters,
                     rate_adjustment=session_scenario.adjusted_rates,
-                    number_adjustment=session_scenario.adjusted_numbers
+                    number_adjustment=session_scenario.adjusted_numbers,
                 )
 
                 # build chart
@@ -600,7 +624,7 @@ def transition_rates(request):
                     stats,
                     prediction,
                     adjusted_prediction,
-                    **session_scenario.prediction_parameters
+                    **session_scenario.prediction_parameters,
                 )
 
                 is_post = True
@@ -729,7 +753,7 @@ def adjusted(request):
                 data=historic_data,
                 **session_scenario.prediction_parameters,
                 rate_adjustment=session_scenario.adjusted_rates,
-                number_adjustment=session_scenario.adjusted_numbers
+                number_adjustment=session_scenario.adjusted_numbers,
             )
 
             # build chart

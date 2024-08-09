@@ -3,6 +3,7 @@ from decimal import Decimal, getcontext
 from typing import Iterable, Optional, Union
 
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 from ssda903.config import Costs, PlacementCategories
 from ssda903.multinomial import Prediction
@@ -104,21 +105,28 @@ def resample_summary_table(summary_table):
     return summary_table
 
 
+def apply_inflation_to_cost_item(cost_per_day, inflation_rate):
+    new_cost_per_day = Decimal(str(cost_per_day)) * (
+        (Decimal("1") + Decimal(str(inflation_rate)))
+    )
+    return float(new_cost_per_day)
+
+
 def convert_population_to_cost(
     data: Union[Prediction, PopulationStats],
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     proportion_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
-    # inflation? True/false
+    inflation: Union[bool] = None,
+    inflation_rate: Union[float] = None,
 ) -> CostForecast:
     """
-    This will take a population via a Prediction or PopulationStats object and translate it to a cost.
+    This will take a population via a Prediction or PopulationStats object and transform it to a cost.
     """
     if isinstance(data, Prediction):
         forecast_population = data.population
     elif isinstance(data, PopulationStats):
         forecast_population = data.stock
 
-    processed_categories = set()
     proportions = pd.Series(dtype="float64")
     costs = pd.Series(dtype="float64")
 
@@ -131,6 +139,8 @@ def convert_population_to_cost(
 
     cost_forecast = pd.DataFrame(index=forecast_population.index)
     summary_table = pd.DataFrame(index=forecast_population.index)
+    start_date = forecast_population.index[0]
+
     for column in forecast_population.columns:
         # for each column, create a new series where we will sum the total cost output
         total_cost_series = pd.Series(0, index=forecast_population.index)
@@ -155,6 +165,9 @@ def convert_population_to_cost(
                         cost_per_day = cost_adjustment[cost_item.label]
                     else:
                         cost_per_day = cost_item.defaults.cost_per_day
+                    # add original daily cost to costs output
+                    costs[cost_item.label] = cost_per_day
+
                     if (
                         proportion_adjustment is not None
                         and cost_item.label in normalised_proportions.index
@@ -162,20 +175,60 @@ def convert_population_to_cost(
                         proportion = normalised_proportions[cost_item.label]
                     else:
                         proportion = cost_item.defaults.proportion
-                    # for each cost item, multiply by cost per day and proportion, then sum together
-                    total_cost_series += (
-                        forecast_population[column] * cost_per_day * proportion
-                    )
-                    if cost_item.label in summary_table.columns:
-                        summary_table[cost_item.label] += (
-                            forecast_population[column] * cost_per_day * proportion
-                        )
-                    else:
-                        summary_table[cost_item.label] = (
-                            forecast_population[column] * cost_per_day * proportion
-                        )
+                    # add proportion to proportions output
                     proportions[cost_item.label] = proportion
-                    costs[cost_item.label] = cost_per_day
+
+                    if inflation is True:
+                        anniversary = start_date
+                        for i, current_date in enumerate(forecast_population.index):
+                            # for each year that passes, add interest to the cost per day
+                            if current_date == anniversary + relativedelta(years=1):
+                                cost_per_day = apply_inflation_to_cost_item(
+                                    cost_per_day, inflation_rate
+                                )
+                                anniversary = current_date
+
+                            total_cost_series[i] += (
+                                forecast_population.at[current_date, column]
+                                * cost_per_day
+                                * proportion
+                            )
+
+                            if cost_item.label in summary_table.columns:
+                                if pd.isna(
+                                    summary_table.at[current_date, cost_item.label]
+                                ):
+                                    summary_table.at[current_date, cost_item.label] = (
+                                        forecast_population.at[current_date, column]
+                                        * cost_per_day
+                                        * proportion
+                                    )
+                                else:
+                                    summary_table.at[current_date, cost_item.label] += (
+                                        forecast_population.at[current_date, column]
+                                        * cost_per_day
+                                        * proportion
+                                    )
+                            else:
+                                summary_table.at[current_date, cost_item.label] = (
+                                    forecast_population.at[current_date, column]
+                                    * cost_per_day
+                                    * proportion
+                                )
+                    else:
+                        # for each cost item, multiply by cost per day and proportion, then sum together
+                        total_cost_series += (
+                            forecast_population[column] * cost_per_day * proportion
+                        )
+                        if cost_item.label in summary_table.columns:
+                            summary_table[cost_item.label] += (
+                                forecast_population[column] * cost_per_day * proportion
+                            )
+                        else:
+                            summary_table[cost_item.label] = (
+                                forecast_population[column] * cost_per_day * proportion
+                            )
+
         cost_forecast[column] = total_cost_series
     summary_table = resample_summary_table(summary_table)
     return CostForecast(cost_forecast, proportions, costs, summary_table)
