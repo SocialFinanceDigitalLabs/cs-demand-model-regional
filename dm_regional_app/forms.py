@@ -219,7 +219,6 @@ class InflationForm(forms.Form):
         min_value=0.0,
         max_value=100.0,
         required=False,
-        widget=forms.NumberInput(attrs={"step": "0.01"}),  # For better float input
     )
 
     def clean_inflation_rate(self):

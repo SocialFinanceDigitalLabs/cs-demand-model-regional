@@ -81,7 +81,7 @@ def convert_summary_tables_to_html_table(df):
             return f"{value:,.2f}"
         return value
 
-    html = f'<thead><tr><th scope="col" style="padding-top: 8px; padding-bottom: 8px;">{df.index.name}</th>'
+    html = f'<thead><tr><th scope="col" style="padding-top: 8px; padding-bottom: 8px;">Placement</th>'
     for value in df.columns:
         if isinstance(value, str):
             if "base" in value.lower():

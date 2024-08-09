@@ -292,7 +292,7 @@
 <h3>Adjusted forecast breakdown</h3>
 <p>Your adjusted forecast breakdown includes all adjustments you have made to your forecast</p>
 <table id="efficiency-hub-table" class="table table-hover table-sm">                         
-    {{ summary_table | convert_data_frame_to_html_table | safe}}
+    {{ summary_table | convert_summary_tables_to_html_table | safe}}
 </table>
 <br>
 {% endif %}
@@ -310,7 +310,7 @@
     <li>Adjustments you have made to placement provider proportions</li>
 </ul>
 <table id="efficiency-hub-table" class="table table-hover table-sm">                         
-    {{ summary_table_base | convert_data_frame_to_html_table | safe}}
+    {{ summary_table_base | convert_summary_tables_to_html_table | safe}}
 </table>
 <br>
 <! -- TO DO : update logic to include proportions in proportion issue -->
@@ -319,7 +319,7 @@
 <p>This table show the difference between your base and adjusted forecast by subtracting the base from the adjustments. 
     Negative numbers represent savings made via your adjustments and positive numbers are additional costs incurred by the adjustments.</p>
 <table id="efficiency-hub-table" class="table table-hover table-sm">                         
-    {{ summary_table_difference | convert_data_frame_to_html_table | safe}}
+    {{ summary_table_difference | convert_summary_tables_to_html_table | safe}}
 </table>
 {% endif %}
       <div class="d-flex bd-highlight mb-3">

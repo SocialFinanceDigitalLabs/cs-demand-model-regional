@@ -114,7 +114,8 @@ def costs(request):
                 session_scenario.save()
 
         else:
-            form = InflationForm(initial=session_scenario.inflation_parameters)
+            inflation_parameters = session_scenario.inflation_parameters.copy()
+            form = InflationForm(initial=inflation_parameters)
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -175,8 +176,8 @@ def costs(request):
 
         summary_table_base = summary_tables(base_costs.summary_table)
 
-        summary_table_difference = costs.summary_table - base_costs.summary_table
-        summary_table_difference = summary_tables(summary_table_difference)
+        summary_table_difference = summary_table - summary_table_base
+        summary_table_difference = summary_table_difference.round(2)
 
         year_one_cost = year_one_costs(costs)
         year_one_cost_base = year_one_costs(base_costs)

@@ -157,7 +157,6 @@ def summary_tables(df):
     df.loc["Total"] = df.sum()
 
     df_transposed = df.T
-    df_transposed = df_transposed.reset_index().rename(columns={"index": "Placement"})
 
     return df_transposed
 
