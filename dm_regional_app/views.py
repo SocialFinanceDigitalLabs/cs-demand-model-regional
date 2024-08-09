@@ -114,7 +114,8 @@ def costs(request):
                 session_scenario.save()
 
         else:
-            form = InflationForm(initial=session_scenario.inflation_parameters)
+            inflation_parameters = session_scenario.inflation_parameters.copy()
+            form = InflationForm(initial=inflation_parameters)
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -158,11 +159,14 @@ def costs(request):
             **session_scenario.inflation_parameters,
         )
 
-        daily_cost = pd.DataFrame(
-            {"Placement type": costs.costs.index, "Daily cost": costs.costs.values}
+        weekly_cost = pd.DataFrame(
+            {
+                "Placement type": costs.cost_summary.index,
+                "Weekly cost": costs.cost_summary.values,
+            }
         )
 
-        area_numbers = area_chart_population(stats, prediction)
+        area_numbers = area_chart_population(historic_costs, costs)
 
         area_costs = area_chart_cost(historic_costs, costs)
 
@@ -172,8 +176,8 @@ def costs(request):
 
         summary_table_base = summary_tables(base_costs.summary_table)
 
-        summary_table_difference = costs.summary_table - base_costs.summary_table
-        summary_table_difference = summary_tables(summary_table_difference)
+        summary_table_difference = summary_table - summary_table_base
+        summary_table_difference = summary_table_difference.round(2)
 
         year_one_cost = year_one_costs(costs)
         year_one_cost_base = year_one_costs(base_costs)
@@ -205,7 +209,7 @@ def costs(request):
             "dm_regional_app/views/costs.html",
             {
                 "forecast_dates": session_scenario.prediction_parameters,
-                "daily_cost": daily_cost,
+                "weekly_cost": weekly_cost,
                 "proportions": proportions,
                 "area_numbers": area_numbers,
                 "area_costs": area_costs,
@@ -277,6 +281,23 @@ def placement_proportions(request):
 
                 return redirect("costs")
 
+            else:
+                form = DynamicForm(
+                    request.POST,
+                    dataframe=costs.proportions,
+                    initial_data=session_scenario.adjusted_proportions,
+                )
+                messages.warning(request, "Form not saved, positive numbers only")
+
+                return render(
+                    request,
+                    "dm_regional_app/views/placement_proportions.html",
+                    {
+                        "form": form,
+                        "placement_types": proportions,
+                    },
+                )
+
         else:
             form = DynamicForm(
                 dataframe=costs.proportions,
@@ -301,7 +322,7 @@ def placement_proportions(request):
 
 
 @login_required
-def daily_costs(request):
+def weekly_costs(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
@@ -324,13 +345,14 @@ def daily_costs(request):
         )
 
         placement_types = pd.DataFrame(
-            {"Placement type": costs.costs.index}, index=costs.costs.index
+            {"Placement type": costs.cost_summary.index}, index=costs.cost_summary.index
         )
 
         if request.method == "POST":
             form = DynamicForm(
                 request.POST,
-                dataframe=costs.costs,
+                dataframe=costs.cost_summary,
+                initial_data=costs.cost_summary,
             )
             if form.is_valid():
                 data = form.save()
@@ -349,15 +371,26 @@ def daily_costs(request):
 
                 return redirect("costs")
 
+            else:
+                messages.warning(request, "Form not saved, positive numbers only")
+                return render(
+                    request,
+                    "dm_regional_app/views/weekly_costs.html",
+                    {
+                        "form": form,
+                        "placement_types": placement_types,
+                    },
+                )
+
         else:
             form = DynamicForm(
-                dataframe=costs.costs,
-                initial_data=costs.costs,
+                dataframe=costs.cost_summary,
+                initial_data=costs.cost_summary,
             )
 
             return render(
                 request,
-                "dm_regional_app/views/daily_costs.html",
+                "dm_regional_app/views/weekly_costs.html",
                 {
                     "form": form,
                     "placement_types": placement_types,
@@ -366,20 +399,22 @@ def daily_costs(request):
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
-        redirect_url = reverse(next_url_name) + "?next_url_name=" + "daily_costs"
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "weekly_costs"
         return redirect(redirect_url)
 
 
 @login_required
 def clear_rate_adjustments(request):
     if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         session_scenario.adjusted_rates = None
         session_scenario.adjusted_numbers = None
         session_scenario.save()
         messages.success(request, "Rate adjustments cleared.")
-    return redirect("adjusted")
+    return redirect(next_url_name)
 
 
 @login_required
@@ -448,6 +483,25 @@ def entry_rates(request):
                         "entry_rate_table": entry_rates,
                         "form": form,
                         "chart": chart,
+                        "is_post": is_post,
+                    },
+                )
+            else:
+                messages.warning(request, "Form not saved, positive numbers only")
+                form = DynamicForm(
+                    request.POST,
+                    initial_data=session_scenario.adjusted_numbers,
+                    dataframe=prediction.entry_rates,
+                )
+
+                is_post = False
+
+                return render(
+                    request,
+                    "dm_regional_app/views/entry_rates.html",
+                    {
+                        "entry_rate_table": entry_rates,
+                        "form": form,
                         "is_post": is_post,
                     },
                 )
@@ -546,6 +600,26 @@ def exit_rates(request):
                     },
                 )
 
+            else:
+                form = DynamicForm(
+                    request.POST,
+                    initial_data=session_scenario.adjusted_rates,
+                    dataframe=prediction.transition_rates,
+                )
+                messages.warning(request, "Form not saved, positive numbers only")
+
+                is_post = False
+
+            return render(
+                request,
+                "dm_regional_app/views/exit_rates.html",
+                {
+                    "exit_rate_table": exit_rates,
+                    "form": form,
+                    "is_post": is_post,
+                },
+            )
+
         else:
             form = DynamicForm(
                 initial_data=session_scenario.adjusted_rates,
@@ -639,6 +713,26 @@ def transition_rates(request):
                         "is_post": is_post,
                     },
                 )
+
+            else:
+                form = DynamicForm(
+                    request.POST,
+                    initial_data=session_scenario.adjusted_rates,
+                    dataframe=prediction.transition_rates,
+                )
+
+                is_post = False
+                messages.warning(request, "Form not saved, positive numbers only")
+
+            return render(
+                request,
+                "dm_regional_app/views/transition_rates.html",
+                {
+                    "transition_rate_table": transition_rates,
+                    "form": form,
+                    "is_post": is_post,
+                },
+            )
 
         else:
             form = DynamicForm(

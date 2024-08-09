@@ -13,7 +13,7 @@ class TestCosts(unittest.TestCase):
                 "label": "Fostering",
             },
             "defaults": {
-                "cost_per_day": 100,
+                "cost_per_week": 100,
                 "proportion": 0.3,
             },
         }

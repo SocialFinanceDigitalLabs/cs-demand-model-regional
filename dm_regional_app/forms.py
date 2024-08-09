@@ -135,7 +135,7 @@ class HistoricDataFilter(forms.Form):
 class DynamicForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.dataframe = kwargs.pop("dataframe", None)
-        initial_data = kwargs.pop("initial_data", pd.Series())
+        initial_data = kwargs.pop("initial_data", pd.Series)
 
         super(DynamicForm, self).__init__(*args, **kwargs)
         self.initialize_fields(initial_data)
@@ -163,6 +163,21 @@ class DynamicForm(forms.Form):
                 self.fields[field_name] = forms.FloatField(
                     required=False, initial=initial_value
                 )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        negative_numbers = []
+
+        for field_name in self.fields:
+            value = cleaned_data.get(field_name)
+            if value is not None and value < 0:
+                negative_numbers.append(field_name)
+                self.add_error(field_name, "Negative numbers are not allowed!")
+
+        if negative_numbers:
+            raise forms.ValidationError(
+                "Form not saved, negative numbers cannot be entered."
+            )
 
     def save(self):
         transition = []
@@ -204,7 +219,6 @@ class InflationForm(forms.Form):
         min_value=0.0,
         max_value=100.0,
         required=False,
-        widget=forms.NumberInput(attrs={"step": "0.01"}),  # For better float input
     )
 
     def clean_inflation_rate(self):

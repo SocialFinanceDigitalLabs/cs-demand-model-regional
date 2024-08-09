@@ -4,11 +4,26 @@
 
 
 {% block content %}
+
+{% if messages %}
+    <div class="container mt-4">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
 <br>
-    <h1>Adjust daily costs</h1>
+    <h1>Adjust placement proportions</h1>
     <br>
-    <p>You may want to edit the daily cost of a child placement to give a more accurate picture of your projected spend.</p>
-    <p>New costs will overwrite previous values.
+    <p>You may want to edit the proportions relating to a particular placement to give a more accurate picture of your projected spend. 
+        The forecast model first works out the high level placement populations (fostering, residential, supported and other) and will
+        then apply the below proportions to these placements to work out costs.</p>
+    <p>New proportions will overwrite previous values. Entering proportions that sum to more than or less than one will result in the model
+        scaling these values so that the total sums to 1. Weight will be given to values entered by the user.
     </p>
         <div class="table-responsive">
             <table id="transition-rate" class="table table-hover">
