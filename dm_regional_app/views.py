@@ -405,13 +405,15 @@ def weekly_costs(request):
 @login_required
 def clear_rate_adjustments(request):
     if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         session_scenario.adjusted_rates = None
         session_scenario.adjusted_numbers = None
         session_scenario.save()
         messages.success(request, "Rate adjustments cleared.")
-    return redirect("adjusted")
+    return redirect(next_url_name)
 
 
 @login_required
