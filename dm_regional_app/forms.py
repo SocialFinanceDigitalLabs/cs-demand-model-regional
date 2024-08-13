@@ -5,6 +5,7 @@ from crispy_forms.layout import Column, Layout, Row, Submit
 from django import forms
 from django_select2 import forms as s2forms
 
+from dm_regional_app.models import SavedScenario
 from dm_regional_app.utils import str_to_tuple
 
 
@@ -189,3 +190,9 @@ class DynamicForm(forms.Form):
         data = pd.Series(data["adjusted_rate"].values, index=data.index)
 
         return data
+
+
+class SavedScenarioForm(forms.ModelForm):
+    class Meta:
+        model = SavedScenario
+        fields = ["name", "description"]

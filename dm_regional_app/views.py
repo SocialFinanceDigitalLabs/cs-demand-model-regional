@@ -3,6 +3,7 @@ from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -14,7 +15,12 @@ from dm_regional_app.charts import (
     prediction_chart,
     transition_rate_table,
 )
-from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
+from dm_regional_app.forms import (
+    DynamicForm,
+    HistoricDataFilter,
+    PredictFilter,
+    SavedScenarioForm,
+)
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.utils import apply_filters
 from ssda903.config import PlacementCategories
@@ -76,6 +82,66 @@ def router_handler(request):
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+def save_scenario(request):
+    form = SavedScenarioForm()
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
+        if request.method == "POST":
+            form = SavedScenarioForm(request.POST)
+            if form.is_valid():
+                # Convert the session scenario to a dictionary, excluding fields you don't want to copy
+                session_data = model_to_dict(
+                    session_scenario, exclude=["id", "saved_scenario", "user"]
+                )
+
+                current_user = request.user
+
+                # Create the SavedScenario instance
+                saved_scenario = SavedScenario.objects.create(
+                    **session_data, user_id=current_user.id
+                )
+
+                # Update with additional fields from the form
+                saved_scenario.name = form.cleaned_data["name"]
+                saved_scenario.description = form.cleaned_data["description"]
+                saved_scenario.save()
+
+                # Associate the saved scenario with the session scenario
+                session_scenario.saved_scenario = saved_scenario
+                session_scenario.save()
+
+                return render(
+                    request,
+                    "dm_regional_app/views/save_scenario.html",
+                    {
+                        "form": form,
+                    },
+                )
+        else:
+            form = SavedScenarioForm()
+    return render(
+        request,
+        "dm_regional_app/views/save_scenario.html",
+        {
+            "form": form,
+        },
+    )
+
+
+def load_saved_scenario(request, pk):
+    # loading save scenario should copy it over to a session scenario and jump to the predict view with it
+    pk = request.session["session_scenario_id"]
+    saved_scenario = get_object_or_404(SavedScenario, pk=pk)
+    session_scenario = SessionScenario.objects.create(**saved_scenario)
+
+    # we are keeping the saved_scenario in the session_scenario because we might need it if the user decides to update this saved instance
+    session_scenario.saved_scenario = saved_scenario
+    session_scenario.save()
+    return redirect("predict")
 
 
 @login_required
