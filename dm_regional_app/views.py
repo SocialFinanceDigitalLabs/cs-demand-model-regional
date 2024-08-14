@@ -85,7 +85,6 @@ def router_handler(request):
 
 
 def save_scenario(request):
-    form = SavedScenarioForm()
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
@@ -114,34 +113,47 @@ def save_scenario(request):
                 session_scenario.saved_scenario = saved_scenario
                 session_scenario.save()
 
-                return render(
-                    request,
-                    "dm_regional_app/views/save_scenario.html",
-                    {
-                        "form": form,
-                    },
-                )
+                messages.success(request, "Scenario saved.")
+
+                return redirect("scenarios")
         else:
             form = SavedScenarioForm()
-    return render(
-        request,
-        "dm_regional_app/views/save_scenario.html",
-        {
-            "form": form,
-        },
-    )
+
+        return render(
+            request,
+            "dm_regional_app/views/save_scenario.html",
+            {
+                "form": form,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "save_scenario"
+        return redirect(redirect_url)
 
 
 def load_saved_scenario(request, pk):
     # loading save scenario should copy it over to a session scenario and jump to the predict view with it
-    pk = request.session["session_scenario_id"]
     saved_scenario = get_object_or_404(SavedScenario, pk=pk)
-    session_scenario = SessionScenario.objects.create(**saved_scenario)
+
+    current_user = request.user
+
+    scenario_data = model_to_dict(
+        saved_scenario, exclude=["id", "name", "description", "user"]
+    )
+    session_scenario = SessionScenario.objects.create(
+        **scenario_data, user_id=current_user.id
+    )
 
     # we are keeping the saved_scenario in the session_scenario because we might need it if the user decides to update this saved instance
     session_scenario.saved_scenario = saved_scenario
     session_scenario.save()
-    return redirect("predict")
+
+    # update the request session
+    request.session["session_scenario_id"] = session_scenario.pk
+
+    return redirect("prediction")
 
 
 @login_required

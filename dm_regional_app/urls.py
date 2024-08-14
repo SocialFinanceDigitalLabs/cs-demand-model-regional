@@ -15,4 +15,5 @@ urlpatterns = [
     path("entry_rates", views.entry_rates, name="entry_rates"),
     path("clear_rates", views.clear_rate_adjustments, name="clear_rates"),
     path("save_scenario", views.save_scenario, name="save_scenario"),
+    path("load_scenario/<int:pk>", views.load_saved_scenario, name="load_scenario"),
 ]

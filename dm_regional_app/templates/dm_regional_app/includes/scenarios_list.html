@@ -9,6 +9,8 @@
                     <p class="card-text">{{ scenario.description }}</p>
                     <a href="{% url 'scenario_detail' scenario.id %}"
                         class="btn btn-primary">View</a>
+                    <a href="{% url 'load_scenario' scenario.id %}"
+                        class="btn btn-primary">Load scenario</a>
                 </div>
             </div>
         </div>
