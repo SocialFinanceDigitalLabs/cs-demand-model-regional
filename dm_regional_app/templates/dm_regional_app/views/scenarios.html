@@ -1,4 +1,5 @@
 {% extends "dm_regional_app/base.html" %}
+{% load render_table from django_tables2 %}
 {% block content %}
 
 {% if messages %}
@@ -12,8 +13,16 @@
     </div>
 {% endif %}
 
+<style>
+    /* Vertically center the content in all table cells */
+    .table td, .table th {
+        vertical-align: middle;
+    }
+</style>
+
+<br>
     <h1>Your saved scenarios</h1>
-    <article class="mb-3">
-        {% include 'dm_regional_app/includes/scenarios_list.html' with scenarios=scenarios %}
-    </article>
+    <br>
+    <p>View scenarios saved by users at your local authority. Click the table headers to sort the table.</p>
+    {% render_table table %}
 {% endblock %}

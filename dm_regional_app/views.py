@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django_tables2 import RequestConfig
 
 from dm_regional_app.charts import (
     compare_forecast,
@@ -22,6 +23,7 @@ from dm_regional_app.forms import (
     SavedScenarioForm,
 )
 from dm_regional_app.models import SavedScenario, SessionScenario
+from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters
 from ssda903.config import PlacementCategories
 from ssda903.population_stats import PopulationStats
@@ -758,10 +760,16 @@ def historic_data(request):
 
 @login_required
 def scenarios(request):
-    user = request.user
-    scenarios = SavedScenario.objects.filter(user=user)
+    user_la = request.user.profile.la
+
+    scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
+    table = SavedScenarioTable(scenarios)
+    RequestConfig(request, paginate={"per_page": 12}).configure(table)
+
     return render(
-        request, "dm_regional_app/views/scenarios.html", {"scenarios": scenarios}
+        request,
+        "dm_regional_app/views/scenarios.html",
+        {"scenarios": scenarios, "table": table},
     )
 
 
