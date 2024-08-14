@@ -84,6 +84,7 @@ def router_handler(request):
     return redirect(next_url_name)
 
 
+@login_required
 def save_scenario(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
@@ -133,27 +134,41 @@ def save_scenario(request):
         return redirect(redirect_url)
 
 
+@login_required
 def load_saved_scenario(request, pk):
     # loading save scenario should copy it over to a session scenario and jump to the predict view with it
     saved_scenario = get_object_or_404(SavedScenario, pk=pk)
 
     current_user = request.user
 
-    scenario_data = model_to_dict(
-        saved_scenario, exclude=["id", "name", "description", "user"]
-    )
-    session_scenario = SessionScenario.objects.create(
-        **scenario_data, user_id=current_user.id
-    )
+    if saved_scenario.user.profile.la == current_user.profile.la:
+        scenario_data = model_to_dict(
+            saved_scenario, exclude=["id", "name", "description", "user"]
+        )
+        session_scenario = SessionScenario.objects.create(
+            **scenario_data, user_id=current_user.id
+        )
 
-    # we are keeping the saved_scenario in the session_scenario because we might need it if the user decides to update this saved instance
-    session_scenario.saved_scenario = saved_scenario
-    session_scenario.save()
+        # we are keeping the saved_scenario in the session_scenario because we might need it if the user decides to update this saved instance
+        session_scenario.saved_scenario = saved_scenario
+        session_scenario.save()
 
-    # update the request session
-    request.session["session_scenario_id"] = session_scenario.pk
+        # update the request session
+        request.session["session_scenario_id"] = session_scenario.pk
 
-    return redirect("prediction")
+        messages.success(
+            request,
+            "Scenario loaded. Current page will not show additional adjustments, click 'next' or navigate to Adjust Forecast to view these.",
+        )
+
+        return redirect("prediction")
+
+    else:
+        messages.warning(
+            request,
+            "Scenario not loaded, can only load scenarios associated with your current local authority",
+        )
+        return redirect("scenarios")
 
 
 @login_required
@@ -576,6 +591,7 @@ def prediction(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        print(session_scenario.user.profile.la)
 
         if request.method == "POST":
             if "uasc" in request.POST:
