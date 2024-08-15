@@ -91,42 +91,69 @@ def save_scenario(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        current_user = request.user
+
+        if (
+            session_scenario.saved_scenario
+            and session_scenario.saved_scenario.user == current_user
+        ):
+            related_scenario = True
+            scenario_to_update = session_scenario.saved_scenario
+            form = SavedScenarioForm(instance=scenario_to_update)
+
+        else:
+            related_scenario = False
 
         if request.method == "POST":
-            form = SavedScenarioForm(request.POST)
-            if form.is_valid():
-                # Convert the session scenario to a dictionary, excluding fields you don't want to copy
-                session_data = model_to_dict(
-                    session_scenario, exclude=["id", "saved_scenario", "user"]
-                )
+            if "update" in request.POST:
+                form = SavedScenarioForm(request.POST, instance=scenario_to_update)
 
-                current_user = request.user
+                if form.is_valid():
+                    # Convert the session scenario to a dictionary, excluding fields you don't want to copy
+                    session_data = model_to_dict(
+                        session_scenario, exclude=["id", "saved_scenario", "user"]
+                    )
 
-                # Create the SavedScenario instance
-                saved_scenario = SavedScenario.objects.create(
-                    **session_data, user_id=current_user.id
-                )
+                    for key, value in session_data.items():
+                        setattr(scenario_to_update, key, value)
 
-                # Update with additional fields from the form
-                saved_scenario.name = form.cleaned_data["name"]
-                saved_scenario.description = form.cleaned_data["description"]
-                saved_scenario.save()
+                    # Update with additional fields from the form
+                    scenario_to_update.name = form.cleaned_data["name"]
+                    scenario_to_update.description = form.cleaned_data["description"]
+                    scenario_to_update.save()
 
-                # Associate the saved scenario with the session scenario
-                session_scenario.saved_scenario = saved_scenario
-                session_scenario.save()
+                    messages.success(request, "Scenario updated.")
 
-                messages.success(request, "Scenario saved.")
+                    return redirect("scenarios")
 
-                return redirect("scenarios")
-        else:
-            form = SavedScenarioForm()
+            else:
+                form = SavedScenarioForm(request.POST)
+
+                if form.is_valid():
+                    # Create the SavedScenario instance
+                    saved_scenario = SavedScenario.objects.create(
+                        **session_data, user_id=current_user.id
+                    )
+
+                    # Update with additional fields from the form
+                    saved_scenario.name = form.cleaned_data["name"]
+                    saved_scenario.description = form.cleaned_data["description"]
+                    saved_scenario.save()
+
+                    # Associate the saved scenario with the session scenario
+                    session_scenario.saved_scenario = saved_scenario
+                    session_scenario.save()
+
+                    messages.success(request, "Scenario saved.")
+
+                    return redirect("scenarios")
 
         return render(
             request,
             "dm_regional_app/views/save_scenario.html",
             {
                 "form": form,
+                "related_scenario": related_scenario,
             },
         )
     else:

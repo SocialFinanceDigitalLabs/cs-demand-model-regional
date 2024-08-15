@@ -6,6 +6,7 @@ from dm_regional_app.models import SavedScenario
 
 
 class SavedScenarioTable(tables.Table):
+    updated_at = tables.DateTimeColumn(format="d/m/Y H:i:s", accessor="updated_at")
     view = tables.Column(empty_values=(), verbose_name="")
 
     class Meta:
