@@ -797,12 +797,9 @@ def scenarios(request):
     user_la = request.user.profile.la
 
     scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
-    print(scenarios)
 
     filterset = SavedScenarioFilter(request.GET, queryset=scenarios)
-    print(filterset)
     filtered_scenarios = filterset.qs
-    print(filterset.qs)
 
     # Check for the presence of filters
     if not request.GET or not any(request.GET.values()):
@@ -814,7 +811,7 @@ def scenarios(request):
 
     table = SavedScenarioTable(filtered_scenarios)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-    print(request.GET)
+    print(table)
 
     return render(
         request,
