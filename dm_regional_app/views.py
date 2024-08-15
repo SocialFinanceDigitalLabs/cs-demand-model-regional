@@ -103,6 +103,7 @@ def save_scenario(request):
 
         else:
             related_scenario = False
+            form = SavedScenarioForm()
 
         if request.method == "POST":
             if "update" in request.POST:
@@ -130,6 +131,11 @@ def save_scenario(request):
                 form = SavedScenarioForm(request.POST)
 
                 if form.is_valid():
+                    # Convert the session scenario to a dictionary, excluding fields you don't want to copy
+                    session_data = model_to_dict(
+                        session_scenario, exclude=["id", "saved_scenario", "user"]
+                    )
+
                     # Create the SavedScenario instance
                     saved_scenario = SavedScenario.objects.create(
                         **session_data, user_id=current_user.id

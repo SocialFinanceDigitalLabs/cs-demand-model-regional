@@ -17,13 +17,13 @@ def fixtures():
         password="test",
         superuser=True,
     )
-    user = builder.user(
+    user2 = builder.user(
         first_name="Annie",
         last_name="Smith",
-        email="john.smith@bromley.gov.uk",
+        email="annie.smith@bromley.gov.uk",
         password="test",
     )
-    user = builder.user(
+    user3 = builder.user(
         first_name="John",
         last_name="Smith",
         email="john.smith@southwark.gov.uk",
