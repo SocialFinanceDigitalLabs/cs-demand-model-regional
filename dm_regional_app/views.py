@@ -16,6 +16,7 @@ from dm_regional_app.charts import (
     prediction_chart,
     transition_rate_table,
 )
+from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
     DynamicForm,
     HistoricDataFilter,
@@ -796,13 +797,33 @@ def scenarios(request):
     user_la = request.user.profile.la
 
     scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
-    table = SavedScenarioTable(scenarios)
-    RequestConfig(request, paginate={"per_page": 12}).configure(table)
+    print(scenarios)
+
+    filterset = SavedScenarioFilter(request.GET, queryset=scenarios)
+    print(filterset)
+    filtered_scenarios = filterset.qs
+    print(filterset.qs)
+
+    # Check for the presence of filters
+    if not request.GET or not any(request.GET.values()):
+        # No filters applied, or query parameters are empty or invalid
+        filtered_scenarios = scenarios
+    else:
+        # Apply filters if they are present and valid
+        filtered_scenarios = filterset.qs
+
+    table = SavedScenarioTable(filtered_scenarios)
+    RequestConfig(request, paginate={"per_page": 10}).configure(table)
+    print(request.GET)
 
     return render(
         request,
         "dm_regional_app/views/scenarios.html",
-        {"scenarios": scenarios, "table": table},
+        {
+            "scenarios": scenarios,
+            "table": table,
+            "filter": filterset,
+        },
     )
 
 
