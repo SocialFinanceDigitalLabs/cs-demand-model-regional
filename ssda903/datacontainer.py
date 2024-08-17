@@ -134,6 +134,13 @@ class DemandModellingDataContainer:
         assert not combined["DECOM"].isna().any()
 
         # Then clean up the episodes
+        # First we remove children who have no DOB, as this prevents us from knowing which age bucket to put them in
+        combined.drop(combined[combined.DOB.isna()].index, inplace=True)
+        log.debug(
+            "%s records remaining after removing children with no DOB.",
+            combined.shape,
+        )
+
         # We first sort by child, decom and dec, and make sure NAs are first (for dropping duplicates)
         combined.sort_values(
             ["CHILD", "DECOM", "DEC"], inplace=True, na_position="first"
@@ -169,7 +176,7 @@ class DemandModellingDataContainer:
             False,
         )
 
-        # Keep episodes with Skip_Episode == FALSE, but update their closing info (DEC, REC and REASON_PLACE_CHANGE) to equal to last skipped episode
+        # Keep episodes with Skip_Episode == FALSE, but maintain continuity in episode close info (DEC, REC, REASON_PLACE_CHANGE) with skipped episodes
         kept_rows = []
         skipped_episode = False
         last_skipped_dec = None
@@ -191,6 +198,10 @@ class DemandModellingDataContainer:
                 last_skipped_rpc = row["REASON_PLACE_CHANGE"]
 
         combined = pd.DataFrame(kept_rows)
+        log.debug(
+            "%s records remaining after removing episodes that do not represent new placements.",
+            combined.shape,
+        )
 
         return combined
 
@@ -205,6 +216,7 @@ class DemandModellingDataContainer:
         """
         combined = self.combined_data
         combined = self._add_ages(combined)
+        combined = self._add_age_change_eps(combined)
         combined = self._add_age_bins(combined)
         combined = self._add_placement_category(combined)
         combined = self._add_related_placement_type(
@@ -243,6 +255,42 @@ class DemandModellingDataContainer:
         """
         combined["age"] = (combined["DECOM"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
         combined["end_age"] = (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
+        return combined
+
+    def _add_age_change_eps(self, combined: pd.DataFrame) -> pd.DataFrame:
+        """
+        Creates new rows for episodes where a child has crossed an age bin boundary
+
+        WARNING: This method modifies the dataframe in place.
+        """
+        df_copy = combined
+
+        for bracket in AgeBrackets:
+            if bracket.value.end:
+                age_bound = bracket.value.end
+                expanded_df = []
+                for index, row in df_copy.iterrows():
+                    if row["age"] < age_bound and age_bound <= row["end_age"]:
+                        old_row = row.copy()
+                        new_row = row.copy()
+                        old_row["DEC"] = row["DOB"] + pd.DateOffset(years=age_bound)
+                        old_row["REC"] = "Age"
+                        old_row["REASON_PLACE_CHANGE"] = ""
+                        old_row["end_age"] = age_bound
+                        new_row["DECOM"] = row["DOB"] + pd.DateOffset(years=age_bound)
+                        new_row["age"] = age_bound
+                        expanded_df.append(old_row)
+                        expanded_df.append(new_row)
+                    else:
+                        expanded_df.append(row)
+                df_copy = pd.DataFrame(expanded_df)
+
+        combined = df_copy
+
+        log.debug(
+            "%s records after adding episodes based on age transitions.",
+            combined.shape,
+        )
         return combined
 
     def _add_age_bins(self, combined: pd.DataFrame) -> pd.DataFrame:
