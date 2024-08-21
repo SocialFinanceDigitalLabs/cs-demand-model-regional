@@ -1,0 +1,30 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags %}
+{% load table_tags %}
+
+
+{% block content %}
+
+<br>
+    <h1>Save a scenario</h1>
+    <br>
+    <p>Save current session data to be able to return to your current model at a later date.</p>
+
+    <div class="container mt-5">      
+        <form method="post">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="form-group">
+                {% if related_scenario %}
+                    <button type="submit" name="update" class="btn btn-primary">Update Existing Scenario</button>
+                    <button type="submit" name="save_new" class="btn btn-secondary">Save as New Scenario</button>
+                {% else %}
+                    <button type="submit" name="save_new" class="btn btn-primary">Save Scenario</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+
+
+{% endblock %}

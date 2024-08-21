@@ -3,8 +3,10 @@ from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django_tables2 import RequestConfig
 
 from dm_regional_app.charts import (
     compare_forecast,
@@ -14,8 +16,15 @@ from dm_regional_app.charts import (
     prediction_chart,
     transition_rate_table,
 )
-from dm_regional_app.forms import DynamicForm, HistoricDataFilter, PredictFilter
+from dm_regional_app.filters import SavedScenarioFilter
+from dm_regional_app.forms import (
+    DynamicForm,
+    HistoricDataFilter,
+    PredictFilter,
+    SavedScenarioForm,
+)
 from dm_regional_app.models import SavedScenario, SessionScenario
+from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters
 from ssda903.config import PlacementCategories
 from ssda903.population_stats import PopulationStats
@@ -76,6 +85,126 @@ def router_handler(request):
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
     return redirect(next_url_name)
+
+
+@login_required
+def save_scenario(request):
+    if "session_scenario_id" in request.session:
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        current_user = request.user
+
+        if (
+            session_scenario.saved_scenario
+            and session_scenario.saved_scenario.user == current_user
+        ):
+            related_scenario = True
+            scenario_to_update = session_scenario.saved_scenario
+            form = SavedScenarioForm(instance=scenario_to_update)
+
+        else:
+            related_scenario = False
+            form = SavedScenarioForm()
+
+        if request.method == "POST":
+            if "update" in request.POST:
+                form = SavedScenarioForm(request.POST, instance=scenario_to_update)
+
+                if form.is_valid():
+                    # Convert the session scenario to a dictionary, excluding fields you don't want to copy
+                    session_data = model_to_dict(
+                        session_scenario, exclude=["id", "saved_scenario", "user"]
+                    )
+
+                    for key, value in session_data.items():
+                        setattr(scenario_to_update, key, value)
+
+                    # Update with additional fields from the form
+                    scenario_to_update.name = form.cleaned_data["name"]
+                    scenario_to_update.description = form.cleaned_data["description"]
+                    scenario_to_update.save()
+
+                    messages.success(request, "Scenario updated.")
+
+                    return redirect("scenarios")
+
+            else:
+                form = SavedScenarioForm(request.POST)
+
+                if form.is_valid():
+                    # Convert the session scenario to a dictionary, excluding fields you don't want to copy
+                    session_data = model_to_dict(
+                        session_scenario, exclude=["id", "saved_scenario", "user"]
+                    )
+
+                    # Create the SavedScenario instance
+                    saved_scenario = SavedScenario.objects.create(
+                        **session_data, user_id=current_user.id
+                    )
+
+                    # Update with additional fields from the form
+                    saved_scenario.name = form.cleaned_data["name"]
+                    saved_scenario.description = form.cleaned_data["description"]
+                    saved_scenario.save()
+
+                    # Associate the saved scenario with the session scenario
+                    session_scenario.saved_scenario = saved_scenario
+                    session_scenario.save()
+
+                    messages.success(request, "Scenario saved.")
+
+                    return redirect("scenarios")
+
+        return render(
+            request,
+            "dm_regional_app/views/save_scenario.html",
+            {
+                "form": form,
+                "related_scenario": related_scenario,
+            },
+        )
+    else:
+        next_url_name = "router_handler"
+        # Construct the URL for the router handler view and append the next_url_name as a query parameter
+        redirect_url = reverse(next_url_name) + "?next_url_name=" + "save_scenario"
+        return redirect(redirect_url)
+
+
+@login_required
+def load_saved_scenario(request, pk):
+    # loading save scenario should copy it over to a session scenario and jump to the predict view with it
+    saved_scenario = get_object_or_404(SavedScenario, pk=pk)
+
+    current_user = request.user
+
+    if saved_scenario.user.profile.la == current_user.profile.la:
+        scenario_data = model_to_dict(
+            saved_scenario, exclude=["id", "name", "description", "user"]
+        )
+        session_scenario = SessionScenario.objects.create(
+            **scenario_data, user_id=current_user.id
+        )
+
+        # we are keeping the saved_scenario in the session_scenario because we might need it if the user decides to update this saved instance
+        session_scenario.saved_scenario = saved_scenario
+        session_scenario.save()
+
+        # update the request session
+        request.session["session_scenario_id"] = session_scenario.pk
+
+        messages.success(
+            request,
+            "Scenario loaded. Current page will not show additional adjustments, click 'next' or navigate to Adjust Forecast to view these.",
+        )
+
+        return redirect("prediction")
+
+    else:
+        messages.warning(
+            request,
+            "Scenario not loaded, can only load scenarios associated with your current local authority",
+        )
+        return redirect("scenarios")
 
 
 @login_required
@@ -498,6 +627,7 @@ def prediction(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        print(session_scenario.user.profile.la)
 
         if request.method == "POST":
             if "uasc" in request.POST:
@@ -664,10 +794,33 @@ def historic_data(request):
 
 @login_required
 def scenarios(request):
-    user = request.user
-    scenarios = SavedScenario.objects.filter(user=user)
+    user_la = request.user.profile.la
+
+    scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
+
+    filterset = SavedScenarioFilter(request.GET, queryset=scenarios)
+    filtered_scenarios = filterset.qs
+
+    # Check for the presence of filters
+    if not request.GET or not any(request.GET.values()):
+        # No filters applied, or query parameters are empty or invalid
+        filtered_scenarios = scenarios
+    else:
+        # Apply filters if they are present and valid
+        filtered_scenarios = filterset.qs
+
+    table = SavedScenarioTable(filtered_scenarios)
+    RequestConfig(request, paginate={"per_page": 10}).configure(table)
+    print(table)
+
     return render(
-        request, "dm_regional_app/views/scenarios.html", {"scenarios": scenarios}
+        request,
+        "dm_regional_app/views/scenarios.html",
+        {
+            "scenarios": scenarios,
+            "table": table,
+            "filter": filterset,
+        },
     )
 
 
