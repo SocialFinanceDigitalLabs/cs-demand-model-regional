@@ -229,11 +229,36 @@ class DemandModellingDataContainer:
 
     @cached_property
     def start_date(self) -> date:
-        return self.combined_data[["DECOM", "DEC"]].min().min().date()
+        # Find the minimum value in the 'DEC' column
+        min_dec = self.combined_data["DEC"].min()
+
+        # Extract the month and year from the min_dec date
+        min_dec_month = min_dec.month
+        min_dec_year = min_dec.year
+
+        # Determine the start_date based on the month of min_dec
+        if 4 <= min_dec_month <= 12:  # April to December
+            start_date = date(min_dec_year, 4, 1)
+        else:  # January to March
+            start_date = date(min_dec_year - 1, 4, 1)
+
+        return start_date
 
     @cached_property
     def end_date(self) -> date:
-        return self.combined_data[["DECOM", "DEC"]].max().max().date()
+        max_dec_decom = self.combined_data[["DECOM", "DEC"]].max().max().date()
+
+        # Extract the month and year from the max_dec_decom date
+        max_dec_decom_month = max_dec_decom.month
+        max_dec_decom_year = max_dec_decom.year
+
+        # Determine the start_date based on the month of max_dec_decom
+        if 4 <= max_dec_decom_month <= 12:  # April to December
+            end_date = date(max_dec_decom_year - 1, 3, 31)
+        else:  # January to March
+            end_date = date(max_dec_decom_year, 3, 31)
+
+        return end_date
 
     @cached_property
     def unique_las(self) -> pd.Series:
