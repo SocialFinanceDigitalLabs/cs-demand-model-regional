@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from ssda903.config import YEAR_IN_DAYS, AgeBrackets, PlacementCategories
+from ssda903.config import YEAR_IN_DAYS, AgeBrackets, Costs, PlacementCategories
 from ssda903.data.ssda903 import SSDA903TableType
 from ssda903.datastore import DataFile, DataStore, TableType
 
@@ -225,6 +225,7 @@ class DemandModellingDataContainer:
         combined = self._add_related_placement_type(
             combined, -1, "placement_type_after"
         )
+        combined = self._add_detailed_placement_category(combined)
         return combined
 
     @cached_property
@@ -389,4 +390,29 @@ class DemandModellingDataContainer:
         combined["placement_type"] = combined["PLACE"].apply(
             lambda x: placement_type_map.get(x, PlacementCategories.OTHER.value).label
         )
+        return combined
+
+    def _add_detailed_placement_category(self, combined: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds placement category for
+
+        WARNING: This method modifies the dataframe in place.
+        """
+        placement_type_map = Costs.get_placement_type_map()
+
+        def lookup_placement_type(row):
+            # Try to match (placement_type, place_provider)
+            key = (row["PLACE"], row["PLACE_PROVIDER"])
+            if key in placement_type_map:
+                return placement_type_map[key].label
+            # Fall back to matching (placement_type, "")
+            fallback_key = (row["PLACE"], "")
+            return placement_type_map.get(
+                fallback_key, PlacementCategories.OTHER.value
+            ).label
+
+        combined["placement_type_detail"] = combined.apply(
+            lookup_placement_type, axis=1
+        )
+
         return combined
