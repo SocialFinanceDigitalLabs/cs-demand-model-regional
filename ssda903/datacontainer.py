@@ -343,23 +343,40 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-
         combined = combined.sort_values(["CHILD", "DECOM", "DEC"], na_position="first")
 
-        combined[new_column_name] = (
-            combined.groupby("CHILD")["placement_type"]
-            .shift(offset)
-            .fillna(PlacementCategories.NOT_IN_CARE.value.label)
+        start_date = pd.to_datetime(self.start_date)
+
+        # Perform the groupby and shift operation
+        combined[new_column_name] = combined.groupby("CHILD")["placement_type"].shift(
+            offset
         )
 
+        # Create offset mask - this will identify instances where a single child has non-continous episodes of care
         offset_mask = combined["CHILD"] == combined["CHILD"].shift(offset)
-        if offset > 0:
-            offset_mask &= combined["DECOM"] != combined["DEC"].shift(offset)
-        else:
+
+        if offset == -1:
+            # If following placement type, fill 'None' where DEC is NaN
+            combined.loc[combined["DEC"].isna(), new_column_name] = "None"
             offset_mask &= combined["DEC"] != combined["DECOM"].shift(offset)
+
+        else:
+            # If preceeding placement type, fill 'None' where DECOM is before or equal to start date and is na - due to age transistions there may be episodes
+            combined.loc[
+                (combined["DECOM"] <= start_date) & combined[new_column_name].isna(),
+                new_column_name,
+            ] = "None"
+            offset_mask &= combined["DECOM"] != combined["DEC"].shift(offset)
+
+        # Apply offset mask - this will overwrite any non-continuous care episodes with not in care rather than the preceeding episode
         combined.loc[
             offset_mask, new_column_name
         ] = PlacementCategories.NOT_IN_CARE.value.label
+
+        # fill any remaining NAs with not in care
+        combined[new_column_name] = combined[new_column_name].fillna(
+            PlacementCategories.NOT_IN_CARE.value.label
+        )
         return combined
 
     def _add_placement_category(self, combined: pd.DataFrame) -> pd.DataFrame:
