@@ -642,17 +642,6 @@ def historic_data(request):
         ]["CHILD"].nunique()
 
         stats = PopulationStats(data)
-        print(
-            datacontainer.enriched_view[
-                [
-                    "CHILD",
-                    "PLACE",
-                    "PLACE_PROVIDER",
-                    "placement_type",
-                    "placement_type_detail",
-                ]
-            ].head(50)
-        )
 
         chart = historic_chart(stats)
 
