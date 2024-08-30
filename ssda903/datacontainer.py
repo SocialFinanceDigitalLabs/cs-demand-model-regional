@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from ssda903.config import YEAR_IN_DAYS, AgeBrackets, PlacementCategories
+from ssda903.config import YEAR_IN_DAYS, AgeBrackets, Costs, PlacementCategories
 from ssda903.data.ssda903 import SSDA903TableType
 from ssda903.datastore import DataFile, DataStore, TableType
 
@@ -225,15 +225,41 @@ class DemandModellingDataContainer:
         combined = self._add_related_placement_type(
             combined, -1, "placement_type_after"
         )
+        combined = self._add_detailed_placement_category(combined)
         return combined
 
     @cached_property
     def start_date(self) -> date:
-        return self.combined_data[["DECOM", "DEC"]].min().min().date()
+        # Find the minimum value in the 'DEC' column
+        min_dec = self.combined_data["DEC"].min()
+
+        # Extract the month and year from the min_dec date
+        min_dec_month = min_dec.month
+        min_dec_year = min_dec.year
+
+        # Determine the start_date based on the month of min_dec
+        if 4 <= min_dec_month <= 12:  # April to December
+            start_date = date(min_dec_year, 4, 1)
+        else:  # January to March
+            start_date = date(min_dec_year - 1, 4, 1)
+
+        return start_date
 
     @cached_property
     def end_date(self) -> date:
-        return self.combined_data[["DECOM", "DEC"]].max().max().date()
+        max_dec_decom = self.combined_data[["DECOM", "DEC"]].max().max().date()
+
+        # Extract the month and year from the max_dec_decom date
+        max_dec_decom_month = max_dec_decom.month
+        max_dec_decom_year = max_dec_decom.year
+
+        # Determine the end_date based on the month of max_dec_decom
+        if 4 <= max_dec_decom_month <= 12:  # April to December
+            end_date = date(max_dec_decom_year + 1, 3, 31)
+        else:  # January to March
+            end_date = date(max_dec_decom_year, 3, 31)
+
+        return end_date
 
     @cached_property
     def unique_las(self) -> pd.Series:
@@ -318,23 +344,32 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-
         combined = combined.sort_values(["CHILD", "DECOM", "DEC"], na_position="first")
 
+        # Group by child and set next/preceding placement based on offset
+        # Set any blank values (where next/preceding episode is not the same child) as Not in Care
         combined[new_column_name] = (
             combined.groupby("CHILD")["placement_type"]
             .shift(offset)
             .fillna(PlacementCategories.NOT_IN_CARE.value.label)
         )
 
+        # Create offset mask - this will identify rows where the offset row is the same CHILD and where there is a break between episodes
         offset_mask = combined["CHILD"] == combined["CHILD"].shift(offset)
         if offset > 0:
             offset_mask &= combined["DECOM"] != combined["DEC"].shift(offset)
         else:
             offset_mask &= combined["DEC"] != combined["DECOM"].shift(offset)
+
+        # Apply offset mask - this will overwrite any non-continuous care episodes with not in care rather than the adjacent episode
         combined.loc[
             offset_mask, new_column_name
         ] = PlacementCategories.NOT_IN_CARE.value.label
+
+        # For next episodes (offset = -1) where the current episode hasn't ended, set next placement as None
+        if offset == -1:
+            combined.loc[combined["DEC"].isna(), new_column_name] = "None"
+
         return combined
 
     def _add_placement_category(self, combined: pd.DataFrame) -> pd.DataFrame:
@@ -347,4 +382,29 @@ class DemandModellingDataContainer:
         combined["placement_type"] = combined["PLACE"].apply(
             lambda x: placement_type_map.get(x, PlacementCategories.OTHER.value).label
         )
+        return combined
+
+    def _add_detailed_placement_category(self, combined: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds placement category for
+
+        WARNING: This method modifies the dataframe in place.
+        """
+        placement_type_map = Costs.get_placement_type_map()
+
+        def lookup_placement_type(row):
+            # Try to match (placement_type, place_provider)
+            key = (row["PLACE"], row["PLACE_PROVIDER"])
+            if key in placement_type_map:
+                return placement_type_map[key].label
+            # Fall back to matching (placement_type, "")
+            fallback_key = (row["PLACE"], "")
+            return placement_type_map.get(
+                fallback_key, PlacementCategories.OTHER.value
+            ).label
+
+        combined["placement_type_detail"] = combined.apply(
+            lookup_placement_type, axis=1
+        )
+
         return combined

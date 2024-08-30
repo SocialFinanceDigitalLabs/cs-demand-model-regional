@@ -69,6 +69,8 @@ class PlacementCategories(Enum):
         placement_types=(
             "K2",
             "R1",
+            "P3",
+            "S1",
         ),
         index=1,
     )
