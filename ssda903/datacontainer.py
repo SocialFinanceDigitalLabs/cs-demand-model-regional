@@ -253,9 +253,9 @@ class DemandModellingDataContainer:
         max_dec_decom_month = max_dec_decom.month
         max_dec_decom_year = max_dec_decom.year
 
-        # Determine the start_date based on the month of max_dec_decom
+        # Determine the end_date based on the month of max_dec_decom
         if 4 <= max_dec_decom_month <= 12:  # April to December
-            end_date = date(max_dec_decom_year - 1, 3, 31)
+            end_date = date(max_dec_decom_year + 1, 3, 31)
         else:  # January to March
             end_date = date(max_dec_decom_year, 3, 31)
 
@@ -346,38 +346,30 @@ class DemandModellingDataContainer:
         """
         combined = combined.sort_values(["CHILD", "DECOM", "DEC"], na_position="first")
 
-        start_date = pd.to_datetime(self.start_date)
-
-        # Perform the groupby and shift operation
-        combined[new_column_name] = combined.groupby("CHILD")["placement_type"].shift(
-            offset
+        # Group by child and set next/preceding placement based on offset
+        # Set any blank values (where next/preceding episode is not the same child) as Not in Care
+        combined[new_column_name] = (
+            combined.groupby("CHILD")["placement_type"]
+            .shift(offset)
+            .fillna(PlacementCategories.NOT_IN_CARE.value.label)
         )
 
-        # Create offset mask - this will identify instances where a single child has non-continous episodes of care
+        # Create offset mask - this will identify rows where the offset row is the same CHILD and where there is a break between episodes
         offset_mask = combined["CHILD"] == combined["CHILD"].shift(offset)
-
-        if offset == -1:
-            # If following placement type, fill 'None' where DEC is NaN
-            combined.loc[combined["DEC"].isna(), new_column_name] = "None"
+        if offset > 0:
+            offset_mask &= combined["DECOM"] != combined["DEC"].shift(offset)
+        else:
             offset_mask &= combined["DEC"] != combined["DECOM"].shift(offset)
 
-        else:
-            # If preceeding placement type, fill 'None' where DECOM is before or equal to start date and is na - due to age transistions there may be episodes
-            combined.loc[
-                (combined["DECOM"] <= start_date) & combined[new_column_name].isna(),
-                new_column_name,
-            ] = "None"
-            offset_mask &= combined["DECOM"] != combined["DEC"].shift(offset)
-
-        # Apply offset mask - this will overwrite any non-continuous care episodes with not in care rather than the preceeding episode
+        # Apply offset mask - this will overwrite any non-continuous care episodes with not in care rather than the adjacent episode
         combined.loc[
             offset_mask, new_column_name
         ] = PlacementCategories.NOT_IN_CARE.value.label
 
-        # fill any remaining NAs with not in care
-        combined[new_column_name] = combined[new_column_name].fillna(
-            PlacementCategories.NOT_IN_CARE.value.label
-        )
+        # For next episodes (offset = -1) where the current episode hasn't ended, set next placement as None
+        if offset == -1:
+            combined.loc[combined["DEC"].isna(), new_column_name] = "None"
+
         return combined
 
     def _add_placement_category(self, combined: pd.DataFrame) -> pd.DataFrame:

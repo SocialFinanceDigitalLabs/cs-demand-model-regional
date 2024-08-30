@@ -73,7 +73,12 @@ class Costs(Enum):
     RESIDENTIAL_IN_HOUSE = CostItem(
         label="Residential (In-house)",
         category=PlacementCategories.RESIDENTIAL.value,
-        placement_types=("K2",),
+        placement_types=(
+            "K2",
+            "R1",
+            "P3",
+            "S1",
+        ),
         place_provider=(
             "PR1",
             "PR2",
@@ -84,7 +89,12 @@ class Costs(Enum):
     RESIDENTIAL_EXTERNAL = CostItem(
         label="Residential (External)",
         category=PlacementCategories.RESIDENTIAL.value,
-        placement_types=("K2",),
+        placement_types=(
+            "K2",
+            "R1",
+            "P3",
+            "S1",
+        ),
         place_provider=("PR4", "PR5"),
         defaults=CostDefaults(cost_per_day=1000, proportion=1),
     )
@@ -101,7 +111,7 @@ class Costs(Enum):
     SECURE_HOME = CostItem(
         label="Secure home",
         category=PlacementCategories.OTHER.value,  # @Michael note - on 903 guidance this is under residential?
-        placement_types=("K1"),
+        placement_types=("K1",),
         place_provider=(),
         defaults=CostDefaults(cost_per_day=1000, proportion=1),
     )
