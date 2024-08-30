@@ -69,8 +69,9 @@ def normalize_proportions(cost_items, proportion_adjustment):
                 normalised_proportions[item.label] = proportion_adjustment[item.label]
             else:
                 normalised_proportions[item.label] = item.defaults.proportion
-    elif adjustment_total >= 1:
-        # Set remaining proportions to 0 and scale down adjustment proportions
+    elif adjustment_total >= 1 or remaining_total == 0:
+        # For when adjustments are >= 1 and there are remaining; or adjustments are < 1 and there are no remaining
+        # Scale adjustments up or down and set any remaining to 0
         scale_factor = Decimal("1") / Decimal(str(adjustment_total))
         for item in cost_items:
             if item.label in proportion_adjustment.index:
@@ -82,38 +83,18 @@ def normalize_proportions(cost_items, proportion_adjustment):
                 proportion = 0
             normalised_proportions[item.label] = proportion
     else:
-        if total_proportion > 1:
-            # Adjust remaining proportions to make the total sum to 1
-            scale_factor = (
-                (Decimal("1") - Decimal(str(adjustment_total)))
-                / Decimal(str(remaining_total))
-                if remaining_total > 0
-                else 0
-            )
-            for item in cost_items:
-                if item.label in proportion_adjustment.index:
-                    proportion = proportion_adjustment[item.label]
-                else:
-                    proportion = Decimal(str(item.defaults.proportion)) * Decimal(
-                        str(scale_factor)
-                    )
-                normalised_proportions[item.label] = float(proportion)
-        else:
-            # Scale up remaining proportions to make the total sum to 1 while keeping adjustment proportions unchanged
-            scale_factor = (
-                (Decimal("1") - Decimal(str(adjustment_total)))
-                / Decimal(str(remaining_total))
-                if remaining_total > 0
-                else 0
-            )
-            for item in cost_items:
-                if item.label in proportion_adjustment.index:
-                    proportion = proportion_adjustment[item.label]
-                else:
-                    proportion = Decimal(str(item.defaults.proportion)) * Decimal(
-                        str(scale_factor)
-                    )
-                normalised_proportions[item.label] = float(proportion)
+        # For when adjustments are < 1 and there are remaining, remaining must be scaled up or down
+        scale_factor = (Decimal("1") - Decimal(str(adjustment_total))) / Decimal(
+            str(remaining_total)
+        )
+        for item in cost_items:
+            if item.label in proportion_adjustment.index:
+                proportion = proportion_adjustment[item.label]
+            else:
+                proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                    str(scale_factor)
+                )
+            normalised_proportions[item.label] = float(proportion)
 
     return normalised_proportions
 
@@ -250,7 +231,7 @@ def convert_population_to_cost(
                             cost_forecast[cost_item.label] = (
                                 forecast_population[column] * cost_per_day * proportion
                             )
-                    # for each cost item, multiply by proportion, then sum together for proportioned population
+                    # for each cost item, multiply forecast population by proportion, then sum together for proportioned population
                     if cost_item.label in proportion_population.columns:
                         proportion_population[cost_item.label] += (
                             forecast_population[column] * proportion
