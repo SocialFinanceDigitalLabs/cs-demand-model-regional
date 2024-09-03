@@ -75,7 +75,7 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
 
 
 def area_chart_population(historic_data: CostForecast, prediction: CostForecast):
-    df_forecast = prediction.population
+    df_forecast = prediction.proportional_population
 
     df_forecast = df_forecast.melt(
         var_name="Placement",
@@ -88,7 +88,7 @@ def area_chart_population(historic_data: CostForecast, prediction: CostForecast)
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.population
+    df_historic = historic_data.proportional_population
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Population",
