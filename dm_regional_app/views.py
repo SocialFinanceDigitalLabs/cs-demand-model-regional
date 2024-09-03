@@ -24,23 +24,17 @@ from dm_regional_app.charts import (
     transition_rate_table,
     year_one_costs,
 )
-from dm_regional_app.forms import (
-    DynamicForm,
-    HistoricDataFilter,
-    InflationForm,
-    PredictFilter,
-)
 from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
     DynamicForm,
     HistoricDataFilter,
+    InflationForm,
     PredictFilter,
     SavedScenarioForm,
 )
 from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters, number_format
-
 from ssda903.config import PlacementCategories
 from ssda903.costs import convert_population_to_cost
 from ssda903.population_stats import PopulationStats
@@ -237,14 +231,14 @@ def costs(request):
                 "form": form,
             },
         )
-  else:
+    else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
         redirect_url = reverse(next_url_name) + "?next_url_name=" + "costs"
         return redirect(redirect_url)
-          
-              
-@login_required              
+
+
+@login_required
 def save_scenario(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
@@ -496,8 +490,8 @@ def weekly_costs(request):
         redirect_url = reverse(next_url_name) + "?next_url_name=" + "weekly_costs"
         return redirect(redirect_url)
 
-      
-@login_required      
+
+@login_required
 def load_saved_scenario(request, pk):
     # loading save scenario should copy it over to a session scenario and jump to the predict view with it
     saved_scenario = get_object_or_404(SavedScenario, pk=pk)
