@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 from datetime import date, datetime
 
 import pandas as pd
@@ -78,3 +79,10 @@ def str_to_tuple(string):
         return ast.literal_eval(string)
     except Exception:
         return string
+
+
+def number_format(value):
+    if value < 0:
+        return f"-£{abs(value):,.2f}"
+    else:
+        return f"£{value:,.2f}"

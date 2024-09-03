@@ -14,6 +14,13 @@ urlpatterns = [
     path("exit_rates", views.exit_rates, name="exit_rates"),
     path("entry_rates", views.entry_rates, name="entry_rates"),
     path("clear_rates", views.clear_rate_adjustments, name="clear_rates"),
+    path("costs", views.costs, name="costs"),
+    path("weekly_costs", views.weekly_costs, name="weekly_costs"),
+    path(
+        "placement_proportions",
+        views.placement_proportions,
+        name="placement_proportions",
+    ),
     path("save_scenario", views.save_scenario, name="save_scenario"),
     path("load_scenario/<int:pk>", views.load_saved_scenario, name="load_scenario"),
 ]

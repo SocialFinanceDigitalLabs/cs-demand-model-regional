@@ -1,7 +1,8 @@
 import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Column, Field, Layout, Row, Submit
+from crispy_forms.layout import HTML, Column, Field, Layout, Row, Submit
+
 from django import forms
 from django_select2 import forms as s2forms
 
@@ -136,7 +137,7 @@ class HistoricDataFilter(forms.Form):
 class DynamicForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.dataframe = kwargs.pop("dataframe", None)
-        initial_data = kwargs.pop("initial_data", pd.Series())
+        initial_data = kwargs.pop("initial_data", pd.Series)
 
         super(DynamicForm, self).__init__(*args, **kwargs)
         self.initialize_fields(initial_data)
@@ -165,6 +166,21 @@ class DynamicForm(forms.Form):
                     required=False, initial=initial_value
                 )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        negative_numbers = []
+
+        for field_name in self.fields:
+            value = cleaned_data.get(field_name)
+            if value is not None and value < 0:
+                negative_numbers.append(field_name)
+                self.add_error(field_name, "Negative numbers are not allowed!")
+
+        if negative_numbers:
+            raise forms.ValidationError(
+                "Form not saved, negative numbers cannot be entered."
+            )
+
     def save(self):
         transition = []
         transition_rate = []
@@ -191,7 +207,73 @@ class DynamicForm(forms.Form):
 
         return data
 
+      
+class InflationForm(forms.Form):
+    # Boolean field with radio buttons
+    inflation = forms.BooleanField(
+        label="Include inflation?",
+        required=False,
+    )
 
+    # Float field for inflation rate
+    inflation_rate = forms.FloatField(
+        label="Inflation rate (%)",
+        min_value=0.0,
+        max_value=100.0,
+        required=False,
+    )
+
+    def clean_inflation_rate(self):
+        rate = self.cleaned_data.get("inflation_rate")
+        if rate is not None:
+            rate = rate / 100.0  # Convert percentage to decimal
+        return rate
+
+    def __init__(self, *args, **kwargs):
+        initial = kwargs.get("initial", {})
+        if "inflation_rate" in initial and initial["inflation_rate"] is not None:
+            initial["inflation_rate"] = (
+                initial["inflation_rate"] * 100
+            )  # Convert decimal to percentage for display
+        kwargs["initial"] = initial
+        super(InflationForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = "post"
+        self.helper.form_show_labels = False
+        self.helper.layout = Layout(
+            Row(
+                Column(
+                    HTML(
+                        '<label for="id_inflation" class="control-label">Include inflation?</label>'
+                    ),
+                    css_class="form-group col-md-5 mb-0",
+                ),
+                Column(
+                    Field("inflation", css_class="form-control"),
+                    css_class="form-group col-md-4 mb-0",
+                ),
+                Column(
+                    Submit("submit", "Apply", css_class="btn btn-primary align-right"),
+                    css_class="form-group col-auto align-right",
+                ),
+                css_class="form-row",
+            ),
+            Row(
+                Column(
+                    HTML(
+                        '<label for="id_inflation_rate" class="control-label">Inflation Rate (%)</label>'
+                    ),
+                    css_class="form-group col-md-5 mb-0",
+                ),
+                Column(
+                    Field("inflation_rate", css_class="form-control"),
+                    css_class="form-group col-md-3 mb-0",
+                ),
+                css_class="form-row",
+            ),
+        )
+
+          
 class SavedScenarioForm(forms.ModelForm):
     name = forms.CharField(
         widget=forms.TextInput(attrs={"maxlength": 100}),
