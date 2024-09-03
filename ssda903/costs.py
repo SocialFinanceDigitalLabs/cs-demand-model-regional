@@ -15,10 +15,11 @@ getcontext().prec = 6
 
 @dataclass
 class CostForecast:
-    population: pd.DataFrame
-    proportions: pd.DataFrame
     costs: pd.DataFrame
+    proportions: pd.DataFrame
+    cost_summary: pd.DataFrame
     summary_table: pd.DataFrame
+    proportional_population: pd.DataFrame
 
 
 def get_cost_items_for_category(category_label: str):
@@ -34,9 +35,9 @@ def get_cost_items_for_category(category_label: str):
 
 def normalize_proportions(cost_items, proportion_adjustment):
     """
-    This function makes sure the proportions for each category sum to 1
+    This function makes sure the proportions for each category sum to 1.
 
-    It will prioritise proportions in the proportion adjustment series, eg
+    It will prioritize proportions in the proportion adjustment series, e.g.,
     If proportion adjustments sum to less than 1 but total proportions sum to
     more than 1, this will be adjusted via changing proportions not in the
     adjustment series.
@@ -44,6 +45,9 @@ def normalize_proportions(cost_items, proportion_adjustment):
     If the adjustment total sums to more than 1, other proportions will
     scale to 0 and the proportions in the adjustment series will be scaled
     to sum to 1.
+
+    If the total proportions sum to less than 1, keep adjustment proportions
+    unchanged and scale up the remaining proportions.
     """
     adjustment_total = 0
     remaining_total = 0
@@ -56,8 +60,18 @@ def normalize_proportions(cost_items, proportion_adjustment):
         else:
             remaining_total += item.defaults.proportion
 
-    if adjustment_total >= 1:
-        # Set remaining proportions to 0 and scale down adjustment proportions
+    total_proportion = adjustment_total + remaining_total
+
+    if total_proportion == 1:
+        # If the total is exactly 1, return the proportions as they are
+        for item in cost_items:
+            if item.label in proportion_adjustment.index:
+                normalised_proportions[item.label] = proportion_adjustment[item.label]
+            else:
+                normalised_proportions[item.label] = item.defaults.proportion
+    elif adjustment_total >= 1 or remaining_total == 0:
+        # For when adjustments are >= 1 and there are remaining; or adjustments are < 1 and there are no remaining
+        # Scale adjustments up or down and set any remaining to 0
         scale_factor = Decimal("1") / Decimal(str(adjustment_total))
         for item in cost_items:
             if item.label in proportion_adjustment.index:
@@ -69,12 +83,9 @@ def normalize_proportions(cost_items, proportion_adjustment):
                 proportion = 0
             normalised_proportions[item.label] = proportion
     else:
-        # Adjust remaining proportions to make the total sum to 1
-        scale_factor = (
-            (Decimal("1") - Decimal(str(adjustment_total)))
-            / Decimal(str(remaining_total))
-            if remaining_total > 0
-            else 0
+        # For when adjustments are < 1 and there are remaining, remaining must be scaled up or down
+        scale_factor = (Decimal("1") - Decimal(str(adjustment_total))) / Decimal(
+            str(remaining_total)
         )
         for item in cost_items:
             if item.label in proportion_adjustment.index:
@@ -123,27 +134,26 @@ def convert_population_to_cost(
     This will take a population via a Prediction or PopulationStats object and transform it to a cost.
     """
     if isinstance(data, Prediction):
-        forecast_population = data.population
+        input_population = data.population
     elif isinstance(data, PopulationStats):
-        forecast_population = data.stock
+        input_population = data.stock
 
     proportions = pd.Series(dtype="float64")
-    costs = pd.Series(dtype="float64")
+    cost_summary = pd.Series(dtype="float64")
 
     # Filter out columns that contain the not in care population
     columns_to_keep = [
-        col for col in forecast_population.columns if "Not in care" not in col
+        col for col in input_population.columns if "Not in care" not in col
     ]
     # Return the dataframe with only the in care population
-    forecast_population = forecast_population[columns_to_keep]
+    input_population = input_population[columns_to_keep]
 
-    cost_forecast = pd.DataFrame(index=forecast_population.index)
-    summary_table = pd.DataFrame(index=forecast_population.index)
-    start_date = forecast_population.index[0]
+    costs = pd.DataFrame(index=input_population.index)
+    proportional_population = pd.DataFrame(index=input_population.index)
+    start_date = input_population.index[0]
 
-    for column in forecast_population.columns:
+    for column in input_population.columns:
         # for each column, create a new series where we will sum the total cost output
-        total_cost_series = pd.Series(0, index=forecast_population.index)
 
         for category in PlacementCategories:
             # for each category, check if the category label is in the column header
@@ -162,11 +172,13 @@ def convert_population_to_cost(
                         cost_adjustment is not None
                         and cost_item.label in cost_adjustment.index
                     ):
-                        cost_per_day = cost_adjustment[cost_item.label]
+                        cost_per_week = cost_adjustment[cost_item.label]
                     else:
-                        cost_per_day = cost_item.defaults.cost_per_day
-                    # add original daily cost to costs output
-                    costs[cost_item.label] = cost_per_day
+                        cost_per_week = cost_item.defaults.cost_per_week
+                    # work out daily cost
+                    cost_per_day = cost_per_week / 7
+                    # add original weekly cost to cost_summary output
+                    cost_summary[cost_item.label] = cost_per_week
 
                     if (
                         proportion_adjustment is not None
@@ -180,7 +192,7 @@ def convert_population_to_cost(
 
                     if inflation is True:
                         anniversary = start_date
-                        for i, current_date in enumerate(forecast_population.index):
+                        for i, current_date in enumerate(input_population.index):
                             # for each year that passes, add interest to the cost per day
                             if current_date == anniversary + relativedelta(years=1):
                                 cost_per_day = apply_inflation_to_cost_item(
@@ -188,47 +200,46 @@ def convert_population_to_cost(
                                 )
                                 anniversary = current_date
 
-                            total_cost_series[i] += (
-                                forecast_population.at[current_date, column]
-                                * cost_per_day
-                                * proportion
-                            )
-
-                            if cost_item.label in summary_table.columns:
-                                if pd.isna(
-                                    summary_table.at[current_date, cost_item.label]
-                                ):
-                                    summary_table.at[current_date, cost_item.label] = (
-                                        forecast_population.at[current_date, column]
+                            if cost_item.label in costs.columns:
+                                if pd.isna(costs.at[current_date, cost_item.label]):
+                                    costs.at[current_date, cost_item.label] = (
+                                        input_population.at[current_date, column]
                                         * cost_per_day
                                         * proportion
                                     )
                                 else:
-                                    summary_table.at[current_date, cost_item.label] += (
-                                        forecast_population.at[current_date, column]
+                                    costs.at[current_date, cost_item.label] += (
+                                        input_population.at[current_date, column]
                                         * cost_per_day
                                         * proportion
                                     )
                             else:
-                                summary_table.at[current_date, cost_item.label] = (
-                                    forecast_population.at[current_date, column]
+                                costs.at[current_date, cost_item.label] = (
+                                    input_population.at[current_date, column]
                                     * cost_per_day
                                     * proportion
                                 )
                     else:
                         # for each cost item, multiply by cost per day and proportion, then sum together
-                        total_cost_series += (
-                            forecast_population[column] * cost_per_day * proportion
-                        )
-                        if cost_item.label in summary_table.columns:
-                            summary_table[cost_item.label] += (
-                                forecast_population[column] * cost_per_day * proportion
+                        if cost_item.label in costs.columns:
+                            costs[cost_item.label] += (
+                                input_population[column] * cost_per_day * proportion
                             )
                         else:
-                            summary_table[cost_item.label] = (
-                                forecast_population[column] * cost_per_day * proportion
+                            costs[cost_item.label] = (
+                                input_population[column] * cost_per_day * proportion
                             )
+                    # for each cost item, multiply forecast population by proportion, then sum together for proportioned population
+                    if cost_item.label in proportional_population.columns:
+                        proportional_population[cost_item.label] += (
+                            input_population[column] * proportion
+                        )
+                    else:
+                        proportional_population[cost_item.label] = (
+                            input_population[column] * proportion
+                        )
 
-        cost_forecast[column] = total_cost_series
-    summary_table = resample_summary_table(summary_table)
-    return CostForecast(cost_forecast, proportions, costs, summary_table)
+    summary_table = resample_summary_table(costs)
+    return CostForecast(
+        costs, proportions, cost_summary, summary_table, proportional_population
+    )
