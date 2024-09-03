@@ -17,6 +17,8 @@
           {% include 'dm_regional_app/includes/navbar-item.html' with url='scenarios' name='Saved Scenarios' url_names="['scenarios', 'scenario_detail']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=historic_data" name='Historic Data' url_names="['historic_data']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=prediction" name='Start Modelling' url_names="['prediction']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=adjusted" name='Adjust Forecast' url_names="['adjusted']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=costs" name='Projecting Spend' url_names="['costs']" %}
         {% else %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='home' name='Home' url_names="['home']" %}
         {% endif %}

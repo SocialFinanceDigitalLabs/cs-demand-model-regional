@@ -85,7 +85,10 @@ class MultinomialPredictor(BaseModelPredictor):
                     number_adjustment = [number_adjustment]
                 for adjustment in number_adjustment:
                     adjustment = adjustment.copy()
-                    adjustment.index.names = ["from", "to"]
+                    new_index = pd.MultiIndex.from_product(
+                        [[()], adjustment.index], names=["from", "to"]
+                    )
+                    adjustment.index = new_index
                     transition_numbers = combine_rates(transition_numbers, adjustment)
 
             transition_numbers.index = transition_numbers.index.get_level_values("to")

@@ -13,8 +13,8 @@ class TestCosts(unittest.TestCase):
                 "label": "Fostering",
             },
             "defaults": {
-                "cost_per_day": 100,
-                "proportion": 1,
+                "cost_per_week": 100,
+                "proportion": 0.3,
             },
         }
         self.assertEqual(cost_item.toJSON(), expected_json)
