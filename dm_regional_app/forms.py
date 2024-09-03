@@ -2,9 +2,11 @@ import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Column, Field, Layout, Row, Submit
+
 from django import forms
 from django_select2 import forms as s2forms
 
+from dm_regional_app.models import SavedScenario
 from dm_regional_app.utils import str_to_tuple
 
 
@@ -205,7 +207,7 @@ class DynamicForm(forms.Form):
 
         return data
 
-
+      
 class InflationForm(forms.Form):
     # Boolean field with radio buttons
     inflation = forms.BooleanField(
@@ -269,4 +271,32 @@ class InflationForm(forms.Form):
                 ),
                 css_class="form-row",
             ),
+        )
+
+          
+class SavedScenarioForm(forms.ModelForm):
+    name = forms.CharField(
+        widget=forms.TextInput(attrs={"maxlength": 100}),
+        max_length=400,
+        required=True,
+        label="Name",
+    )
+    description = forms.CharField(
+        widget=forms.TextInput(attrs={"maxlength": 400}),
+        max_length=400,
+        required=False,
+        label="Description",
+    )
+
+    class Meta:
+        model = SavedScenario
+        fields = ["name", "description"]
+
+    def __init__(self, *args, **kwargs):
+        super(SavedScenarioForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = "post"
+        self.helper.layout = Layout(
+            Field("name", css_class="form-control"),
+            Field("description", css_class="form-control"),
         )

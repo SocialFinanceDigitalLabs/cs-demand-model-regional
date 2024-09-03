@@ -21,4 +21,6 @@ urlpatterns = [
         views.placement_proportions,
         name="placement_proportions",
     ),
+    path("save_scenario", views.save_scenario, name="save_scenario"),
+    path("load_scenario/<int:pk>", views.load_saved_scenario, name="load_scenario"),
 ]

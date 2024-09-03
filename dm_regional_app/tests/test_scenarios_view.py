@@ -9,10 +9,12 @@ class ScenariosTestCase(TestCase):
 
     def setUp(self):
         self.user = self.builder.user(
-            email="testuser",
+            email="testuser@hillingdon.gov.uk",
             password="testpassword",
         )
-        self.client.login(username="testuser", password="testpassword")
+        self.client.login(
+            username="testuser@hillingdon.gov.uk", password="testpassword"
+        )
         self.scenario = self.builder.scenario(name="Test Scenario", user=self.user)
 
     def test_scenarios_view(self):
@@ -35,13 +37,13 @@ class ScenariosTestCase(TestCase):
         self.assertTemplateUsed(response, "dm_regional_app/views/scenarios.html")
         self.assertQuerysetEqual(response.context["scenarios"], [])
 
-    def test_different_user_only_sees_their_scenarios(self):
+    def test_different_user_only_sees_scenarios_from_their_la(self):
         other_user = self.builder.user(
-            email="testuser2",
+            email="testuser2@bromley.gov.uk",
             password="testpassword2",
         )
         other_scenario = self.builder.scenario(name="Test Scenario 2", user=other_user)
-        self.client.login(username="testuser2", password="testpassword2")
+        self.client.login(username="testuser2@bromley.gov.uk", password="testpassword2")
 
         response = self.client.get(reverse("scenarios"))
         self.assertEqual(response.status_code, 200)
