@@ -76,7 +76,7 @@ class PopulationStats:
             axis=1,
         )
         transitions["end_bin"] = transitions.apply(
-            lambda c: f"{c.age_bin} - {c.placement_type_after.capitalize()}",
+            lambda c: f"{c.end_age_bin} - {c.placement_type_after.capitalize()}",
             axis=1,
         )
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
