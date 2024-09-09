@@ -86,3 +86,16 @@ def number_format(value):
         return f"-£{abs(value):,.2f}"
     else:
         return f"£{value:,.2f}"
+
+
+def care_type(row):
+    if "Fostering" in row:
+        return "Fostering"
+    if "Not in care" in row:
+        return "Not in care"
+    if "Residential" in row:
+        return "Residential"
+    if "Other" in row:
+        return "Other"
+    if "Supported" in row:
+        return "Supported"
