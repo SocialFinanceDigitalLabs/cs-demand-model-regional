@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -282,6 +283,88 @@ def historic_chart(data: PopulationStats):
     return fig_html
 
 
+def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str):
+    data.df["DECOM"] = pd.to_datetime(data.df["DECOM"])
+    start_date, end_date = pd.to_datetime([start_date, end_date])
+    data.df["DECOM"] = data.df["DECOM"].dt.to_period("M").dt.to_timestamp()
+
+    # filter time-frame to form dates
+    df_filtered = data.df[
+        (data.df["DECOM"] >= start_date) & (data.df["DECOM"] <= end_date)
+    ]
+
+    # calculate placement duration (end_age - age)
+    df_filtered["placement_duration"] = df_filtered["end_age"] - df_filtered["age"]
+
+    df_entrants = (
+        df_filtered.groupby(["DECOM", "placement_type"])
+        .agg(
+            count=("CHILD", "size"), avg_duration=("placement_duration", "mean")
+        )  # calculate count and avg duration
+        .reset_index()
+    )
+
+    # convert avg_duration yrs to more sensical wks (using 52.14 wks pa)
+    df_entrants["avg_duration_weeks"] = (df_entrants["avg_duration"] * 52.14).round(2)
+
+    df_entrants["true_count"] = df_entrants["count"]
+
+    # visualise
+    fig = px.line(
+        df_entrants,
+        y="true_count",
+        x="DECOM",
+        color="placement_type",
+        markers=True,
+        line_shape="spline",
+        labels={  # hover dict
+            "true_count": "Placements",
+            "DECOM": "Date",
+            "placement_type": "Placement Type",
+            "avg_duration_weeks": "Avg Duration (wks)",
+        },
+        title="Placement starts per month by Placement Type",
+        hover_data={"true_count": True, "avg_duration_weeks": True},
+    )
+
+    quarterly_months = df_entrants[df_entrants["DECOM"].dt.month.isin([1, 4, 7, 10])]
+    fig.update_layout(
+        xaxis=dict(
+            tickvals=quarterly_months["DECOM"],
+            ticktext=[f"{d:%b}" for d in quarterly_months["DECOM"]],
+            tickangle=45,
+            tickmode="array",
+            title=dict(text="Date", standoff=40),
+        ),
+        title="Placement starts per month",
+        hovermode="x",
+        font=dict(size=12),
+    )
+
+    for year in df_entrants["DECOM"].dt.year.unique():
+        fig.add_annotation(
+            x=f"{year}-07-01",
+            y=-0.18,
+            text=str(year),
+            showarrow=False,
+            xref="x",
+            yref="paper",
+            align="center",
+        )
+
+    fig.update_traces(line=dict(width=1), marker=dict(size=4))
+
+    max_count = df_entrants["true_count"].max()
+    fig.update_yaxes(
+        title_text="Placements",
+        tickvals=list(range(0, int(max_count) + 10, 10)),
+        ticktext=[str(i) for i in range(0, int(max_count) + 10, 10)],
+    )
+
+    fig_html = fig.to_html(full_html=False)
+    return fig_html
+
+
 def transition_rate_table(data):
     df = data
 
@@ -386,7 +469,7 @@ def compare_forecast(
     historic_data: PopulationStats,
     base_forecast: Prediction,
     adjusted_forecast: Prediction,
-    **kwargs
+    **kwargs,
 ):
     # pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")

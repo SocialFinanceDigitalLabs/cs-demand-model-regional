@@ -18,6 +18,7 @@ from dm_regional_app.charts import (
     exit_rate_table,
     historic_chart,
     placement_proportion_table,
+    placement_starts_chart,
     prediction_chart,
     summary_tables,
     transition_rate_changes,
@@ -1135,8 +1136,21 @@ def historic_data(request):
                 # update reference start and end
 
                 data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
+
+                # # Get start_date and end_date from form.cleaned_data
+                # start_date = form.cleaned_data["start_date"]
+                # end_date = form.cleaned_data["end_date"]
+                start_date = datacontainer.start_date
+                end_date = datacontainer.end_date
+
             else:
+                # If the form is not valid, use default dates from datacontainer
                 data = datacontainer.enriched_view
+
+                # get datacontainer dates
+                start_date = datacontainer.start_date
+                end_date = datacontainer.end_date
+
         else:
             # read data
             datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -1150,6 +1164,10 @@ def historic_data(request):
             )
             data = apply_filters(datacontainer.enriched_view, form.initial)
 
+            # get datacontainer dates
+            start_date = form.initial.get("start_date", datacontainer.start_date)
+            end_date = form.initial.get("end_date", datacontainer.end_date)
+
         entry_into_care_count = data.loc[
             data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label
         ]["CHILD"].nunique()
@@ -1159,7 +1177,8 @@ def historic_data(request):
 
         stats = PopulationStats(data)
 
-        chart = historic_chart(stats)
+        chart = historic_chart(stats)  # consider name revision
+        plmt_starts_chart = placement_starts_chart(stats, start_date, end_date)
 
         return render(
             request,
@@ -1168,7 +1187,8 @@ def historic_data(request):
                 "form": form,
                 "entry_into_care_count": entry_into_care_count,
                 "exiting_care_count": exiting_care_count,
-                "chart": chart,
+                "historic_chart": chart,
+                "placement_starts_chart": plmt_starts_chart,
             },
         )
     else:
