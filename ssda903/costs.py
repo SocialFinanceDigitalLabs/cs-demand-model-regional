@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from decimal import Decimal, getcontext
-from typing import Iterable, Optional, Union
+from typing import Iterable, Union
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-from ssda903.config import Costs, PlacementCategories
+from ssda903.config import PlacementCategories
 from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
+from ssda903.utils import get_cost_items_for_category
 
 # Set the precision for decimal operations
 getcontext().prec = 6
@@ -20,17 +21,6 @@ class CostForecast:
     cost_summary: pd.DataFrame
     summary_table: pd.DataFrame
     proportional_population: pd.DataFrame
-
-
-def get_cost_items_for_category(category_label: str):
-    """
-    Takes a placement category label and returns related enum costs in a list
-    """
-    cost_items = []
-    for cost in Costs:
-        if cost.value.category.label == category_label:
-            cost_items.append(cost.value)
-    return cost_items
 
 
 def normalize_proportions(cost_items, proportion_adjustment):
@@ -125,6 +115,7 @@ def apply_inflation_to_cost_item(cost_per_day, inflation_rate):
 
 def convert_population_to_cost(
     data: Union[Prediction, PopulationStats],
+    historic_proportion: Union[pd.Series, Iterable[pd.Series]] = None,
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     proportion_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     inflation: Union[bool] = None,
