@@ -133,9 +133,11 @@ class PopulationStats:
         return df.rate
 
     @lru_cache(maxsize=5)
-    def placement_proportions(self, start_date: date, end_date: date):
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
+    def placement_proportions(
+        self, reference_start_date: date, reference_end_date: date, **kwargs
+    ):
+        start_date = pd.to_datetime(reference_start_date)
+        end_date = pd.to_datetime(reference_end_date)
 
         df = self.df.copy()
 
@@ -174,13 +176,13 @@ class PopulationStats:
 
         total_pops = pops.sum()
 
-        proportion_series = pd.Series([])
+        proportion_series = pd.Series(dtype="float64")
 
         for category in PlacementCategories:
             # fetch cost items for each category
             cost_items = get_cost_items_for_category(category.value.label)
             # create empty series to store related placement populations
-            placement_series = pd.Series([])
+            placement_series = pd.Series(dtype="float64")
             for cost_item in cost_items:
                 # if cost item is in the total_pops index, store value to placement series
                 if cost_item.label in total_pops.index:

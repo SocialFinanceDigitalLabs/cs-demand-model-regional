@@ -23,7 +23,7 @@ class CostForecast:
     proportional_population: pd.DataFrame
 
 
-def normalize_proportions(cost_items, proportion_adjustment):
+def normalize_proportions(cost_items, historic_proportions, proportion_adjustment):
     """
     This function makes sure the proportions for each category sum to 1.
 
@@ -44,11 +44,20 @@ def normalize_proportions(cost_items, proportion_adjustment):
     normalised_proportions = pd.Series(dtype="float64")
 
     # Calculate the total of adjustment proportions and remaining proportions
+    print(cost_items)
     for item in cost_items:
         if item.label in proportion_adjustment.index:
             adjustment_total += proportion_adjustment[item.label]
+        elif item.label in historic_proportions.index:
+            remaining_total += historic_proportions[item.label]
         else:
-            remaining_total += item.defaults.proportion
+            pass
+
+    print(historic_proportions)
+    print(remaining_total)
+
+    print(proportion_adjustment)
+    print(adjustment_total)
 
     total_proportion = adjustment_total + remaining_total
 
@@ -57,8 +66,10 @@ def normalize_proportions(cost_items, proportion_adjustment):
         for item in cost_items:
             if item.label in proportion_adjustment.index:
                 normalised_proportions[item.label] = proportion_adjustment[item.label]
+            elif item.label in historic_proportions.index:
+                normalised_proportions[item.label] = historic_proportions[item.label]
             else:
-                normalised_proportions[item.label] = item.defaults.proportion
+                normalised_proportions[item.label] = 0
     elif adjustment_total >= 1 or remaining_total == 0:
         # For when adjustments are >= 1 and there are remaining; or adjustments are < 1 and there are no remaining
         # Scale adjustments up or down and set any remaining to 0
@@ -81,7 +92,7 @@ def normalize_proportions(cost_items, proportion_adjustment):
             if item.label in proportion_adjustment.index:
                 proportion = proportion_adjustment[item.label]
             else:
-                proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                proportion = Decimal(str(historic_proportions[item.label])) * Decimal(
                     str(scale_factor)
                 )
             normalised_proportions[item.label] = float(proportion)
@@ -115,7 +126,7 @@ def apply_inflation_to_cost_item(cost_per_day, inflation_rate):
 
 def convert_population_to_cost(
     data: Union[Prediction, PopulationStats],
-    historic_proportion: Union[pd.Series, Iterable[pd.Series]] = None,
+    historic_proportions: Union[pd.Series, Iterable[pd.Series]] = None,
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     proportion_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     inflation: Union[bool] = None,
@@ -128,6 +139,9 @@ def convert_population_to_cost(
         input_population = data.population
     elif isinstance(data, PopulationStats):
         input_population = data.stock
+
+    print(historic_proportions)
+    print(proportion_adjustment)
 
     proportions = pd.Series(dtype="float64")
     cost_summary = pd.Series(dtype="float64")
@@ -154,7 +168,7 @@ def convert_population_to_cost(
                 if proportion_adjustment is not None:
                     # Apply proportion adjustments
                     normalised_proportions = normalize_proportions(
-                        cost_items, proportion_adjustment
+                        cost_items, historic_proportions, proportion_adjustment
                     )
 
                 for cost_item in cost_items:
@@ -176,8 +190,8 @@ def convert_population_to_cost(
                         and cost_item.label in normalised_proportions.index
                     ):
                         proportion = normalised_proportions[cost_item.label]
-                    else:
-                        proportion = cost_item.defaults.proportion
+                    elif cost_item.label in historic_proportions.index:
+                        proportion = historic_proportions[cost_item.label]
                     # add proportion to proportions output
                     proportions[cost_item.label] = proportion
 

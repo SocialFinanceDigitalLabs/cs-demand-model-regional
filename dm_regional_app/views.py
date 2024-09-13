@@ -139,17 +139,23 @@ def costs(request):
             number_adjustment=session_scenario.adjusted_numbers,
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
             **session_scenario.inflation_parameters,
         )
 
-        stats = PopulationStats(historic_data)
-
         historic_costs = convert_population_to_cost(
             stats,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
@@ -160,6 +166,7 @@ def costs(request):
 
         base_costs = convert_population_to_cost(
             base_prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             **session_scenario.inflation_parameters,
         )
@@ -338,8 +345,15 @@ def placement_proportions(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
@@ -426,8 +440,15 @@ def weekly_costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
