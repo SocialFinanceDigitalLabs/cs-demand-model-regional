@@ -44,7 +44,6 @@ def normalize_proportions(cost_items, historic_proportions, proportion_adjustmen
     normalised_proportions = pd.Series(dtype="float64")
 
     # Calculate the total of adjustment proportions and remaining proportions
-    print(cost_items)
     for item in cost_items:
         if item.label in proportion_adjustment.index:
             adjustment_total += proportion_adjustment[item.label]
@@ -52,12 +51,6 @@ def normalize_proportions(cost_items, historic_proportions, proportion_adjustmen
             remaining_total += historic_proportions[item.label]
         else:
             pass
-
-    print(historic_proportions)
-    print(remaining_total)
-
-    print(proportion_adjustment)
-    print(adjustment_total)
 
     total_proportion = adjustment_total + remaining_total
 
@@ -139,9 +132,6 @@ def convert_population_to_cost(
         input_population = data.population
     elif isinstance(data, PopulationStats):
         input_population = data.stock
-
-    print(historic_proportions)
-    print(proportion_adjustment)
 
     proportions = pd.Series(dtype="float64")
     cost_summary = pd.Series(dtype="float64")
