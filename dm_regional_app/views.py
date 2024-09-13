@@ -1013,7 +1013,6 @@ def prediction(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-        print(session_scenario.user.profile.la)
 
         if request.method == "POST":
             if "uasc" in request.POST:
@@ -1197,7 +1196,6 @@ def scenarios(request):
 
     table = SavedScenarioTable(filtered_scenarios)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-    print(table)
 
     return render(
         request,
