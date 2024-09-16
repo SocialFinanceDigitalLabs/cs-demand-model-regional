@@ -252,13 +252,11 @@ def convert_historic_population_to_cost(
 
     for column in input_population.columns:
         # for each column, create a new series where we will sum the total cost output
-        print(column)
 
         for cost in Costs:
             # for each category, check if the category label is in the column header
             if cost.value.label in column:
                 cost_item = cost.value
-                print(cost_item)
 
                 if (
                     cost_adjustment is not None
@@ -271,7 +269,6 @@ def convert_historic_population_to_cost(
                 cost_per_day = cost_per_week / 7
 
                 # for each cost item, multiply by cost per day
-
                 costs[cost_item.label] = input_population[column] * cost_per_day
 
     return costs

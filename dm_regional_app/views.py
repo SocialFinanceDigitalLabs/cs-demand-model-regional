@@ -156,7 +156,9 @@ def costs(request):
             **session_scenario.inflation_parameters,
         )
 
-        historic_costs = convert_historic_population_to_cost(historic_population)
+        historic_costs = convert_historic_population_to_cost(
+            historic_population, session_scenario.adjusted_costs
+        )
 
         base_prediction = predict(
             data=historic_data, **session_scenario.prediction_parameters
