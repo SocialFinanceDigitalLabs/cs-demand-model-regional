@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dm_regional_app.utils import care_type
+from dm_regional_app.utils import care_type_organiser
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -171,39 +171,12 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     df = prediction.population.unstack().reset_index()
 
     df.columns = ["from", "date", "forecast"]
-    df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
-    df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
-    df["date"] = pd.to_datetime(df["date"]).dt.date
-
-    # dataframe containing predictions by population type
-    df_by_type = prediction.population.unstack().reset_index()
-    df_by_type.columns = ["from", "date", "forecast"]
-    df_by_type["type"] = df_by_type["from"].apply(care_type)
-    df_by_type = (
-        df_by_type[["date", "forecast", "type"]]
-        .groupby(by=["date", "type"])
-        .sum()
-        .reset_index()
-    )
-    df_by_type["date"] = pd.to_datetime(df_by_type["date"]).dt.date
+    forecast_care_by_type_dfs = care_type_organiser(df)
 
     # dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
     df_hd.columns = ["from", "date", "historic"]
-    df_hd = df_hd[["date", "historic"]].groupby(by="date").sum().reset_index()
-    df_hd["date"] = pd.to_datetime(df_hd["date"]).dt.date
-
-    # dataframe containing total children in historic data
-    df_hd_by_type = historic_data.stock.unstack().reset_index()
-    df_hd_by_type.columns = ["from", "date", "historic"]
-    df_hd_by_type["type"] = df_hd_by_type["from"].apply(care_type)
-    df_hd_by_type = (
-        df_hd_by_type[["type", "date", "historic"]]
-        .groupby(by=["date", "type"])
-        .sum()
-        .reset_index()
-    )
-    df_hd_by_type["date"] = pd.to_datetime(df_hd_by_type["date"]).dt.date
+    historic_care_by_type_dfs = care_type_organiser(df_hd)
 
     # dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
@@ -242,8 +215,8 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     # add forecast for total children
     fig.add_trace(
         go.Scatter(
-            x=df["date"],
-            y=df["forecast"],
+            x=forecast_care_by_type_dfs["Total"]["date"],
+            y=forecast_care_by_type_dfs["Total"]["forecast"],
             name="Forecast",
             line=dict(color="black", width=1.5),
         )
@@ -252,50 +225,90 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     # add forecast for fostering
     fig.add_trace(
         go.Scatter(
-            x=df_by_type["date"],
-            y=df_by_type[df_by_type["type"] == "Fostering"]["forecast"],
+            x=forecast_care_by_type_dfs["Fostering"]["date"],
+            y=forecast_care_by_type_dfs["Fostering"]["forecast"],
             name="Forecast (Fostering)",
             line=dict(color="red", width=1.5),
-        )
-    )
-
-    # add historic for fostering
-    fig.add_trace(
-        go.Scatter(
-            x=df_hd_by_type["date"],
-            y=df_hd_by_type[df_hd_by_type["type"] == "Fostering"]["historic"],
-            name="Historic (Fostering)",
-            line=dict(color="red", width=1.5, dash="dot"),
         )
     )
 
     # add forecast for residential
     fig.add_trace(
         go.Scatter(
-            x=df_by_type["date"],
-            y=df_by_type[df_by_type["type"] == "Residential"]["forecast"],
+            x=forecast_care_by_type_dfs["Residential"]["date"],
+            y=forecast_care_by_type_dfs["Residential"]["forecast"],
             name="Forecast (Residential)",
-            line=dict(color="blue", width=1.5),
+            line=dict(color="goldenrod", width=1.5),
         )
     )
 
-    # add historic for residential
+    # add forecast for Other
     fig.add_trace(
         go.Scatter(
-            x=df_hd_by_type["date"],
-            y=df_hd_by_type[df_hd_by_type["type"] == "Residential"]["historic"],
-            name="Historic (Residential)",
-            line=dict(color="blue", width=1.5, dash="dot"),
+            x=forecast_care_by_type_dfs["Other"]["date"],
+            y=forecast_care_by_type_dfs["Other"]["forecast"],
+            name="Forecast (Other",
+            line=dict(color="green", width=1.5),
+        )
+    )
+
+    # add forecast for Supported
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_care_by_type_dfs["Supported"]["date"],
+            y=forecast_care_by_type_dfs["Supported"]["forecast"],
+            name="Forecast (Supported)",
+            line=dict(color="magenta", width=1.5),
         )
     )
 
     # add historic data for total children
     fig.add_trace(
         go.Scatter(
-            x=df_hd["date"],
-            y=df_hd["historic"],
+            x=historic_care_by_type_dfs["Total"]["date"],
+            y=historic_care_by_type_dfs["Total"]["historic"],
             name="Historic data",
             line=dict(color="black", width=1.5, dash="dot"),
+        )
+    )
+
+    # add historic for fostering
+    fig.add_trace(
+        go.Scatter(
+            x=historic_care_by_type_dfs["Fostering"]["date"],
+            y=historic_care_by_type_dfs["Fostering"]["historic"],
+            name="Historic (Fostering)",
+            line=dict(color="red", width=1.5, dash="dot"),
+        )
+    )
+
+    # add historic for Other
+    fig.add_trace(
+        go.Scatter(
+            x=historic_care_by_type_dfs["Other"]["date"],
+            y=historic_care_by_type_dfs["Other"]["historic"],
+            name="Historic (Other)",
+            line=dict(color="green", width=1.5, dash="dot"),
+        )
+    )
+
+    # add historic for Supported
+    fig.add_trace(
+        go.Scatter(
+            x=historic_care_by_type_dfs["Supported"]["date"],
+            y=historic_care_by_type_dfs["Supported"]["historic"],
+            name="Historic (Supported)",
+            line=dict(color="magenta", width=1.5, dash="dot"),
+        )
+    )
+
+    # add historic for Residential
+    fig.add_trace(
+        go.Scatter(
+            x=historic_care_by_type_dfs["Residential"]["date"],
+            y=historic_care_by_type_dfs["Residential"]["historic"],
+            name="Historic (Residential)",
+            line=dict(color="goldenrod", width=1.5, dash="dot"),
         )
     )
 

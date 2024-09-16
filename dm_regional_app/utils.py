@@ -88,14 +88,33 @@ def number_format(value):
         return f"£{value:,.2f}"
 
 
-def care_type(row):
-    if "Fostering" in row:
-        return "Fostering"
-    if "Not in care" in row:
-        return "Not in care"
-    if "Residential" in row:
-        return "Residential"
-    if "Other" in row:
-        return "Other"
-    if "Supported" in row:
-        return "Supported"
+def care_type_organiser(df):
+    care_types = [
+        "Total",
+        "Fostering",
+        "Not in care",
+        "Residential",
+        "Other",
+        "Supported",
+    ]
+    care_type_dict = {}
+
+    if "forecast" in df.columns:
+        data_type = "forecast"
+    elif "historic" in df.columns:
+        data_type = "historic"
+
+    for care_type in care_types:
+        if care_type == "Total":
+            care_type_df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
+        else:
+            care_type_df = df[df["from"].str.contains(care_type)]
+
+        care_type_df = (
+            care_type_df[["date", data_type]].groupby("date").sum().reset_index()
+        )
+        care_type_df["date"] = pd.to_datetime(care_type_df["date"]).dt.date
+
+        care_type_dict[care_type] = care_type_df
+
+    return care_type_dict
