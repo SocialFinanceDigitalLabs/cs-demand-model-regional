@@ -182,7 +182,7 @@ def costs(request):
 
         area_costs = area_chart_cost(historic_costs, costs)
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(placement_proportions, costs)
 
         summary_table = summary_tables(costs.summary_table)
 
@@ -358,7 +358,7 @@ def placement_proportions(request):
             session_scenario.adjusted_proportions,
         )
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(placement_proportions, costs)
 
         if request.method == "POST":
             form = DynamicForm(

@@ -118,26 +118,40 @@ def area_chart_population(historic_data, prediction: CostForecast):
     return fig_html
 
 
-def placement_proportion_table(data: CostForecast):
-    proportions = data.proportions
-
+def placement_proportion_table(historic_proportions, current_proportion: CostForecast):
     categories = {item.value.label: item.value.category.label for item in Costs}
 
-    placement = proportions.index.map(categories)
+    current_proportion = current_proportion.proportions.sort_index()
+    historic_proportions = historic_proportions.sort_index()
 
-    proportions = pd.DataFrame(
-        {
-            "Placement": placement,
-            "Placement type": proportions.index,
-            "Current proportion": proportions.values,
-        },
-        index=proportions.index,
-    )
+    placement = current_proportion.index.map(categories)
+
+    if historic_proportions.equals(current_proportion):
+        proportions = pd.DataFrame(
+            {
+                "Placement": placement,
+                "Placement type": current_proportion.index,
+                "Historic proportion": current_proportion.values,
+            },
+            index=current_proportion.index,
+        )
+    else:
+        proportions = pd.DataFrame(
+            {
+                "Placement": placement,
+                "Placement type": current_proportion.index,
+                "Historic proportion": historic_proportions.values,
+                "Current forecast proportion": current_proportion.values,
+            },
+            index=current_proportion.index,
+        )
 
     proportions = proportions.sort_values(by=["Placement"])
     proportions["Placement"] = proportions["Placement"].mask(
         proportions["Placement"].duplicated(), ""
     )
+
+    proportions = proportions.round(4)
 
     return proportions
 
