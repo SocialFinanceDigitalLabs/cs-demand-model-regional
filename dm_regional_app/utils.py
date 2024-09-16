@@ -11,7 +11,6 @@ import plotly.graph_objects as go
 care_types = [
     "Total",
     "Fostering",
-    "Not in care",
     "Residential",
     "Other",
     "Supported",
@@ -150,17 +149,17 @@ def add_traces(dfs_forecast, dfs_historic, fig):
         "purple",
     ]
 
-    care_types.remove("Not in care")
     for care_type, colour in zip(care_types, colours):
-        # add forecast data
-        fig.add_trace(
-            go.Scatter(
-                x=dfs_forecast[care_type]["date"],
-                y=dfs_forecast[care_type]["forecast"],
-                name=f"Forecast ({care_type})",
-                line=dict(color=colour, width=1.5),
+        if dfs_forecast:
+            # add forecast data
+            fig.add_trace(
+                go.Scatter(
+                    x=dfs_forecast[care_type]["date"],
+                    y=dfs_forecast[care_type]["forecast"],
+                    name=f"Forecast ({care_type})",
+                    line=dict(color=colour, width=1.5),
+                )
             )
-        )
 
         # add historic data
         fig.add_trace(
@@ -176,7 +175,6 @@ def add_traces(dfs_forecast, dfs_historic, fig):
 
 
 def add_ci_traces(df, fig):
-    # care_types.remove('Not in care')
     for care_type in care_types:
         fig.add_trace(
             go.Scatter(

@@ -228,19 +228,14 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
 
 def historic_chart(data: PopulationStats):
     df_hd = data.stock.unstack().reset_index()
-    df_hd.columns = ["from", "date", "value"]
-    df_hd = df_hd[["date", "value"]].groupby(by="date").sum().reset_index()
+    df_hd.columns = ["from", "date", "historic"]
+    historic_care_by_type_dfs = care_type_organiser(df_hd)
 
-    # visualise prediction using unstacked dataframe
-    fig = px.line(
-        df_hd,
-        y="value",
-        x="date",
-        labels={
-            "value": "Number of children",
-            "date": "Date",
-        },
-    )
+    fig = go.Figure()
+
+    # Add historical traces
+    fig = add_traces(None, historic_care_by_type_dfs, fig)
+
     fig.update_layout(title="Historic data")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
