@@ -36,7 +36,10 @@ from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters, number_format
 from ssda903.config import PlacementCategories
-from ssda903.costs import convert_population_to_cost
+from ssda903.costs import (
+    convert_historic_population_to_cost,
+    convert_population_to_cost,
+)
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
@@ -153,12 +156,7 @@ def costs(request):
             **session_scenario.inflation_parameters,
         )
 
-        historic_costs = convert_population_to_cost(
-            stats,
-            placement_proportions,
-            session_scenario.adjusted_costs,
-            session_scenario.adjusted_proportions,
-        )
+        historic_costs = convert_historic_population_to_cost(historic_population)
 
         base_prediction = predict(
             data=historic_data, **session_scenario.prediction_parameters
@@ -178,7 +176,7 @@ def costs(request):
             }
         )
 
-        area_numbers = area_chart_population(historic_costs, costs)
+        area_numbers = area_chart_population(historic_population, costs)
 
         area_costs = area_chart_cost(historic_costs, costs)
 

@@ -33,7 +33,7 @@ def year_one_costs(df: CostForecast):
     return total_sum
 
 
-def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
+def area_chart_cost(df_historic, prediction: CostForecast):
     df_forecast = prediction.costs
 
     df_forecast = df_forecast.melt(
@@ -46,7 +46,6 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.costs
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Cost",
@@ -74,7 +73,7 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
     return fig_html
 
 
-def area_chart_population(historic_data: CostForecast, prediction: CostForecast):
+def area_chart_population(historic_data, prediction: CostForecast):
     df_forecast = prediction.proportional_population
 
     df_forecast = df_forecast.melt(
@@ -88,7 +87,7 @@ def area_chart_population(historic_data: CostForecast, prediction: CostForecast)
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.proportional_population
+    df_historic = historic_data
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Population",

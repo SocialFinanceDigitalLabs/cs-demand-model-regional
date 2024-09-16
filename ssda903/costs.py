@@ -5,7 +5,7 @@ from typing import Iterable, Union
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-from ssda903.config import PlacementCategories
+from ssda903.config import Costs, PlacementCategories
 from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
 from ssda903.utils import get_cost_items_for_category
@@ -238,3 +238,40 @@ def convert_population_to_cost(
     return CostForecast(
         costs, proportions, cost_summary, summary_table, proportional_population
     )
+
+
+def convert_historic_population_to_cost(
+    input_population: Union[Prediction, PopulationStats],
+    cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
+) -> pd.DataFrame:
+    """
+    This will take a detailed historic population - proportion_population output from placement_proportions - and convert to a cost
+    """
+
+    costs = pd.DataFrame(index=input_population.index)
+
+    for column in input_population.columns:
+        # for each column, create a new series where we will sum the total cost output
+        print(column)
+
+        for cost in Costs:
+            # for each category, check if the category label is in the column header
+            if cost.value.label in column:
+                cost_item = cost.value
+                print(cost_item)
+
+                if (
+                    cost_adjustment is not None
+                    and cost_item.label in cost_adjustment.index
+                ):
+                    cost_per_week = cost_adjustment[cost_item.label]
+                else:
+                    cost_per_week = cost_item.defaults.cost_per_week
+                # work out daily cost
+                cost_per_day = cost_per_week / 7
+
+                # for each cost item, multiply by cost per day
+
+                costs[cost_item.label] = input_population[column] * cost_per_day
+
+    return costs
