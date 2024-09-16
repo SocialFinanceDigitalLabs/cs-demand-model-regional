@@ -2,7 +2,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dm_regional_app.utils import care_type_organiser
+from dm_regional_app.utils import (
+    add_ci_traces,
+    add_traces,
+    apply_variances,
+    care_type_organiser,
+)
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -180,137 +185,19 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
 
     # dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
-    df_ci.columns = ["bin", "date", "variance"]
-    df_ci = df_ci[["date", "variance"]].groupby(by="date").sum().reset_index()
-    df_ci["date"] = pd.to_datetime(df_ci["date"]).dt.date
-    df_ci["upper"] = df["forecast"] + df_ci["variance"]
-    df_ci["lower"] = df["forecast"] - df_ci["variance"]
+    df_ci.columns = ["from", "date", "variance"]
+    df_ci = care_type_organiser(df_ci)
+
+    df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
     # visualise prediction using unstacked dataframe
     fig = go.Figure()
 
+    # Add forecast and historical traces
+    fig = add_traces(forecast_care_by_type_dfs, historic_care_by_type_dfs, fig)
+
     # Display confidence interval as filled shape
-    fig.add_trace(
-        go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["lower"],
-            line_color="rgba(255,255,255,0)",
-            name="Confidence interval",
-            showlegend=False,
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["upper"],
-            fill="tonexty",
-            fillcolor="rgba(0,176,246,0.2)",
-            line_color="rgba(255,255,255,0)",
-            name="Confidence interval",
-            showlegend=True,
-        )
-    )
-
-    # add forecast for total children
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_care_by_type_dfs["Total"]["date"],
-            y=forecast_care_by_type_dfs["Total"]["forecast"],
-            name="Forecast",
-            line=dict(color="black", width=1.5),
-        )
-    )
-
-    # add forecast for fostering
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_care_by_type_dfs["Fostering"]["date"],
-            y=forecast_care_by_type_dfs["Fostering"]["forecast"],
-            name="Forecast (Fostering)",
-            line=dict(color="red", width=1.5),
-        )
-    )
-
-    # add forecast for residential
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_care_by_type_dfs["Residential"]["date"],
-            y=forecast_care_by_type_dfs["Residential"]["forecast"],
-            name="Forecast (Residential)",
-            line=dict(color="goldenrod", width=1.5),
-        )
-    )
-
-    # add forecast for Other
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_care_by_type_dfs["Other"]["date"],
-            y=forecast_care_by_type_dfs["Other"]["forecast"],
-            name="Forecast (Other",
-            line=dict(color="green", width=1.5),
-        )
-    )
-
-    # add forecast for Supported
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_care_by_type_dfs["Supported"]["date"],
-            y=forecast_care_by_type_dfs["Supported"]["forecast"],
-            name="Forecast (Supported)",
-            line=dict(color="magenta", width=1.5),
-        )
-    )
-
-    # add historic data for total children
-    fig.add_trace(
-        go.Scatter(
-            x=historic_care_by_type_dfs["Total"]["date"],
-            y=historic_care_by_type_dfs["Total"]["historic"],
-            name="Historic data",
-            line=dict(color="black", width=1.5, dash="dot"),
-        )
-    )
-
-    # add historic for fostering
-    fig.add_trace(
-        go.Scatter(
-            x=historic_care_by_type_dfs["Fostering"]["date"],
-            y=historic_care_by_type_dfs["Fostering"]["historic"],
-            name="Historic (Fostering)",
-            line=dict(color="red", width=1.5, dash="dot"),
-        )
-    )
-
-    # add historic for Other
-    fig.add_trace(
-        go.Scatter(
-            x=historic_care_by_type_dfs["Other"]["date"],
-            y=historic_care_by_type_dfs["Other"]["historic"],
-            name="Historic (Other)",
-            line=dict(color="green", width=1.5, dash="dot"),
-        )
-    )
-
-    # add historic for Supported
-    fig.add_trace(
-        go.Scatter(
-            x=historic_care_by_type_dfs["Supported"]["date"],
-            y=historic_care_by_type_dfs["Supported"]["historic"],
-            name="Historic (Supported)",
-            line=dict(color="magenta", width=1.5, dash="dot"),
-        )
-    )
-
-    # add historic for Residential
-    fig.add_trace(
-        go.Scatter(
-            x=historic_care_by_type_dfs["Residential"]["date"],
-            y=historic_care_by_type_dfs["Residential"]["historic"],
-            name="Historic (Residential)",
-            line=dict(color="goldenrod", width=1.5, dash="dot"),
-        )
-    )
+    fig = add_ci_traces(df_ci, fig)
 
     # add shaded reference period
     fig.add_shape(
@@ -537,7 +424,7 @@ def compare_forecast(
     # Display confidence interval as filled shape
     fig.add_trace(
         go.Scatter(
-            x=df_ci["date"],
+            x=df_df_ci["date"],
             y=df_ci["lower"],
             line_color="rgba(255,255,255,0)",
             name="Base confidence interval",
@@ -547,8 +434,8 @@ def compare_forecast(
 
     fig.add_trace(
         go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["upper"],
+            x=df_df_ci["date"],
+            y=df_df_ci["upper"],
             fill="tonexty",
             fillcolor="rgba(0,176,246,0.2)",
             line_color="rgba(255,255,255,0)",

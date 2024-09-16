@@ -4,6 +4,18 @@ import re
 from datetime import date, datetime
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+# data for care type functions
+care_types = [
+    "Total",
+    "Fostering",
+    "Not in care",
+    "Residential",
+    "Other",
+    "Supported",
+]
 
 
 def apply_filters(data: pd.DataFrame, filters: dict):
@@ -89,20 +101,14 @@ def number_format(value):
 
 
 def care_type_organiser(df):
-    care_types = [
-        "Total",
-        "Fostering",
-        "Not in care",
-        "Residential",
-        "Other",
-        "Supported",
-    ]
     care_type_dict = {}
 
     if "forecast" in df.columns:
         data_type = "forecast"
     elif "historic" in df.columns:
         data_type = "historic"
+    elif "variance" in df.columns:
+        data_type = "variance"
 
     for care_type in care_types:
         if care_type == "Total":
@@ -118,3 +124,80 @@ def care_type_organiser(df):
         care_type_dict[care_type] = care_type_df
 
     return care_type_dict
+
+
+def apply_variances(care_by_type, ci_by_type):
+    for care_type in care_types:
+        ci_by_type[care_type]["upper"] = (
+            care_by_type[care_type]["forecast"] + ci_by_type[care_type]["variance"]
+        )
+        ci_by_type[care_type]["lower"] = (
+            care_by_type[care_type]["forecast"] - ci_by_type[care_type]["variance"]
+        )
+
+    return ci_by_type
+
+
+def add_traces(dfs_forecast, dfs_historic, fig):
+    # Uses an accessible colour scheme from: https://personal.sron.nl/~pault/
+    # Exact RGB codes cause some weirdness with plotly so text colours were used instead.
+
+    colours = [
+        "blue",
+        "green",
+        "yellow",
+        "red",
+        "purple",
+    ]
+
+    care_types.remove("Not in care")
+    for care_type, colour in zip(care_types, colours):
+        # add forecast data
+        fig.add_trace(
+            go.Scatter(
+                x=dfs_forecast[care_type]["date"],
+                y=dfs_forecast[care_type]["forecast"],
+                name=f"Forecast ({care_type})",
+                line=dict(color=colour, width=1.5),
+            )
+        )
+
+        # add historic data
+        fig.add_trace(
+            go.Scatter(
+                x=dfs_historic[care_type]["date"],
+                y=dfs_historic[care_type]["historic"],
+                name=f"Historic data ({care_type})",
+                line=dict(color=colour, width=1.5, dash="dot"),
+            )
+        )
+
+    return fig
+
+
+def add_ci_traces(df, fig):
+    # care_types.remove('Not in care')
+    for care_type in care_types:
+        fig.add_trace(
+            go.Scatter(
+                x=df[care_type]["date"],
+                y=df[care_type]["lower"],
+                line_color="rgba(255,255,255,0)",
+                name=f"Confidence interval ({care_type})",
+                showlegend=False,
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=df[care_type]["date"],
+                y=df[care_type]["upper"],
+                fill="tonexty",
+                fillcolor="rgba(0,176,246,0.2)",
+                line_color="rgba(255,255,255,0)",
+                name=f"Confidence interval ({care_type})",
+                showlegend=True,
+            )
+        )
+
+    return fig
