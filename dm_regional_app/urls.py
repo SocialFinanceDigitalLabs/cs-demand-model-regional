@@ -28,4 +28,6 @@ urlpatterns = [
         views.clear_proportion_adjustments,
         name="clear_proportions",
     ),
+    path("upload_data/", views.upload_data_source, name="upload_data"),
+
 ]

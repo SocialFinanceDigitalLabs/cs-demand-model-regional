@@ -19,6 +19,9 @@
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=prediction" name='Start Modelling' url_names="['prediction']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=adjusted" name='Adjust Forecast' url_names="['adjusted']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=costs" name='Projecting Spend' url_names="['costs']" %}
+          {% if user.is_staff %}
+                {% include 'dm_regional_app/includes/navbar-item.html' with url='upload_data' name='Data Source Upload' url_names="['upload_data']" %}
+          {% endif %}
         {% else %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='home' name='Home' url_names="['home']" %}
         {% endif %}

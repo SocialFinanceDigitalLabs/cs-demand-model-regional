@@ -2,8 +2,8 @@ import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Column, Field, Layout, Row, Submit
-
 from django import forms
+from django.core.validators import FileExtensionValidator
 from django_select2 import forms as s2forms
 
 from dm_regional_app.models import SavedScenario
@@ -207,7 +207,7 @@ class DynamicForm(forms.Form):
 
         return data
 
-      
+
 class InflationForm(forms.Form):
     # Boolean field with radio buttons
     inflation = forms.BooleanField(
@@ -273,7 +273,7 @@ class InflationForm(forms.Form):
             ),
         )
 
-          
+
 class SavedScenarioForm(forms.ModelForm):
     name = forms.CharField(
         widget=forms.TextInput(attrs={"maxlength": 100}),
@@ -300,3 +300,28 @@ class SavedScenarioForm(forms.ModelForm):
             Field("name", css_class="form-control"),
             Field("description", css_class="form-control"),
         )
+
+
+class DataSourceUploadForm(forms.Form):
+    episodes = forms.FileField(
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv"], message="File must have extension .csv"
+            )
+        ]
+    )
+    header = forms.FileField(
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv"], message="File must have extension .csv"
+            )
+        ]
+    )
+    uasc = forms.FileField(
+        label="UASC",
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv"], message="File must have extension .csv"
+            )
+        ],
+    )
