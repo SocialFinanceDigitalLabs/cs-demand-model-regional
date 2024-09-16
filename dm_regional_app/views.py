@@ -329,6 +329,19 @@ def save_scenario(request):
 
 
 @login_required
+def clear_proportion_adjustments(request):
+    if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_proportions = None
+        session_scenario.save()
+        messages.success(request, "Proportion adjustments cleared.")
+    return redirect(next_url_name)
+
+
+@login_required
 def placement_proportions(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]

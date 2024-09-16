@@ -141,7 +141,7 @@ def placement_proportion_table(historic_proportions, current_proportion: CostFor
                 "Placement": placement,
                 "Placement type": current_proportion.index,
                 "Historic proportion": historic_proportions.values,
-                "Current forecast proportion": current_proportion.values,
+                "Forecast proportion": current_proportion.values,
             },
             index=current_proportion.index,
         )
