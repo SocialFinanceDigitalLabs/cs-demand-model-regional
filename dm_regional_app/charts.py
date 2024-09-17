@@ -168,29 +168,32 @@ def summary_tables(df):
 
 
 def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):
-    # pop start and end dates to visualise reference period
+    # Pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
 
-    # dataframe containing total children in prediction
+    # Dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
 
     df.columns = ["from", "date", "forecast"]
+    # Organises forecast data into dict of dfs by care type bucket
     forecast_care_by_type_dfs = care_type_organiser(df)
 
-    # dataframe containing total children in historic data
+    # Dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
     df_hd.columns = ["from", "date", "historic"]
+    # Organises historic data into dict of dfs by care type bucket
     historic_care_by_type_dfs = care_type_organiser(df_hd)
 
-    # dataframe containing upper and lower confidence intervals
+    # Dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
     df_ci.columns = ["from", "date", "variance"]
+    # Organises confidence interval data into dict of dfs by care type bucket
     df_ci = care_type_organiser(df_ci)
 
     df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
-    # visualise prediction using unstacked dataframe
+    # Visualise prediction using unstacked dataframe
     fig = go.Figure()
 
     # Add forecast and historical traces

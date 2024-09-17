@@ -100,6 +100,8 @@ def number_format(value):
 
 
 def care_type_organiser(df):
+    # Used on forecast, historic, and variance data to organise by care types,
+    # outpouts to a dictionary of dfs.
     care_type_dict = {}
 
     if "forecast" in df.columns:
@@ -126,6 +128,8 @@ def care_type_organiser(df):
 
 
 def apply_variances(care_by_type, ci_by_type):
+    # Applies pre-calculated variance make the df needed for plotting
+    # confidence intervals.
     for care_type in care_types:
         ci_by_type[care_type]["upper"] = (
             care_by_type[care_type]["forecast"] + ci_by_type[care_type]["variance"]
@@ -140,7 +144,6 @@ def apply_variances(care_by_type, ci_by_type):
 def add_traces(dfs_forecast, dfs_historic, fig):
     # Uses an accessible colour scheme from: https://personal.sron.nl/~pault/
     # Exact RGB codes cause some weirdness with plotly so text colours were used instead.
-
     colours = [
         "blue",
         "green",
@@ -151,7 +154,7 @@ def add_traces(dfs_forecast, dfs_historic, fig):
 
     for care_type, colour in zip(care_types, colours):
         if dfs_forecast:
-            # add forecast data
+            # Add forecast data.
             fig.add_trace(
                 go.Scatter(
                     x=dfs_forecast[care_type]["date"],
@@ -161,7 +164,7 @@ def add_traces(dfs_forecast, dfs_historic, fig):
                 )
             )
 
-        # add historic data
+        # Add historic data.
         fig.add_trace(
             go.Scatter(
                 x=dfs_historic[care_type]["date"],
@@ -176,6 +179,7 @@ def add_traces(dfs_forecast, dfs_historic, fig):
 
 def add_ci_traces(df, fig):
     for care_type in care_types:
+        # Add lower bounds for confidence intervals.
         fig.add_trace(
             go.Scatter(
                 x=df[care_type]["date"],
@@ -186,6 +190,7 @@ def add_ci_traces(df, fig):
             )
         )
 
+        # Add upper bounds for confidence intervals.
         fig.add_trace(
             go.Scatter(
                 x=df[care_type]["date"],
