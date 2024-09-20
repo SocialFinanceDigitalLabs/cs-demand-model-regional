@@ -973,11 +973,42 @@ def adjusted(request):
                 rate_adjustment=session_scenario.adjusted_rates,
                 number_adjustment=session_scenario.adjusted_numbers,
             )
+            if session_scenario.adjusted_numbers is not None:
+                # if previous rate adjustments have been made, update old series with new adjustments
+                # rate_adjustments = session_scenario.adjusted_numbers
+                # new_numbers = data.combine_first(rate_adjustments)
 
-            # build chart
-            chart = prediction_chart(
-                stats, prediction, **session_scenario.prediction_parameters
-            )
+                # session_scenario.adjusted_numbers = new_numbers
+                # session_scenario.save()
+
+                # else:
+                #     session_scenario.adjusted_numbers = data
+                #     session_scenario.save()
+                prediction = predict(
+                    data=historic_data, **session_scenario.prediction_parameters
+                )
+
+                stats = PopulationStats(historic_data)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers,
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters,
+                )
+            else:
+                # build chart
+                chart = prediction_chart(
+                    stats, prediction, **session_scenario.prediction_parameters
+                )
 
             transition_rates = transition_rate_table(prediction.transition_rates)
 
