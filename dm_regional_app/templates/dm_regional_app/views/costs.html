@@ -245,9 +245,13 @@
                     </div>
                     <div class="d-flex bd-highlight mb-3">
                       {% if proportions.columns|length == 4 %}
-                      <div class="p-2 bd-highlight"><a class="btn btn-warning" href="clear_proportions?next_url_name=costs">Clear all proportion adjustments</a></div>
+                      <div class="p-2 bd-highlight">
+                        <a class="btn btn-warning" href="clear_proportions?next_url_name=costs">Clear all proportion adjustments</a>
+                      </div>
                       {% endif %}
-                        <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=placement_proportions">Edit placement proportions</a></div>
+                        <div class="ms-auto p-2 bd-highlight">
+                          <a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=placement_proportions">Edit placement proportions</a>
+                        </div>
                       </div>
                     </div>
             </div>

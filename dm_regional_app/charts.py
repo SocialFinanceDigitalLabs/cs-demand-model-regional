@@ -73,7 +73,7 @@ def area_chart_cost(df_historic, prediction: CostForecast):
     return fig_html
 
 
-def area_chart_population(historic_data, prediction: CostForecast):
+def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast):
     df_forecast = prediction.proportional_population
 
     df_forecast = df_forecast.melt(

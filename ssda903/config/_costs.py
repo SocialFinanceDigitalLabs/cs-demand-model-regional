@@ -186,3 +186,10 @@ class Costs(Enum):
                     ] = c  # Empty string indicates match any provider
 
         return placement_type_map
+
+    @classmethod
+    def get_cost_items_for_category(cls, category_label: str):
+        """
+        Takes a placement category label and returns related enum costs in a list
+        """
+        return [cost for cost in cls.values() if cost.category.label == category_label]

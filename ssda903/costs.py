@@ -8,7 +8,6 @@ from dateutil.relativedelta import relativedelta
 from ssda903.config import Costs, PlacementCategories
 from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
-from ssda903.utils import get_cost_items_for_category
 
 # Set the precision for decimal operations
 getcontext().prec = 6
@@ -49,8 +48,6 @@ def normalize_proportions(cost_items, historic_proportions, proportion_adjustmen
             adjustment_total += proportion_adjustment[item.label]
         elif item.label in historic_proportions.index:
             remaining_total += historic_proportions[item.label]
-        else:
-            pass
 
     total_proportion = adjustment_total + remaining_total
 
@@ -153,7 +150,7 @@ def convert_population_to_cost(
         for category in PlacementCategories:
             # for each category, check if the category label is in the column header
             if category.value.label in column:
-                cost_items = get_cost_items_for_category(category.value.label)
+                cost_items = Costs.get_cost_items_for_category(category.value.label)
 
                 if proportion_adjustment is not None:
                     # Apply proportion adjustments
@@ -241,7 +238,7 @@ def convert_population_to_cost(
 
 
 def convert_historic_population_to_cost(
-    input_population: Union[Prediction, PopulationStats],
+    input_population: pd.DataFrame,
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
 ) -> pd.DataFrame:
     """

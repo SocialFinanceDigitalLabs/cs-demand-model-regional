@@ -3,8 +3,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from ssda903.config import AgeBrackets, PlacementCategories
-from ssda903.utils import get_cost_items_for_category
+from ssda903.config import AgeBrackets, Costs, PlacementCategories
 
 
 class PopulationStats:
@@ -180,7 +179,7 @@ class PopulationStats:
 
         for category in PlacementCategories:
             # fetch cost items for each category
-            cost_items = get_cost_items_for_category(category.value.label)
+            cost_items = Costs.get_cost_items_for_category(category.value.label)
             # create empty series to store related placement populations
             placement_series = pd.Series(dtype="float64")
             for cost_item in cost_items:
