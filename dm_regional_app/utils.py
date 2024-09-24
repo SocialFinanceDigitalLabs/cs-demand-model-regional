@@ -1,6 +1,5 @@
 import ast
 import json
-import re
 from datetime import date, datetime
 
 import pandas as pd
@@ -87,10 +86,13 @@ def number_format(value):
     else:
         return f"£{value:,.2f}"
 
-def remove_age_transitions(df):
 
-    age_up_16 = df['from'].str.contains('10 to 16') & df['to'].str.contains('16 to 18+')
-    age_up_10 = df['from'].str.contains('5 to 10') & df['to'].str.contains('10 to 16')
+def remove_age_transitions(df):
+    """
+    Used to remove age transitions from transitions rate table
+    """
+    age_up_16 = df["from"].str.contains("10 to 16") & df["to"].str.contains("16 to 18+")
+    age_up_10 = df["from"].str.contains("5 to 10") & df["to"].str.contains("10 to 16")
 
     df = df[~(age_up_16 | age_up_10)]
 

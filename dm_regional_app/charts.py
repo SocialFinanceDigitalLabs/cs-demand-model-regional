@@ -2,12 +2,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from dm_regional_app.utils import remove_age_transitions
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
 from ssda903.population_stats import PopulationStats
-
-from dm_regional_app.utils import remove_age_transitions
 
 
 def year_one_costs(df: CostForecast):
@@ -294,7 +293,7 @@ def transition_rate_table(data):
     # reset index
     df = df.reset_index()
 
-    # remove children aging out from transition rates table  
+    # remove children aging out from transition rates table
     df = remove_age_transitions(df)
 
     # create duplicate columns, and set index back to original
@@ -305,9 +304,6 @@ def transition_rate_table(data):
     # filter out children leaving care and rates for children remaining in the placement
     df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
     df = df[df["From"] != df["To"]]
-
-    # remove children aging out from transition rates table
-    
 
     # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
     df = df.sort_values(by=["From"])
