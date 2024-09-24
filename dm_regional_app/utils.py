@@ -86,3 +86,13 @@ def number_format(value):
         return f"-£{abs(value):,.2f}"
     else:
         return f"£{value:,.2f}"
+
+def remove_age_transitions(df):
+
+    age_up_16 = df['from'].str.contains('10 to 16') & df['to'].str.contains('16 to 18+')
+    age_up_10 = df['from'].str.contains('5 to 10') & df['to'].str.contains('10 to 16')
+
+    df = df[~(age_up_16 | age_up_10)]
+
+    df
+    return df
