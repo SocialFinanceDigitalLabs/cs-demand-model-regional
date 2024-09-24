@@ -974,16 +974,6 @@ def adjusted(request):
                 number_adjustment=session_scenario.adjusted_numbers,
             )
             if session_scenario.adjusted_numbers is not None:
-                # if previous rate adjustments have been made, update old series with new adjustments
-                # rate_adjustments = session_scenario.adjusted_numbers
-                # new_numbers = data.combine_first(rate_adjustments)
-
-                # session_scenario.adjusted_numbers = new_numbers
-                # session_scenario.save()
-
-                # else:
-                #     session_scenario.adjusted_numbers = data
-                #     session_scenario.save()
                 prediction = predict(
                     data=historic_data, **session_scenario.prediction_parameters
                 )
@@ -1004,17 +994,24 @@ def adjusted(request):
                     adjusted_prediction,
                     **session_scenario.prediction_parameters,
                 )
+
+                current_prediction = adjusted_prediction
+
             else:
                 # build chart
                 chart = prediction_chart(
                     stats, prediction, **session_scenario.prediction_parameters
                 )
 
-            transition_rates = transition_rate_table(prediction.transition_rates)
+                current_prediction = prediction
 
-            exit_rates = exit_rate_table(prediction.transition_rates)
+            transition_rates = transition_rate_table(
+                current_prediction.transition_rates
+            )
 
-            entry_rates = entry_rate_table(prediction.entry_rates)
+            exit_rates = exit_rate_table(current_prediction.transition_rates)
+
+            entry_rates = entry_rate_table(current_prediction.entry_rates)
 
         return render(
             request,
