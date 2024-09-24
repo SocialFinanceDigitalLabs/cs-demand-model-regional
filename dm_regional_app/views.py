@@ -966,18 +966,11 @@ def adjusted(request):
 
             stats = PopulationStats(historic_data)
 
-            # Call predict function with default dates
-            prediction = predict(
-                data=historic_data,
-                **session_scenario.prediction_parameters,
-                rate_adjustment=session_scenario.adjusted_rates,
-                number_adjustment=session_scenario.adjusted_numbers,
+            original_prediction = predict(
+                data=historic_data, **session_scenario.prediction_parameters
             )
-            if session_scenario.adjusted_numbers is not None:
-                prediction = predict(
-                    data=historic_data, **session_scenario.prediction_parameters
-                )
 
+            if session_scenario.adjusted_numbers is not None:
                 stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
@@ -990,7 +983,7 @@ def adjusted(request):
                 # build chart
                 chart = compare_forecast(
                     stats,
-                    prediction,
+                    original_prediction,
                     adjusted_prediction,
                     **session_scenario.prediction_parameters,
                 )
@@ -1000,10 +993,10 @@ def adjusted(request):
             else:
                 # build chart
                 chart = prediction_chart(
-                    stats, prediction, **session_scenario.prediction_parameters
+                    stats, original_prediction, **session_scenario.prediction_parameters
                 )
 
-                current_prediction = prediction
+                current_prediction = original_prediction
 
             transition_rates = transition_rate_table(
                 current_prediction.transition_rates
