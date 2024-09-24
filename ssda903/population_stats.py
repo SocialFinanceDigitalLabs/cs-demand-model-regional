@@ -3,7 +3,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from ssda903.config import AgeBrackets, PlacementCategories
+from ssda903.config import AgeBrackets, Costs, PlacementCategories
 
 
 class PopulationStats:
@@ -130,6 +130,68 @@ class PopulationStats:
         df = pd.DataFrame(ageing_out)
         df.set_index(["from", "to"], inplace=True)
         return df.rate
+
+    @lru_cache(maxsize=5)
+    def placement_proportions(
+        self, reference_start_date: date, reference_end_date: date, **kwargs
+    ):
+        start_date = pd.to_datetime(reference_start_date)
+        end_date = pd.to_datetime(reference_end_date)
+
+        df = self.df.copy()
+
+        df["bin"] = df.apply(
+            lambda c: f"{c.placement_type_detail}",
+            axis=1,
+        )
+
+        endings = df.groupby(["DEC", "bin"]).size()
+        endings.name = "nof_decs"
+
+        beginnings = df.groupby(["DECOM", "bin"]).size()
+        beginnings.name = "nof_decoms"
+
+        endings.index.names = ["date", "bin"]
+        beginnings.index.names = ["date", "bin"]
+
+        pops = pd.merge(
+            left=beginnings,
+            right=endings,
+            left_index=True,
+            right_index=True,
+            how="outer",
+        )
+
+        pops = pops.fillna(0).sort_values("date")
+
+        pops = (pops["nof_decoms"] - pops["nof_decs"]).groupby(["bin"]).cumsum()
+
+        pops = pops.unstack(level=1)
+
+        # Resample to daily counts and forward-fill in missing days
+        pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
+
+        proportion_population = pops.truncate(before=start_date, after=end_date)
+
+        total_pops = pops.sum()
+
+        proportion_series = pd.Series(dtype="float64")
+
+        for category in PlacementCategories:
+            # fetch cost items for each category
+            cost_items = Costs.get_cost_items_for_category(category.value.label)
+            # create empty series to store related placement populations
+            placement_series = pd.Series(dtype="float64")
+            for cost_item in cost_items:
+                # if cost item is in the total_pops index, store value to placement series
+                if cost_item.label in total_pops.index:
+                    placement_series[cost_item.label] = total_pops[cost_item.label]
+            # normalise populations
+            placement_series = placement_series / placement_series.sum()
+            # add normalised population to proportion series
+            proportion_series = pd.concat([proportion_series, placement_series])
+
+        return proportion_series, proportion_population
 
     @lru_cache(maxsize=5)
     def daily_entrants(self, start_date: date, end_date: date) -> pd.Series:

@@ -35,7 +35,10 @@ from dm_regional_app.models import SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters, number_format
 from ssda903.config import PlacementCategories
-from ssda903.costs import convert_population_to_cost
+from ssda903.costs import (
+    convert_historic_population_to_cost,
+    convert_population_to_cost,
+)
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data
@@ -138,19 +141,22 @@ def costs(request):
             number_adjustment=session_scenario.adjusted_numbers,
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
             **session_scenario.inflation_parameters,
         )
 
-        stats = PopulationStats(historic_data)
-
-        historic_costs = convert_population_to_cost(
-            stats,
-            session_scenario.adjusted_costs,
-            session_scenario.adjusted_proportions,
+        historic_costs = convert_historic_population_to_cost(
+            historic_population, session_scenario.adjusted_costs
         )
 
         base_prediction = predict(
@@ -159,6 +165,7 @@ def costs(request):
 
         base_costs = convert_population_to_cost(
             base_prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             **session_scenario.inflation_parameters,
         )
@@ -170,11 +177,11 @@ def costs(request):
             }
         )
 
-        area_numbers = area_chart_population(historic_costs, costs)
+        area_numbers = area_chart_population(historic_population, costs)
 
         area_costs = area_chart_cost(historic_costs, costs)
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(placement_proportions, costs)
 
         summary_table = summary_tables(costs.summary_table)
 
@@ -321,6 +328,19 @@ def save_scenario(request):
 
 
 @login_required
+def clear_proportion_adjustments(request):
+    if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_proportions = None
+        session_scenario.save()
+        messages.success(request, "Proportion adjustments cleared.")
+    return redirect(next_url_name)
+
+
+@login_required
 def placement_proportions(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
@@ -337,13 +357,20 @@ def placement_proportions(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(placement_proportions, costs)
 
         if request.method == "POST":
             form = DynamicForm(
@@ -425,8 +452,15 @@ def weekly_costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
@@ -1012,7 +1046,6 @@ def prediction(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-        print(session_scenario.user.profile.la)
 
         if request.method == "POST":
             if "uasc" in request.POST:
@@ -1196,7 +1229,6 @@ def scenarios(request):
 
     table = SavedScenarioTable(filtered_scenarios)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-    print(table)
 
     return render(
         request,
