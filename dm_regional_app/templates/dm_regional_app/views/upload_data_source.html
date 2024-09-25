@@ -1,0 +1,56 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags sekizai_tags %}
+
+{% block content %}
+<h1 class="mt-4">Data Source Upload</h1>
+
+<div class="row mt-4">
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button id="submit" type="submit" class="btn btn-primary">Upload</button>
+                <button id="loading" class="btn btn-primary" type="button" disabled>
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    Loading...
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="row mt-4">
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <td class="fw-bold">User</td>
+                <td class="fw-bold">Upload Time</td>
+            </tr>
+        </thead>
+        <tbody>
+        {% for upload in uploads %}
+            <tr>
+                <td>{{ upload.uploaded_by }}</td>
+                <td>{{ upload.uploaded }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% addtoblock "js"%}
+ <script type="text/javascript">
+     $(document).ready(function(){
+        $("#loading").hide();
+        $("#submit").on("click", function(){
+            //If all fields are filled in and the form can be submitted, show a loading spinner on form submission
+            if($("#id_episodes").val() && $("#id_header").val() && $("#id_uasc").val()){
+                $("#submit").hide();
+                $("#loading").show();
+            }
+         })
+     })
+ </script>
+{% endaddtoblock %}
+
+{% endblock %}
