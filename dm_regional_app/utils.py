@@ -7,14 +7,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# data for care type functions
-care_types = [
-    "Total",
-    "Fostering",
-    "Residential",
-    "Other",
-    "Supported",
-]
+from ssda903.config import PlacementCategories
 
 
 def apply_filters(data: pd.DataFrame, filters: dict):
@@ -99,23 +92,22 @@ def number_format(value):
         return f"£{value:,.2f}"
 
 
-def care_type_organiser(df):
+def care_type_organiser(df, data_type, input_col):
     # Used on forecast, historic, and variance data to organise by care types,
     # outpouts to a dictionary of dfs.
-    care_type_dict = {}
+    care_types = [e.value.label for e in PlacementCategories]
+    care_types.append("Total")
+    care_types.remove("Not in care")
 
-    if "forecast" in df.columns:
-        data_type = "forecast"
-    elif "historic" in df.columns:
-        data_type = "historic"
-    elif "variance" in df.columns:
-        data_type = "variance"
+    care_type_dict = {}
 
     for care_type in care_types:
         if care_type == "Total":
-            care_type_df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
+            care_type_df = df[
+                df[input_col].apply(lambda x: "Not in care" in x) == False
+            ]
         else:
-            care_type_df = df[df["from"].str.contains(care_type)]
+            care_type_df = df[df[input_col].str.contains(care_type)]
 
         care_type_df = (
             care_type_df[["date", data_type]].groupby("date").sum().reset_index()
@@ -130,6 +122,10 @@ def care_type_organiser(df):
 def apply_variances(care_by_type, ci_by_type):
     # Applies pre-calculated variance make the df needed for plotting
     # confidence intervals.
+    care_types = [e.value.label for e in PlacementCategories]
+    care_types.append("Total")
+    care_types.remove("Not in care")
+
     for care_type in care_types:
         ci_by_type[care_type]["upper"] = (
             care_by_type[care_type]["forecast"] + ci_by_type[care_type]["variance"]
@@ -142,17 +138,19 @@ def apply_variances(care_by_type, ci_by_type):
 
 
 def add_traces(dfs_forecast, dfs_historic, fig):
-    # Uses an accessible colour scheme from: https://personal.sron.nl/~pault/
-    # Exact RGB codes cause some weirdness with plotly so text colours were used instead.
-    colours = [
-        "blue",
-        "green",
-        "yellow",
-        "red",
-        "purple",
-    ]
+    care_types = [e.value.label for e in PlacementCategories]
+    care_types.append("Total")
+    care_types.remove("Not in care")
 
-    for care_type, colour in zip(care_types, colours):
+    colours = {
+        "purple": "rgba(159, 0, 160, 1)",
+        "green": "rgba(0, 160, 36, 1)",
+        "blue": "rgba(6, 0, 160, 1)",
+        "red": "rgba(241, 0, 0, 1)",
+        "black": "rgba(0, 0, 0, 1)",
+    }
+
+    for care_type, colour in zip(care_types, colours.values()):
         if dfs_forecast:
             # Add forecast data.
             fig.add_trace(
@@ -178,7 +176,19 @@ def add_traces(dfs_forecast, dfs_historic, fig):
 
 
 def add_ci_traces(df, fig):
-    for care_type in care_types:
+    care_types = [e.value.label for e in PlacementCategories]
+    care_types.append("Total")
+    care_types.remove("Not in care")
+
+    colours = {
+        "purple": "rgba(159, 0, 160, 0.2)",
+        "green": "rgba(0, 160, 36, 0.2)",
+        "blue": "rgba(6, 0, 160, 0.2)",
+        "red": "rgba(241, 0, 0, 0.2)",
+        "black": "rgba(0, 0, 0, 0.2)",
+    }
+
+    for care_type, colour in zip(care_types, colours.values()):
         # Add lower bounds for confidence intervals.
         fig.add_trace(
             go.Scatter(
@@ -196,7 +206,7 @@ def add_ci_traces(df, fig):
                 x=df[care_type]["date"],
                 y=df[care_type]["upper"],
                 fill="tonexty",
-                fillcolor="rgba(0,176,246,0.2)",
+                fillcolor=colour,
                 line_color="rgba(255,255,255,0)",
                 name=f"Confidence interval ({care_type})",
                 showlegend=True,

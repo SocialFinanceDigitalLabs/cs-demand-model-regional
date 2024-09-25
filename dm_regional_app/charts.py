@@ -177,19 +177,19 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
 
     df.columns = ["from", "date", "forecast"]
     # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df)
+    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "from")
 
     # Dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
     df_hd.columns = ["from", "date", "historic"]
     # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd)
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
 
     # Dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
-    df_ci.columns = ["from", "date", "variance"]
+    df_ci.columns = ["bin", "date", "variance"]
     # Organises confidence interval data into dict of dfs by care type bucket
-    df_ci = care_type_organiser(df_ci)
+    df_ci = care_type_organiser(df_ci, "variance", "bin")
 
     df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
