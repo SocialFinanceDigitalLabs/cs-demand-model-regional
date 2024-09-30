@@ -1,3 +1,4 @@
+{% load socialaccount %}
 <nav class="navbar navbar-expand-lg bg-body-tertiary">
   <div class="container-fluid">
     <a class="navbar-brand" href="/">Regional Demand Model</a>
@@ -19,7 +20,8 @@
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=prediction" name='Start Modelling' url_names="['prediction']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=adjusted" name='Adjust Forecast' url_names="['adjusted']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=costs" name='Projecting Spend' url_names="['costs']" %}
-          {% if user.is_staff %}
+          {% get_social_accounts user as accounts %}
+          {% if user.is_staff and accounts %}
                 {% include 'dm_regional_app/includes/navbar-item.html' with url='upload_data' name='Data Source Upload' url_names="['upload_data']" %}
           {% endif %}
         {% else %}

@@ -1,3 +1,4 @@
+from unittest import mock
 from unittest.mock import patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -20,6 +21,8 @@ class DataUploadTestCase(TestCase):
         self.client.login(username="testuser", password="testpassword")
         self.user.is_staff = True
         self.user.save()
+        # Mock SSO login
+        self.user.socialaccount_set.create()
 
     def tearDown(self):
         DataSource.objects.all().delete()
@@ -32,7 +35,7 @@ class DataUploadTestCase(TestCase):
         self.user.is_staff = False
         self.user.save()
         response = self.client.get(reverse("upload_data"))
-        self.assertRedirects(response, "/admin/login/?next=/upload_data/")
+        self.assertRedirects(response, "/")
 
     def test_other_file_extensions(self):
         form = DataSourceUploadForm(
@@ -55,8 +58,10 @@ class DataUploadTestCase(TestCase):
             "uasc": SimpleUploadedFile("uasc.csv", b"uasc"),
         }
         prediction.return_value = True, None
-        self.client.post(reverse("upload_data"), files)
-        self.assertEqual(DataSource.objects.count(), 1)
+        with mock.patch("django.core.files.storage.FileSystemStorage") as mock_storage:
+            self.client.post(reverse("upload_data"), files)
+            self.assertEqual(DataSource.objects.count(), 1)
+            mock_storage.assert_called()
 
     @patch("dm_regional_app.views.validate_with_prediction")
     def test_data_upload_failure(self, prediction):
