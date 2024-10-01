@@ -232,7 +232,7 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
 def historic_chart(data: PopulationStats):
     df_hd = data.stock.unstack().reset_index()
     df_hd.columns = ["from", "date", "historic"]
-    historic_care_by_type_dfs = care_type_organiser(df_hd)
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
 
     fig = go.Figure()
 
