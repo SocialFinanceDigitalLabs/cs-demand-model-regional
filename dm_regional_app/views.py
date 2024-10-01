@@ -3,7 +3,6 @@ from pathlib import Path
 import pandas as pd
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.forms.models import model_to_dict
@@ -27,6 +26,7 @@ from dm_regional_app.charts import (
     transition_rate_table,
     year_one_costs,
 )
+from dm_regional_app.decorators import user_is_admin
 from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
     DataSourceUploadForm,
@@ -1269,7 +1269,7 @@ def validate_with_prediction(files):
         return True, "Successful prediction created."
 
 
-@staff_member_required
+@user_is_admin
 def upload_data_source(request):
     """Allow staff users to upload data.
 

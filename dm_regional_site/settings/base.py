@@ -53,6 +53,12 @@ INSTALLED_APPS = [
     "django_select2",
     "django_tables2",
     "sekizai",
+    # 3rd Party
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    # Social Providers
+    "allauth.socialaccount.providers.microsoft",
 ]
 
 MIDDLEWARE = [
@@ -64,7 +70,33 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
+
+MICROSOFT_CLIENT_ID = config("MICROSOFT_CLIENT_ID", default="")
+MICROSOFT_CLIENT_SECRET = config("MICROSOFT_CLIENT_SECRET", default="")
+SOCIALACCOUNT_PROVIDERS = {
+    "microsoft": {
+        "APPS": [
+            {
+                "client_id": MICROSOFT_CLIENT_ID,
+                "secret": MICROSOFT_CLIENT_SECRET,
+                "settings": {
+                    "tenant": "organizations",
+                    # Optional: override URLs (use base URLs without path)
+                    "login_url": "https://login.microsoftonline.com",
+                },
+            }
+        ]
+    }
+}
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_SESSION_REMEMBER = False
+ACCOUNT_FORMS = {"login": "accounts.forms.CustomLoginForm"}
 
 ROOT_URLCONF = "dm_regional_site.urls"
 X_FRAME_OPTIONS = "SAMEORIGIN"
@@ -89,7 +121,10 @@ TEMPLATES = [
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 
-AUTHENTICATION_BACKENDS = ("accounts.backends.EmailBackend",)
+AUTHENTICATION_BACKENDS = (
+    "accounts.backends.EmailBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+)
 
 
 WSGI_APPLICATION = "dm_regional_site.wsgi.application"
@@ -137,7 +172,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-LOGIN_REDIRECT_URL = "dashboard"
+LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
 # Static files (CSS, JavaScript, Images)

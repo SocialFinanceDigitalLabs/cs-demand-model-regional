@@ -1,0 +1,12 @@
+{% extends "dm_regional_app/base.html" %}
+
+{% block content %}
+<h2>Log Out</h2>
+<p>Are you sure you want to logout?</p>
+  <form method="post" action="{% url 'account_logout' %}">
+    {% csrf_token %}
+    <div class="center-align">
+      <button type="submit" class="btn btn-primary">Logout</button>
+    </div>
+  </form>
+{% endblock content %}
