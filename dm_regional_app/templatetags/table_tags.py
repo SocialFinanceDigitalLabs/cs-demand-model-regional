@@ -1,4 +1,3 @@
-import pandas as pd
 from django import template
 from django.utils.safestring import mark_safe
 
@@ -101,4 +100,53 @@ def convert_summary_tables_to_html_table(df):
         html += row_html
 
     html += "</tbody>"
+    return html
+
+
+@register.filter
+def convert_df_and_dynamicrateform_to_table(df, form):
+    """
+    This takes both dataframe and form.
+    It will create a row for each item that shares an index.
+    The form input fields (multiply and add) will be at the end of each row.
+    """
+
+    # Start building the HTML table
+    html = "<thead><tr>"
+
+    # Create headers for each column in the dataframe
+    for value in df.columns:
+        html += f'<th scope="col">{value.capitalize()}</th>'
+
+    # Add headers for multiplication and addition
+    html += '<th scope="col">Multiply Rate</th>'
+    html += '<th scope="col">Add to Rate</th>'
+    html += "</tr></thead><tbody>"
+
+    # Iterate over the dataframe rows and add the form fields
+    for index, row in df.iterrows():
+        row_html = "<tr>"
+
+        # For each value in the row, create a table cell
+        for value in row:
+            if isinstance(value, str):
+                row_html += f'<th scope="row" style="font-size: 15px; padding-top: 8px;">{value}</th>'
+            else:
+                row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{value}</td>'
+
+        # Create form fields for multiply and add rates
+        multiply_field_html = str(form[f"multiply_{index}"])
+        add_field_html = str(form[f"add_{index}"])
+
+        # Add these form fields to the row
+        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{multiply_field_html}</td>'
+        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{add_field_html}</td>'
+
+        # Close the table row
+        row_html += "</tr>"
+        html += row_html
+
+    # Close the table body
+    html += "</tbody>"
+
     return html

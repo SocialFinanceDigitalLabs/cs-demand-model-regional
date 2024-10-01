@@ -31,6 +31,7 @@ from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
     DataSourceUploadForm,
     DynamicForm,
+    DynamicRateForm,
     HistoricDataFilter,
     InflationForm,
     PredictFilter,
@@ -827,13 +828,14 @@ def transition_rates(request):
         transition_rates = transition_rate_table(prediction.transition_rates)
 
         if request.method == "POST":
-            form = DynamicForm(
+            form = DynamicRateForm(
                 request.POST,
                 dataframe=prediction.transition_rates,
                 initial_data=session_scenario.adjusted_rates,
             )
             if form.is_valid():
                 data = form.save()
+                print(data)
 
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
@@ -878,7 +880,7 @@ def transition_rates(request):
                 )
 
             else:
-                form = DynamicForm(
+                form = DynamicRateForm(
                     request.POST,
                     initial_data=session_scenario.adjusted_rates,
                     dataframe=prediction.transition_rates,
@@ -898,7 +900,7 @@ def transition_rates(request):
             )
 
         else:
-            form = DynamicForm(
+            form = DynamicRateForm(
                 initial_data=session_scenario.adjusted_rates,
                 dataframe=prediction.transition_rates,
             )

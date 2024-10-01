@@ -325,3 +325,87 @@ class DataSourceUploadForm(forms.Form):
             )
         ],
     )
+
+
+class DynamicRateForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.dataframe = kwargs.pop("dataframe", None)
+        initial_data = kwargs.pop("initial_data", pd.Series)
+
+        super(DynamicRateForm, self).__init__(*args, **kwargs)
+        self.initialize_fields(initial_data)
+
+    def initialize_fields(self, initial_data):
+        """
+        Dynamically create two fields for each option: one for multiplication and one for addition.
+        """
+        for index in self.dataframe.index:
+            multiply_field_name = f"multiply_{index}"
+            add_field_name = f"add_{index}"
+
+            # Set initial values if available, otherwise leave as None
+            initial_multiply = (
+                initial_data.get(index, {}).get("multiply", None)
+                if initial_data is not None
+                else None
+            )
+            initial_add = (
+                initial_data.get(index, {}).get("add", None)
+                if initial_data is not None
+                else None
+            )
+
+            # Create form fields for each option
+            self.fields[multiply_field_name] = forms.FloatField(
+                required=False,
+                initial=initial_multiply,
+                widget=forms.NumberInput(attrs={"placeholder": "Multiply Rate"}),
+            )
+            self.fields[add_field_name] = forms.FloatField(
+                required=False,
+                initial=initial_add,
+                widget=forms.NumberInput(attrs={"placeholder": "Add to Rate"}),
+            )
+
+    def clean(self):
+        """
+        Validate form data and ensure no negative values are entered.
+        """
+        cleaned_data = super().clean()
+        for field_name in self.fields:
+            value = cleaned_data.get(field_name)
+            if value is not None and value < 0:
+                self.add_error(field_name, "Negative numbers are not allowed!")
+
+    def save(self):
+        """
+        Output a DataFrame with the inputs for multiplication and addition fields.
+        """
+        transitions = []
+        multiply_values = []
+        add_values = []
+
+        # Loop through the form fields and collect the input values
+        for index in self.dataframe.index:
+            multiply_value = self.cleaned_data.get(f"multiply_{index}", None)
+            add_value = self.cleaned_data.get(f"add_{index}", None)
+
+            if multiply_value is not None or add_value is not None:
+                transitions.append(index)
+                multiply_values.append(multiply_value)
+                add_values.append(add_value)
+
+        # Create a DataFrame with the collected input values
+        data = pd.DataFrame(
+            {
+                "transition": transitions,
+                "multiply_value": multiply_values,
+                "add_value": add_values,
+            }
+        )
+
+        # Convert the index to MultiIndex if needed
+        if all(isinstance(idx, tuple) for idx in data["transition"]):
+            data = data.set_index("transition")
+
+        return data
