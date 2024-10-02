@@ -277,7 +277,7 @@ def historic_chart(data: PopulationStats):
             "date": "Date",
         },
     )
-    fig.update_layout(title="Historic data")
+    fig.update_layout(title="Historic population")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -307,7 +307,6 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         .reset_index()  # Reset index after grouping
     )
 
-    # Reindex the result to include all months and fill missing with 0
     df_entrants = (
         df_entrants.set_index(["DECOM", "placement_type"])
         .reindex(
@@ -320,17 +319,13 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         .reset_index()
     )
 
-    # merge, pad missing with 0
-    df_entrants = (
-        df_entrants.set_index(["DECOM", "placement_type"])
-        .reindex(full_index, fill_value=0)
-        .reset_index()
-    )
-
     # convert avg_duration yrs to more sensical wks (using 52.14 wks pa)
     df_entrants["avg_duration_weeks"] = (df_entrants["avg_duration"] * 52.14).round(2)
 
     df_entrants["true_count"] = df_entrants["count"]
+    # min and max vals for y
+    min_count = df_entrants["true_count"].min()
+    max_count = df_entrants["true_count"].max()
 
     # visualise
     fig = px.line(
@@ -346,7 +341,7 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
             "placement_type": "Placement Type",
             "avg_duration_weeks": "Avg Duration (wks)",
         },
-        title="Placement starts per month by Placement Type",
+        # title="Placement starts per month by Placement Type",
         hover_data={"true_count": True, "avg_duration_weeks": True},
     )
 
@@ -359,7 +354,7 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
             tickmode="array",
             title=dict(text="Date", standoff=40),
         ),
-        title="Placement starts per month",
+        title="Placement starts per month by Placement Type",
         hovermode="x",
         font=dict(size=12),
     )
@@ -389,7 +384,10 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
     # ensure y-axis min to max vals
     fig.update_yaxes(
         title_text="Placements",
-        range=[min_count, max_count],  # set range based on data
+        range=[
+            min_count,
+            max_count * 1.1,
+        ],  # raise y-axis to give top end data visual space
         tickvals=list(
             range(int(min_count), int(max_count) + 10, 10)
         ),  # generate tick marks
