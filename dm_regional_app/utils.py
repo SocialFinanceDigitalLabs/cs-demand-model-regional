@@ -1,5 +1,6 @@
 import ast
 import json
+import re
 from datetime import date, datetime
 
 import pandas as pd
@@ -85,46 +86,3 @@ def number_format(value):
         return f"-£{abs(value):,.2f}"
     else:
         return f"£{value:,.2f}"
-
-
-def rate_table_sort(df, bin_col, transition=False):
-    """
-    Sorts entry, exit, and transition rate tables by age and placement as
-    a standard sort_values sorts lexicographically, putting 10 befor 5.
-
-    Transition rate tables need to be sorted on 'From' and 'To' in order
-    to maintain sorting across tables and columns.
-    """
-    # Making age and placement columns for sorting
-    df["split"] = df[bin_col].str.split(" ")
-    df["first_age"] = df["split"].str[0].astype("int")
-    df["starting_place"] = df["split"].str[-1]
-
-    # Sorts entry and exit ratre tables by age then placement
-    if transition == False:
-        df.sort_values(["first_age", "starting_place"], inplace=True)
-        df.drop(columns=["first_age", "starting_place", "split"], inplace=True)
-
-    # Sorts transition rate table by age and placement, then age and placement where
-    # children end up
-    elif transition:
-        df["to_split"] = df["To"].str.split(" ")
-        df["finishing_age"] = df["to_split"].str[0].astype("int")
-        df["finishing_place"] = df["to_split"].str[-1]
-        df.sort_values(
-            ["first_age", "starting_place", "finishing_age", "finishing_place"],
-            inplace=True,
-        )
-        df.drop(
-            columns=[
-                "first_age",
-                "starting_place",
-                "split",
-                "finishing_place",
-                "to_split",
-                "finishing_age",
-            ],
-            inplace=True,
-        )
-
-    return df
