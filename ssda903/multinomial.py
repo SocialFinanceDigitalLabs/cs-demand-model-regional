@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any, Iterable, Optional, Union
+from typing import Iterable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -64,11 +64,14 @@ class MultinomialPredictor(BaseModelPredictor):
         # initialize rates
         transition_rates.index.names = ["from", "to"]
         if rate_adjustment is not None:
+            if isinstance(rate_adjustment, pd.DataFrame):
+                rate_adjustment = [rate_adjustment]
             if isinstance(rate_adjustment, pd.Series):
                 rate_adjustment = [rate_adjustment]
             for adjustment in rate_adjustment:
                 adjustment = adjustment.copy()
                 adjustment.index.names = ["from", "to"]
+                print(transition_rates, adjustment)
                 transition_rates = combine_rates(transition_rates, adjustment)
 
         self._transition_rates = populate_same_state_transition(transition_rates)

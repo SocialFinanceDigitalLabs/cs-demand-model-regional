@@ -835,7 +835,6 @@ def transition_rates(request):
             )
             if form.is_valid():
                 data = form.save()
-                print(data)
 
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
@@ -887,7 +886,9 @@ def transition_rates(request):
                 )
 
                 is_post = False
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
 
             return render(
                 request,

@@ -108,7 +108,8 @@ def convert_df_and_dynamicrateform_to_table(df, form):
     """
     This takes both dataframe and form.
     It will create a row for each item that shares an index.
-    The form input fields (multiply and add) will be at the end of each row.
+    The form input fields (multiply and add) will be at the end of each row,
+    and any errors will be displayed under the corresponding input fields.
     """
 
     # Start building the HTML table
@@ -138,9 +139,29 @@ def convert_df_and_dynamicrateform_to_table(df, form):
         multiply_field_html = str(form[f"multiply_{index}"])
         add_field_html = str(form[f"add_{index}"])
 
-        # Add these form fields to the row
-        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{multiply_field_html}</td>'
-        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{add_field_html}</td>'
+        # Add form fields to the row
+        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{multiply_field_html}'
+
+        # Add error messages for multiply field if they exist
+        if form[f"multiply_{index}"].errors:
+            row_html += '<div class="text-danger">'
+            for error in form[f"multiply_{index}"].errors:
+                row_html += f"<p>{error}</p>"
+            row_html += "</div>"
+
+        row_html += "</td>"
+
+        # Add form fields for add rate and include error messages
+        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{add_field_html}'
+
+        # Add error messages for add field if they exist
+        if form[f"add_{index}"].errors:
+            row_html += '<div class="text-danger">'
+            for error in form[f"add_{index}"].errors:
+                row_html += f"<p>{error}</p>"
+            row_html += "</div>"
+
+        row_html += "</td>"
 
         # Close the table row
         row_html += "</tr>"

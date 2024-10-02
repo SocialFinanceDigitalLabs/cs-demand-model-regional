@@ -372,10 +372,33 @@ class DynamicRateForm(forms.Form):
         Validate form data and ensure no negative values are entered.
         """
         cleaned_data = super().clean()
-        for field_name in self.fields:
-            value = cleaned_data.get(field_name)
-            if value is not None and value < 0:
-                self.add_error(field_name, "Negative numbers are not allowed!")
+
+        for index in self.dataframe.index:
+            multiply_field_name = f"multiply_{index}"
+            add_field_name = f"add_{index}"
+
+            multiply_value = cleaned_data.get(multiply_field_name)
+            add_value = cleaned_data.get(add_field_name)
+
+            # Validation logic: Ensure only one field is filled or none
+            if multiply_value is not None and add_value is not None:
+                self.add_error(
+                    multiply_field_name, "You cannot fill both multiply and add fields."
+                )
+                self.add_error(
+                    add_field_name, "You cannot fill both multiply and add fields."
+                )
+
+        for index in self.dataframe.index:
+            multiply_field_name = f"multiply_{index}"
+            multiply_value = cleaned_data.get(multiply_field_name)
+            if multiply_value is not None and multiply_value < 0:
+                self.add_error(
+                    multiply_field_name,
+                    "You cannot multiply a rate by a negative value",
+                )
+
+        return cleaned_data
 
     def save(self):
         """
@@ -404,8 +427,12 @@ class DynamicRateForm(forms.Form):
             }
         )
 
-        # Convert the index to MultiIndex if needed
+        # Convert the transition column to a MultiIndex if it contains tuples
         if all(isinstance(idx, tuple) for idx in data["transition"]):
-            data = data.set_index("transition")
+            # Convert the "transition" column to a MultiIndex
+            data.set_index(pd.MultiIndex.from_tuples(data["transition"]), inplace=True)
+            data.drop(
+                columns=["transition"], inplace=True
+            )  # Drop the column after conversion
 
         return data
