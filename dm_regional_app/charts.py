@@ -307,7 +307,6 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         .reset_index()  # Reset index after grouping
     )
 
-    # Reindex the result to include all months and fill missing with 0
     df_entrants = (
         df_entrants.set_index(["DECOM", "placement_type"])
         .reindex(
@@ -320,17 +319,13 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         .reset_index()
     )
 
-    # merge, pad missing with 0
-    df_entrants = (
-        df_entrants.set_index(["DECOM", "placement_type"])
-        .reindex(full_index, fill_value=0)
-        .reset_index()
-    )
-
     # convert avg_duration yrs to more sensical wks (using 52.14 wks pa)
     df_entrants["avg_duration_weeks"] = (df_entrants["avg_duration"] * 52.14).round(2)
 
     df_entrants["true_count"] = df_entrants["count"]
+    # min and max vals for y
+    min_count = df_entrants["true_count"].min()
+    max_count = df_entrants["true_count"].max()
 
     # visualise
     fig = px.line(
