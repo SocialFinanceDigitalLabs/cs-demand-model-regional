@@ -295,12 +295,35 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
 
     # calculate placement duration (end_age - age)
     df_filtered["placement_duration"] = df_filtered["end_age"] - df_filtered["age"]
+    # Create a range of all months to ensure we have complete months
+    all_months = pd.date_range(start=start_date, end=end_date, freq="M")
 
+    # Group by 'placement_type' and aggregate
     df_entrants = (
-        df_filtered.groupby(["DECOM", "placement_type"])
-        .agg(
-            count=("CHILD", "size"), avg_duration=("placement_duration", "mean")
-        )  # calculate count and avg duration
+        df_filtered.groupby(
+            ["placement_type", pd.Grouper(key="DECOM", freq="M")]
+        )  # Group by month
+        .agg(count=("CHILD", "size"), avg_duration=("placement_duration", "mean"))
+        .reset_index()  # Reset index after grouping
+    )
+
+    # Reindex the result to include all months and fill missing with 0
+    df_entrants = (
+        df_entrants.set_index(["DECOM", "placement_type"])
+        .reindex(
+            pd.MultiIndex.from_product(
+                [all_months, df_entrants["placement_type"].unique()],
+                names=["DECOM", "placement_type"],
+            ),
+            fill_value=0,
+        )
+        .reset_index()
+    )
+
+    # merge, pad missing with 0
+    df_entrants = (
+        df_entrants.set_index(["DECOM", "placement_type"])
+        .reindex(full_index, fill_value=0)
         .reset_index()
     )
 
@@ -354,13 +377,24 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
 
     fig.update_traces(line=dict(width=1), marker=dict(size=4))
 
-    max_count = df_entrants["true_count"].max()
-    fig.update_yaxes(
-        title_text="Placements",
-        tickvals=list(range(0, int(max_count) + 10, 10)),
-        ticktext=[str(i) for i in range(0, int(max_count) + 10, 10)],
+    # min and max date vals for x
+    fig.update_xaxes(
+        title_text="Date",
+        range=[
+            df_entrants["DECOM"].min(),
+            df_entrants["DECOM"].max(),
+        ],  # Use min and max date values
     )
 
+    # ensure y-axis min to max vals
+    fig.update_yaxes(
+        title_text="Placements",
+        range=[min_count, max_count],  # set range based on data
+        tickvals=list(
+            range(int(min_count), int(max_count) + 10, 10)
+        ),  # generate tick marks
+        ticktext=[str(i) for i in range(int(min_count), int(max_count) + 10, 10)],
+    )
     fig_html = fig.to_html(full_html=False)
     return fig_html
 

@@ -1177,7 +1177,7 @@ def historic_data(request):
 
         stats = PopulationStats(data)
 
-        chart = historic_chart(stats)  # consider name revision
+        chart = historic_chart(stats)
         plmt_starts_chart = placement_starts_chart(stats, start_date, end_date)
 
         return render(
