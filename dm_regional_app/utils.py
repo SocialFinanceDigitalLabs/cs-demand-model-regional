@@ -50,7 +50,9 @@ class DateAwareJSONDecoder(json.JSONDecoder):
                 )
                 return pd.DataFrame(obj["data"], columns=obj["columns"], index=index)
             else:
-                return pd.DataFrame(obj["data"], columns=obj["columns"])
+                return pd.DataFrame(
+                    obj["data"], columns=obj["columns"], index=obj["index"]
+                )
 
         return obj
 
@@ -88,9 +90,7 @@ class SeriesAwareJSONEncoder(json.JSONEncoder):
                 index_names = obj.index.names  # Get index names
             else:
                 index = obj.index.tolist()
-                index_names = [None] * len(
-                    index
-                )  # Create placeholder for non-MultiIndex
+                index_names = obj.index.names  # Get index names
 
             # Transform NaN to None only when necessary
             records = []
