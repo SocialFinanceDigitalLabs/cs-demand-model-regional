@@ -839,7 +839,15 @@ def transition_rates(request):
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old series with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = data.combine_first(rate_adjustments)
+                    new_rates = rate_adjustments.copy()
+                    for idx in data.index.intersection(rate_adjustments.index):
+                        new_rates.loc[idx] = data.loc[idx]
+
+                    # Add unmatched rows from data that are not in rate_adjustments
+                    unmatched_data = data[~data.index.isin(rate_adjustments.index)]
+
+                    # Concatenate the unmatched data to new_rates
+                    new_rates = pd.concat([new_rates, unmatched_data])
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()

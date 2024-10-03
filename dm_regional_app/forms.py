@@ -414,6 +414,8 @@ class DynamicRateForm(forms.Form):
             add_value = self.cleaned_data.get(f"add_{index}", None)
 
             if multiply_value is not None or add_value is not None:
+                # multiply_value = np.nan if multiply_value is None else multiply_value
+                # add_value = np.nan if add_value is None else add_value
                 transitions.append(index)
                 multiply_values.append(multiply_value)
                 add_values.append(add_value)

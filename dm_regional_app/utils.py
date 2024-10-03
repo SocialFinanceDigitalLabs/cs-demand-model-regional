@@ -92,9 +92,14 @@ class SeriesAwareJSONEncoder(json.JSONEncoder):
                     index
                 )  # Create placeholder for non-MultiIndex
 
-            records = obj.to_dict(
-                orient="records"
-            )  # Convert DataFrame to list of dictionaries (rows)
+            # Transform NaN to None only when necessary
+            records = []
+            for record in obj.to_dict(orient="records"):
+                transformed_record = {
+                    key: (value if pd.notnull(value) else None)
+                    for key, value in record.items()
+                }
+                records.append(transformed_record)
             columns = obj.columns.tolist()  # Get column names
 
             return {
