@@ -45,15 +45,13 @@ def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd
             "Adjusted rate dataframe must have 'multiply_value' and 'add_value' columns."
         )
 
-    # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rate
-    original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
+    # Align original_rate and rate_adjustment DataFrame with an outer join to retain all indices
+    original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="outer")
 
-    # Fill missing values: multiply_value with 1 (neutral for multiplication), add_value with 0 (neutral for addition)
+    # Fill missing values: original_rate with 0, multiply_value with 1 (neutral for multiplication), add_value with 0 (neutral for addition)
+    original_rate.fillna(0, inplace=True)
     rate_adjustment["multiply_value"].fillna(1, inplace=True)
     rate_adjustment["add_value"].fillna(0, inplace=True)
-
-    # Create a mask to identify where original_rate is not missing
-    mask = ~original_rate.isna()
 
     # Multiply original_rate by 'multiply_value' where it exists
     multiply_result = original_rate * rate_adjustment["multiply_value"]
@@ -68,8 +66,6 @@ def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd
         rate_adjustment["multiply_value"] != 1, add_result
     )
 
-    # Apply the mask to exclude undesired cases (where original_rate is missing)
-    final_result = final_result[mask]
     final_result.index.names = ["from", "to"]
 
     return final_result
@@ -107,6 +103,7 @@ class MultinomialPredictor(BaseModelPredictor):
         else:
             transition_numbers.index.names = ["from", "to"]
 
+            print("original_numbers", transition_numbers)
             if number_adjustment is not None:
                 if isinstance(number_adjustment, pd.DataFrame):
                     number_adjustment = [number_adjustment]
