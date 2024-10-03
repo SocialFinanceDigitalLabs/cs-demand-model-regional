@@ -31,21 +31,48 @@ class NextPrediction:
     variance: np.ndarray
 
 
-def combine_rates(rate1: pd.Series, rate2: pd.Series) -> pd.Series:
-    """'
-    This has been updated to a multiplication method.
-    Excludes cases where rate1 is missing.
+def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd.Series:
     """
-    # Align the series with a left join to retain all indices from rate1
-    rate1, rate2 = rate1.align(rate2, join="left", fill_value=1)
+    Combines original_rate series and rate_adjustment DataFrame, which has both 'multiply_value' and 'add_value' columns.
+    - Multiplies original_rate with 'multiply_value' where provided.
+    - Adds 'add_value' to original_rate where provided.
+    - Ensures the result of addition is not less than 0.
+    - Excludes cases where original_rate is missing.
+    """
+    # Ensure rate_adjustment has the required columns
+    if not {"multiply_value", "add_value"}.issubset(rate_adjustment.columns):
+        raise ValueError(
+            "Adjusted rate dataframe must have 'multiply_value' and 'add_value' columns."
+        )
 
-    # Create a mask to identify where rate1 is not missing
-    mask = ~rate1.isna()
+    # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rate
+    original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
 
-    # Apply the mask to exclude undesired cases
-    rates = (rate1 * rate2)[mask]
-    rates.index.names = ["from", "to"]
-    return rates
+    # Fill missing values: multiply_value with 1 (neutral for multiplication), add_value with 0 (neutral for addition)
+    rate_adjustment["multiply_value"].fillna(1, inplace=True)
+    rate_adjustment["add_value"].fillna(0, inplace=True)
+
+    # Create a mask to identify where original_rate is not missing
+    mask = ~original_rate.isna()
+
+    # Multiply original_rate by 'multiply_value' where it exists
+    multiply_result = original_rate * rate_adjustment["multiply_value"]
+
+    # Add 'add_value' to original_rate where it exists, ensuring the result is not less than 0
+    add_result = original_rate + rate_adjustment["add_value"]
+    add_result = add_result.clip(lower=0)  # Ensure no negative values
+
+    # Choose between the multiplication and the addition result
+    # If 'multiply_value' is not 1, use multiplication result; otherwise, use add result
+    final_result = multiply_result.where(
+        rate_adjustment["multiply_value"] != 1, add_result
+    )
+
+    # Apply the mask to exclude undesired cases (where original_rate is missing)
+    final_result = final_result[mask]
+    final_result.index.names = ["from", "to"]
+
+    return final_result
 
 
 class MultinomialPredictor(BaseModelPredictor):
@@ -71,7 +98,7 @@ class MultinomialPredictor(BaseModelPredictor):
             for adjustment in rate_adjustment:
                 adjustment = adjustment.copy()
                 adjustment.index.names = ["from", "to"]
-                print(transition_rates, adjustment)
+                # print(transition_rates, adjustment)
                 transition_rates = combine_rates(transition_rates, adjustment)
 
         self._transition_rates = populate_same_state_transition(transition_rates)
