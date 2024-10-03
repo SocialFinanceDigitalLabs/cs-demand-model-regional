@@ -56,6 +56,52 @@ data "aws_iam_policy_document" "bucket_policy" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "bucket_versioning" {
+  bucket = aws_s3_bucket.bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
+  # Must have bucket versioning enabled first
+  depends_on = [aws_s3_bucket_versioning.bucket_versioning]
+  bucket = aws_s3_bucket.bucket.id
+
+  rule {
+    id = "expiration"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      newer_noncurrent_versions = 10
+      # We only want noncurrent versions as above, but the terraform will error without the below
+      # See https://github.com/hashicorp/terraform-provider-aws/issues/34197
+      noncurrent_days = 90
+    }
+
+    status = "Enabled"
+  }
+}
+
+resource "aws_backup_vault" "backup_vault" {
+  name        = "backup_vault"
+}
+
+resource "aws_backup_plan" "bucket_backup" {
+  name = "bucket_backup_plan"
+
+  rule {
+    rule_name         = "bucket_backup_rule"
+    target_vault_name = aws_backup_vault.backup_vault.name
+    schedule          = "cron(0 0 * * ? *)"
+
+    lifecycle {
+      delete_after = 14
+    }
+  }
+}
+
 resource "aws_iam_user" "bucket_user" {
   name = "${var.app}-${var.environment}-bucket-user"
 }
