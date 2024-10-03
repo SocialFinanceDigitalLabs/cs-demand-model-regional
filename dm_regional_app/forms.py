@@ -369,7 +369,9 @@ class DynamicRateForm(forms.Form):
 
     def clean(self):
         """
-        Validate form data and ensure no negative values are entered.
+        Validate form data and ensure:
+        Only a multiply or an add value exists for each rate
+        No negative values are entered in multiply fields
         """
         cleaned_data = super().clean()
 
@@ -436,5 +438,8 @@ class DynamicRateForm(forms.Form):
             data.drop(
                 columns=["transition"], inplace=True
             )  # Drop the column after conversion
+        else:
+            # Otherwise, set transition column as index
+            data.set_index(["transition"], inplace=True)
 
         return data
