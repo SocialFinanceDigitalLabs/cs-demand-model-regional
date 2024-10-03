@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Iterable, Optional, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -82,8 +82,8 @@ class MultinomialPredictor(BaseModelPredictor):
         transition_rates: pd.Series,
         transition_numbers: Optional[pd.Series] = None,
         start_date: date = date.today(),
-        rate_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
-        number_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
+        rate_adjustment: Optional[pd.DataFrame] = None,
+        number_adjustment: Optional[pd.DataFrame] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -93,12 +93,9 @@ class MultinomialPredictor(BaseModelPredictor):
         if rate_adjustment is not None:
             if isinstance(rate_adjustment, pd.DataFrame):
                 rate_adjustment = [rate_adjustment]
-            if isinstance(rate_adjustment, pd.Series):
-                rate_adjustment = [rate_adjustment]
             for adjustment in rate_adjustment:
                 adjustment = adjustment.copy()
                 adjustment.index.names = ["from", "to"]
-                # print(transition_rates, adjustment)
                 transition_rates = combine_rates(transition_rates, adjustment)
 
         self._transition_rates = populate_same_state_transition(transition_rates)
@@ -111,7 +108,7 @@ class MultinomialPredictor(BaseModelPredictor):
             transition_numbers.index.names = ["from", "to"]
 
             if number_adjustment is not None:
-                if isinstance(number_adjustment, pd.Series):
+                if isinstance(number_adjustment, pd.DataFrame):
                     number_adjustment = [number_adjustment]
                 for adjustment in number_adjustment:
                     adjustment = adjustment.copy()
