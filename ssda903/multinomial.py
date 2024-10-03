@@ -103,7 +103,6 @@ class MultinomialPredictor(BaseModelPredictor):
         else:
             transition_numbers.index.names = ["from", "to"]
 
-            print("original_numbers", transition_numbers)
             if number_adjustment is not None:
                 if isinstance(number_adjustment, pd.DataFrame):
                     number_adjustment = [number_adjustment]
