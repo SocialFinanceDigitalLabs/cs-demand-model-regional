@@ -407,7 +407,9 @@ def placement_proportions(request):
                     dataframe=costs.proportions,
                     initial_data=session_scenario.adjusted_proportions,
                 )
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
 
                 return render(
                     request,
@@ -499,7 +501,9 @@ def weekly_costs(request):
                 return redirect("costs")
 
             else:
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
                 return render(
                     request,
                     "dm_regional_app/views/weekly_costs.html",
@@ -651,7 +655,9 @@ def entry_rates(request):
                     },
                 )
             else:
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
                 form = DynamicForm(
                     request.POST,
                     initial_data=session_scenario.adjusted_numbers,
@@ -770,7 +776,9 @@ def exit_rates(request):
                     initial_data=session_scenario.adjusted_rates,
                     dataframe=prediction.transition_rates,
                 )
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
 
                 is_post = False
 

@@ -41,17 +41,24 @@ def convert_data_frame_to_html_table(df):
 
 
 @register.simple_tag
-def convert_data_frame_to_html_table_plus_form(df, form, header="Rate multiplication"):
+def convert_df_plus_dynamicform_to_html_table(df, form, header):
     """
-    This takes both dataframe and form
+    This takes both dataframe and DynamicForm
     It will create a row for each item that shares an index
     The form input field will be at the end of each row
     """
 
+    # Start building the HTML table
     html = "<thead><tr>"
+
+    # Create headers for each column in the dataframe
     for value in df.columns:
         html += f'<th scope="col">{value.capitalize()}</th>'
+
+    # Add header for form input column
     html += f'<th scope="col">{header}</th></tr></thead><tbody>'
+
+    # Iterate over the dataframe rows and add the form fields
     for index, row in df.iterrows():
         row_html = "<tr>"
         for value in row:
@@ -59,10 +66,26 @@ def convert_data_frame_to_html_table_plus_form(df, form, header="Rate multiplica
                 row_html += f'<th scope="row" style="font-size: 15px; padding-top: 8px;">{value}</th>'
             else:
                 row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{value}</td>'
+
+        # Create form field and add to row
         field_html = str(form[str(index)])
-        row_html += f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{field_html}</td>'
-        row_html += "</tr>"
+        row_html += (
+            f'<td scope="row" style="font-size: 15px; padding-top: 8px;">{field_html}'
+        )
+
+        # Add error messages for field if they exist
+        if form[f"{index}"].errors:
+            row_html += '<div class="text-danger">'
+            for error in form[f"{index}"].errors:
+                row_html += f"<p>{error}</p>"
+            row_html += "</div>"
+
+        # Close cell and row
+        row_html += "</td></tr>"
+
         html += row_html
+
+    # Close table body
     html += "</tbody>"
     return mark_safe(html)
 
@@ -106,7 +129,7 @@ def convert_summary_tables_to_html_table(df):
 @register.filter
 def convert_df_and_dynamicrateform_to_table(df, form):
     """
-    This takes both dataframe and form.
+    This takes both dataframe and DynamicRateForm.
     It will create a row for each item that shares an index.
     The form input fields (multiply and add) will be at the end of each row,
     and any errors will be displayed under the corresponding input fields.

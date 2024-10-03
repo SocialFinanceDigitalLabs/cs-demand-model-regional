@@ -19,7 +19,7 @@
             <table id="transition-rate" class="table table-hover">
                 <form method="post">
                 {% csrf_token %}
-                {% convert_data_frame_to_html_table_plus_form entry_rate_table form "Rate multiplication" %}
+                {% convert_df_and_dynamicrateform_to_table entry_rate_table form "Rate multiplication" %}
                 <tr>
                 <td colspan="3">
                     <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="adjusted">Back</a></div>

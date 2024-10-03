@@ -174,7 +174,7 @@ class DynamicForm(forms.Form):
             value = cleaned_data.get(field_name)
             if value is not None and value < 0:
                 negative_numbers.append(field_name)
-                self.add_error(field_name, "Negative numbers are not allowed!")
+                self.add_error(field_name, "Negative numbers are not allowed")
 
         if negative_numbers:
             raise forms.ValidationError(
