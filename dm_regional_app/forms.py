@@ -330,7 +330,7 @@ class DataSourceUploadForm(forms.Form):
 class DynamicRateForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.dataframe = kwargs.pop("dataframe", None)
-        initial_data = kwargs.pop("initial_data", pd.Series)
+        initial_data = kwargs.pop("initial_data", pd.DataFrame)
 
         super(DynamicRateForm, self).__init__(*args, **kwargs)
         self.initialize_fields(initial_data)
@@ -344,16 +344,16 @@ class DynamicRateForm(forms.Form):
             add_field_name = f"add_{index}"
 
             # Set initial values if available, otherwise leave as None
-            initial_multiply = (
-                initial_data.get(index, {}).get("multiply", None)
-                if initial_data is not None
-                else None
-            )
-            initial_add = (
-                initial_data.get(index, {}).get("add", None)
-                if initial_data is not None
-                else None
-            )
+            if initial_data is not None:
+                try:
+                    initial_multiply = initial_data.loc[index, "multiply_value"]
+                except (KeyError, IndexError, ValueError):
+                    initial_multiply = None
+
+                try:
+                    initial_add = initial_data.loc[index, "add_value"]
+                except (KeyError, IndexError, ValueError):
+                    initial_add = None
 
             # Create form fields for each option
             self.fields[multiply_field_name] = forms.FloatField(
