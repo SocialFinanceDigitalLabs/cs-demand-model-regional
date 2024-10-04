@@ -1,10 +1,8 @@
 import ast
 import json
-import re
 from datetime import date, datetime
 
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 
 from ssda903.config import PlacementCategories
@@ -26,7 +24,7 @@ def apply_filters(data: pd.DataFrame, filters: dict):
     if filters["uasc"] == "True":
         data = data.loc[data.UASC == True]
     elif filters["uasc"] == "False":
-        data = data.loc[data.UASC == True]
+        data = data.loc[data.UASC == False]
 
     return data
 
