@@ -67,8 +67,8 @@ def router_handler(request):
 
     historic_filters = {
         "la": [],
-        "placement_types": [],
-        "age_bins": [],
+        "ethnicity": [],
+        "sex": [],
         "uasc": "all",
     }
 
