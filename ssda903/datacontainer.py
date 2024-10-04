@@ -118,8 +118,8 @@ class DemandModellingDataContainer:
             merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
         )
 
-        # create UASC flag if DECOM is less than DUC
-        merged["UASC"] = np.where(merged["DECOM"] < merged["DUC"], True, False)
+        # create UASC flag if DUC
+        merged["UASC"] = merged["DUC"].notna()
 
         return merged
 

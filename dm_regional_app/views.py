@@ -1154,7 +1154,6 @@ def historic_data(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-        print(datacontainer.enriched_view[["ETHNIC", "SEX", "UASC"]])
 
         if request.method == "POST":
             # initialize form with data
