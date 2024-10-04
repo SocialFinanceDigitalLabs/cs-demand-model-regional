@@ -1154,14 +1154,14 @@ def historic_data(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        print(datacontainer.enriched_view[["ETHNIC", "SEX", "UASC"]])
 
         if request.method == "POST":
             # initialize form with data
             form = HistoricDataFilter(
                 request.POST,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
 
             if form.is_valid():
@@ -1182,8 +1182,7 @@ def historic_data(request):
             form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             data = apply_filters(datacontainer.enriched_view, form.initial)
 
