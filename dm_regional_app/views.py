@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import pandas as pd
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -23,22 +26,27 @@ from dm_regional_app.charts import (
     transition_rate_table,
     year_one_costs,
 )
+from dm_regional_app.decorators import user_is_admin
 from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
+    DataSourceUploadForm,
     DynamicForm,
     HistoricDataFilter,
     InflationForm,
     PredictFilter,
     SavedScenarioForm,
 )
-from dm_regional_app.models import SavedScenario, SessionScenario
+from dm_regional_app.models import DataSource, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters, number_format
 from ssda903.config import PlacementCategories
-from ssda903.costs import convert_population_to_cost
+from ssda903.costs import (
+    convert_historic_population_to_cost,
+    convert_population_to_cost,
+)
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
-from ssda903.reader import read_data
+from ssda903.reader import read_data, read_local_data
 
 
 def home(request):
@@ -138,19 +146,22 @@ def costs(request):
             number_adjustment=session_scenario.adjusted_numbers,
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
             **session_scenario.inflation_parameters,
         )
 
-        stats = PopulationStats(historic_data)
-
-        historic_costs = convert_population_to_cost(
-            stats,
-            session_scenario.adjusted_costs,
-            session_scenario.adjusted_proportions,
+        historic_costs = convert_historic_population_to_cost(
+            historic_population, session_scenario.adjusted_costs
         )
 
         base_prediction = predict(
@@ -159,6 +170,7 @@ def costs(request):
 
         base_costs = convert_population_to_cost(
             base_prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             **session_scenario.inflation_parameters,
         )
@@ -170,11 +182,11 @@ def costs(request):
             }
         )
 
-        area_numbers = area_chart_population(historic_costs, costs)
+        area_numbers = area_chart_population(historic_population, costs)
 
         area_costs = area_chart_cost(historic_costs, costs)
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(placement_proportions, costs)
 
         summary_table = summary_tables(costs.summary_table)
 
@@ -321,6 +333,19 @@ def save_scenario(request):
 
 
 @login_required
+def clear_proportion_adjustments(request):
+    if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_proportions = None
+        session_scenario.save()
+        messages.success(request, "Proportion adjustments cleared.")
+    return redirect(next_url_name)
+
+
+@login_required
 def placement_proportions(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
@@ -337,13 +362,20 @@ def placement_proportions(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(placement_proportions, costs)
 
         if request.method == "POST":
             form = DynamicForm(
@@ -425,8 +457,15 @@ def weekly_costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
@@ -1012,7 +1051,6 @@ def prediction(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-        print(session_scenario.user.profile.la)
 
         if request.method == "POST":
             if "uasc" in request.POST:
@@ -1196,7 +1234,6 @@ def scenarios(request):
 
     table = SavedScenarioTable(filtered_scenarios)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-    print(table)
 
     return render(
         request,
@@ -1214,4 +1251,54 @@ def scenario_detail(request, pk):
     scenario = get_object_or_404(SavedScenario, pk=pk, user=request.user)
     return render(
         request, "dm_regional_app/views/scenario_detail.html", {"scenario": scenario}
+    )
+
+
+def validate_with_prediction(files):
+    """Validate files creating a prediction."""
+    try:
+        datacontainer = read_local_data(files)
+        predict(
+            data=datacontainer.enriched_view,
+            reference_start_date=datacontainer.start_date,
+            reference_end_date=datacontainer.end_date,
+        )
+    except ValueError:
+        return False, "At least one file is invalid."
+    else:
+        return True, "Successful prediction created."
+
+
+@user_is_admin
+def upload_data_source(request):
+    """Allow staff users to upload data.
+
+    3 files must be uploaded: `episodes`, `header`, and `uasc`. Files must be of type `.csv`.
+    A prediction will be run to validate the files. If the prediction fails, the files will
+    not be successfully uploaded.
+    """
+    form = DataSourceUploadForm(request.POST or None, request.FILES or None)
+    uploads = DataSource.objects.select_related("uploaded_by").order_by("-uploaded")[
+        :10
+    ]
+    if request.method == "POST":
+        if form.is_valid():
+            files = [files for files in request.FILES.values()]
+            success, msg = validate_with_prediction(files)
+            if success:
+                DataSource.objects.create(uploaded_by=request.user)
+                for filename, file in request.FILES.items():
+                    full_path = Path(settings.DATA_SOURCE, f"{filename}.csv")
+                    # Overwrite files if they already exist
+                    if default_storage.exists(full_path):
+                        default_storage.delete(full_path)
+                    default_storage.save(full_path, file)
+                messages.success(request, "Data uploaded successfully")
+            else:
+                messages.error(request, f"Data not uploaded successfully: {msg}")
+            return redirect("upload_data")
+    return render(
+        request,
+        "dm_regional_app/views/upload_data_source.html",
+        {"form": form, "uploads": uploads},
     )

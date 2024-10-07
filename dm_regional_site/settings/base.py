@@ -12,22 +12,28 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
+import dj_database_url
+from decouple import config
 from django.contrib import messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-gh4wp!kqd8#nc6_o)eqxs@_4w2+9+p(rq$bdz&d2*!jg946@w3"
-
+SECRET_KEY = config(
+    "DJANGO_SECRET_KEY",
+    default="django-insecure-gh4wp!kqd8#nc6_o)eqxs@_4w2+9+p(rq$bdz&d2*!jg946@w3",
+)
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", cast=lambda v: [s.strip() for s in v.split(",")], default=""
+)
 
 
 # Application definition
@@ -46,17 +52,51 @@ INSTALLED_APPS = [
     "bootstrap_datepicker_plus",
     "django_select2",
     "django_tables2",
+    "sekizai",
+    # 3rd Party
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    # Social Providers
+    "allauth.socialaccount.providers.microsoft",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
+
+MICROSOFT_CLIENT_ID = config("MICROSOFT_CLIENT_ID", default="")
+MICROSOFT_CLIENT_SECRET = config("MICROSOFT_CLIENT_SECRET", default="")
+SOCIALACCOUNT_PROVIDERS = {
+    "microsoft": {
+        "APPS": [
+            {
+                "client_id": MICROSOFT_CLIENT_ID,
+                "secret": MICROSOFT_CLIENT_SECRET,
+                "settings": {
+                    "tenant": "organizations",
+                    # Optional: override URLs (use base URLs without path)
+                    "login_url": "https://login.microsoftonline.com",
+                },
+            }
+        ]
+    }
+}
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_SESSION_REMEMBER = False
+ACCOUNT_FORMS = {"login": "accounts.forms.CustomLoginForm"}
 
 ROOT_URLCONF = "dm_regional_site.urls"
 X_FRAME_OPTIONS = "SAMEORIGIN"
@@ -72,6 +112,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "sekizai.context_processors.sekizai",
             ],
         },
     },
@@ -80,7 +121,10 @@ TEMPLATES = [
 AUTH_USER_MODEL = "accounts.CustomUser"
 
 
-AUTHENTICATION_BACKENDS = ("accounts.backends.EmailBackend",)
+AUTHENTICATION_BACKENDS = (
+    "accounts.backends.EmailBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+)
 
 
 WSGI_APPLICATION = "dm_regional_site.wsgi.application"
@@ -88,12 +132,13 @@ WSGI_APPLICATION = "dm_regional_site.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
+MAX_CONN_AGE = 600
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=config("DATABASE_URL", f"sqlite:///{BASE_DIR}/db.sqlite3"),
+        conn_max_age=MAX_CONN_AGE,
+        ssl_require=False,
+    ),
 }
 
 
@@ -149,7 +194,6 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 # data source path
 DATA_SOURCE = "samples/v1"
-
 
 MESSAGE_TAGS = {
     messages.DEBUG: "alert-info",

@@ -2,7 +2,16 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from dm_regional_app.utils import rate_table_sort, remove_age_transitions
+
+from dm_regional_app.utils import (
+    add_ci_traces,
+    add_traces,
+    apply_variances,
+    care_type_organiser,
+    rate_table_sort,
+    remove_age_transitions
+)
+
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -34,7 +43,7 @@ def year_one_costs(df: CostForecast):
     return total_sum
 
 
-def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
+def area_chart_cost(df_historic, prediction: CostForecast):
     df_forecast = prediction.costs
 
     df_forecast = df_forecast.melt(
@@ -47,7 +56,6 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.costs
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Cost",
@@ -75,7 +83,7 @@ def area_chart_cost(historic_data: CostForecast, prediction: CostForecast):
     return fig_html
 
 
-def area_chart_population(historic_data: CostForecast, prediction: CostForecast):
+def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast):
     df_forecast = prediction.proportional_population
 
     df_forecast = df_forecast.melt(
@@ -89,7 +97,7 @@ def area_chart_population(historic_data: CostForecast, prediction: CostForecast)
     prediction_start_date = df_forecast.index.min()
 
     # repeat transformation for historic data
-    df_historic = historic_data.proportional_population
+    df_historic = historic_data
     df_historic = df_historic.melt(
         var_name="Placement",
         value_name="Population",
@@ -120,26 +128,40 @@ def area_chart_population(historic_data: CostForecast, prediction: CostForecast)
     return fig_html
 
 
-def placement_proportion_table(data: CostForecast):
-    proportions = data.proportions
-
+def placement_proportion_table(historic_proportions, current_proportion: CostForecast):
     categories = {item.value.label: item.value.category.label for item in Costs}
 
-    placement = proportions.index.map(categories)
+    current_proportion = current_proportion.proportions.sort_index()
+    historic_proportions = historic_proportions.sort_index()
 
-    proportions = pd.DataFrame(
-        {
-            "Placement": placement,
-            "Placement type": proportions.index,
-            "Current proportion": proportions.values,
-        },
-        index=proportions.index,
-    )
+    placement = current_proportion.index.map(categories)
+
+    if historic_proportions.equals(current_proportion):
+        proportions = pd.DataFrame(
+            {
+                "Placement": placement,
+                "Placement type": current_proportion.index,
+                "Historic proportion": current_proportion.values,
+            },
+            index=current_proportion.index,
+        )
+    else:
+        proportions = pd.DataFrame(
+            {
+                "Placement": placement,
+                "Placement type": current_proportion.index,
+                "Historic proportion": historic_proportions.values,
+                "Forecast proportion": current_proportion.values,
+            },
+            index=current_proportion.index,
+        )
 
     proportions = proportions.sort_values(by=["Placement"])
     proportions["Placement"] = proportions["Placement"].mask(
         proportions["Placement"].duplicated(), ""
     )
+
+    proportions = proportions.round(4)
 
     return proportions
 
@@ -163,77 +185,39 @@ def summary_tables(df):
 
 
 def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):
-    # pop start and end dates to visualise reference period
+    # Pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
 
-    # dataframe containing total children in prediction
+    # Dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
 
     df.columns = ["from", "date", "forecast"]
-    df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
-    df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
-    df["date"] = pd.to_datetime(df["date"]).dt.date
+    # Organises forecast data into dict of dfs by care type bucket
+    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "from")
 
-    # dataframe containing total children in historic data
+    # Dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
     df_hd.columns = ["from", "date", "historic"]
-    df_hd = df_hd[["date", "historic"]].groupby(by="date").sum().reset_index()
-    df_hd["date"] = pd.to_datetime(df_hd["date"]).dt.date
+    # Organises historic data into dict of dfs by care type bucket
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
 
-    # dataframe containing upper and lower confidence intervals
+    # Dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
     df_ci.columns = ["bin", "date", "variance"]
-    df_ci = df_ci[["date", "variance"]].groupby(by="date").sum().reset_index()
-    df_ci["date"] = pd.to_datetime(df_ci["date"]).dt.date
-    df_ci["upper"] = df["forecast"] + df_ci["variance"]
-    df_ci["lower"] = df["forecast"] - df_ci["variance"]
+    # Organises confidence interval data into dict of dfs by care type bucket
+    df_ci = care_type_organiser(df_ci, "variance", "bin")
 
-    # visualise prediction using unstacked dataframe
+    df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
+
+    # Visualise prediction using unstacked dataframe
     fig = go.Figure()
 
+    # Add forecast and historical traces
+    fig = add_traces(forecast_care_by_type_dfs, historic_care_by_type_dfs, fig)
+
     # Display confidence interval as filled shape
-    fig.add_trace(
-        go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["lower"],
-            line_color="rgba(255,255,255,0)",
-            name="Confidence interval",
-            showlegend=False,
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["upper"],
-            fill="tonexty",
-            fillcolor="rgba(0,176,246,0.2)",
-            line_color="rgba(255,255,255,0)",
-            name="Confidence interval",
-            showlegend=True,
-        )
-    )
-
-    # add forecast for total children
-    fig.add_trace(
-        go.Scatter(
-            x=df["date"],
-            y=df["forecast"],
-            name="Forecast",
-            line=dict(color="black", width=1.5),
-        )
-    )
-
-    # add historic data for total children
-    fig.add_trace(
-        go.Scatter(
-            x=df_hd["date"],
-            y=df_hd["historic"],
-            name="Historic data",
-            line=dict(color="black", width=1.5, dash="dot"),
-        )
-    )
+    fig = add_ci_traces(df_ci, fig)
 
     # add shaded reference period
     fig.add_shape(
@@ -264,19 +248,14 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
 
 def historic_chart(data: PopulationStats):
     df_hd = data.stock.unstack().reset_index()
-    df_hd.columns = ["from", "date", "value"]
-    df_hd = df_hd[["date", "value"]].groupby(by="date").sum().reset_index()
+    df_hd.columns = ["from", "date", "historic"]
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
 
-    # visualise prediction using unstacked dataframe
-    fig = px.line(
-        df_hd,
-        y="value",
-        x="date",
-        labels={
-            "value": "Number of children",
-            "date": "Date",
-        },
-    )
+    fig = go.Figure()
+
+    # Add historical traces
+    fig = add_traces(None, historic_care_by_type_dfs, fig)
+
     fig.update_layout(title="Historic data")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
@@ -468,7 +447,7 @@ def compare_forecast(
     # Display confidence interval as filled shape
     fig.add_trace(
         go.Scatter(
-            x=df_ci["date"],
+            x=df_df_ci["date"],
             y=df_ci["lower"],
             line_color="rgba(255,255,255,0)",
             name="Base confidence interval",
@@ -478,8 +457,8 @@ def compare_forecast(
 
     fig.add_trace(
         go.Scatter(
-            x=df_ci["date"],
-            y=df_ci["upper"],
+            x=df_df_ci["date"],
+            y=df_df_ci["upper"],
             fill="tonexty",
             fillcolor="rgba(0,176,246,0.2)",
             line_color="rgba(255,255,255,0)",
