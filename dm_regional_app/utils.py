@@ -91,12 +91,13 @@ def remove_age_transitions(df):
     """
     Used to remove age transitions from transitions rate table
     """
-    age_up_16 = df["from"].str.contains("10 to 16") & df["to"].str.contains("16 to 18+")
-    age_up_10 = df["from"].str.contains("5 to 10") & df["to"].str.contains("10 to 16")
+    df["from_ages"] = df["from"].str.split("-").str[0]
+    df["to_ages"] = df["to"].str.split("-").str[0]
 
-    df = df[~(age_up_16 | age_up_10)]
+    df = df[df["from_ages"] == df["to_ages"]]
 
-    df
+    df.drop(columns=["from_ages", "to_ages"], inplace=True)
+
     return df
 
 
@@ -113,7 +114,7 @@ def rate_table_sort(df, bin_col, transition=False):
     df["first_age"] = df["split"].str[0].astype("int")
     df["starting_place"] = df["split"].str[-1]
 
-    # Sorts entry and exit ratre tables by age then placement
+    # Sorts entry and exit rate tables by age then placement
     if transition == False:
         df.sort_values(["first_age", "starting_place"], inplace=True)
         df.drop(columns=["first_age", "starting_place", "split"], inplace=True)
