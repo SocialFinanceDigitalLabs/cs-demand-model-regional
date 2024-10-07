@@ -935,8 +935,7 @@ def adjusted(request):
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
@@ -961,8 +960,7 @@ def adjusted(request):
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
 
                 historic_data = apply_filters(
@@ -976,8 +974,7 @@ def adjusted(request):
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
@@ -1057,8 +1054,7 @@ def prediction(request):
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
@@ -1082,8 +1078,7 @@ def prediction(request):
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
 
                 historic_data = apply_filters(
@@ -1097,8 +1092,7 @@ def prediction(request):
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
