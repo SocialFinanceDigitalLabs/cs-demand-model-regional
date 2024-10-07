@@ -970,7 +970,7 @@ def adjusted(request):
                 data=historic_data, **session_scenario.prediction_parameters
             )
 
-            if session_scenario.adjusted_numbers is not None:
+            if session_scenario.adjusted_numbers is not None or session_scenario.adjusted_rates is not None:
                 stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
