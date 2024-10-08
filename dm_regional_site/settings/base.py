@@ -137,7 +137,7 @@ USE_I18N = True
 
 USE_TZ = True
 
-LOGIN_REDIRECT_URL = "dashboard"
+LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
 
 # Static files (CSS, JavaScript, Images)
@@ -158,7 +158,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 
 # data source path
-DATA_SOURCE = "samples/v1"
+DATA_SOURCE = config("DATA_SOURCE", default="samples/v1")
 
 MESSAGE_TAGS = {
     messages.DEBUG: "alert-info",
