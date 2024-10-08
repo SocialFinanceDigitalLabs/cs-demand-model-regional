@@ -2,12 +2,16 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+
 from dm_regional_app.utils import (
     add_ci_traces,
     add_traces,
     apply_variances,
     care_type_organiser,
+    rate_table_sort,
+    remove_age_transitions
 )
+
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -265,8 +269,13 @@ def transition_rate_table(data):
     if isinstance(df, pd.Series):
         df = df.rename("rates")
 
-    # reset index, create duplicate columns, and set index back to original
+    # reset index
     df = df.reset_index()
+
+    # remove children aging out from transition rates table
+    df = remove_age_transitions(df)
+
+    # create duplicate columns, and set index back to original
     df["To"] = df["to"]
     df["From"] = df["from"]
     df.set_index(["from", "to"], inplace=True)
@@ -276,7 +285,8 @@ def transition_rate_table(data):
     df = df[df["From"] != df["To"]]
 
     # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
-    df = df.sort_values(by=["From"])
+    # sort_values is not used as it sorts  lexicographically
+    df = rate_table_sort(df, "From", transition=True)
     df["From"] = df["From"].mask(df["From"].duplicated(), "")
 
     # if dataframe has 3 columns, order and rename them and round values
@@ -311,7 +321,8 @@ def exit_rate_table(data):
     df.set_index(["from", "to"], inplace=True)
 
     # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
-    df = df.sort_values(by=["Age Group"])
+    # sort_values is not used as it sorts  lexicographically
+    df = rate_table_sort(df, "Age Group")
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
     # if dataframe has 3 columns, order and rename them and round values
@@ -346,7 +357,8 @@ def entry_rate_table(data):
     df.set_index(["to"], inplace=True)
 
     # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
-    df = df.sort_values(by=["Age Group"])
+    # sort_values is not used as it sorts  lexicographically
+    df = rate_table_sort(df, "Age Group")
     df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
 
     # if dataframe has 3 columns, order and rename them and round values

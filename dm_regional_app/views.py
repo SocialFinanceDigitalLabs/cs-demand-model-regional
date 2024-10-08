@@ -1007,24 +1007,45 @@ def adjusted(request):
 
             stats = PopulationStats(historic_data)
 
-            # Call predict function with default dates
-            prediction = predict(
-                data=historic_data,
-                **session_scenario.prediction_parameters,
-                rate_adjustment=session_scenario.adjusted_rates,
-                number_adjustment=session_scenario.adjusted_numbers,
+            original_prediction = predict(
+                data=historic_data, **session_scenario.prediction_parameters
             )
 
-            # build chart
-            chart = prediction_chart(
-                stats, prediction, **session_scenario.prediction_parameters
+            if session_scenario.adjusted_numbers is not None or session_scenario.adjusted_rates is not None:
+                stats = PopulationStats(historic_data)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers,
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    original_prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters,
+                )
+
+                current_prediction = adjusted_prediction
+
+            else:
+                # build chart
+                chart = prediction_chart(
+                    stats, original_prediction, **session_scenario.prediction_parameters
+                )
+
+                current_prediction = original_prediction
+
+            transition_rates = transition_rate_table(
+                current_prediction.transition_rates
             )
 
-            transition_rates = transition_rate_table(prediction.transition_rates)
+            exit_rates = exit_rate_table(current_prediction.transition_rates)
 
-            exit_rates = exit_rate_table(prediction.transition_rates)
-
-            entry_rates = entry_rate_table(prediction.entry_rates)
+            entry_rates = entry_rate_table(current_prediction.entry_rates)
 
         return render(
             request,
