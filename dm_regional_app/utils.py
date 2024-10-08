@@ -3,7 +3,6 @@ import json
 from datetime import date, datetime
 
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 
 from ssda903.config import PlacementCategories
@@ -270,3 +269,11 @@ def add_ci_traces(df, fig):
 
     return fig
 
+  
+def save_data_if_not_empty(session_scenario, data, attribute_name):
+    """
+    Checks if series or dataframe is not empty, and saves to attribute of model if not
+    """
+    if isinstance(data, (pd.DataFrame, pd.Series)) and not data.empty:
+        setattr(session_scenario, attribute_name, data)
+        session_scenario.save()

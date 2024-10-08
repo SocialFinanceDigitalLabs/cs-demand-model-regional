@@ -38,7 +38,7 @@ from dm_regional_app.forms import (
 )
 from dm_regional_app.models import DataSource, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
-from dm_regional_app.utils import apply_filters, number_format
+from dm_regional_app.utils import apply_filters, number_format, save_data_if_not_empty
 from ssda903.config import PlacementCategories
 from ssda903.costs import (
     convert_historic_population_to_cost,
@@ -395,8 +395,10 @@ def placement_proportions(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_proportions = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    if isinstance(data, (pd.DataFrame, pd.Series)) and not data.empty:
+                        session_scenario.adjusted_proportions = data
+                        session_scenario.save()
 
                 return redirect("costs")
 
@@ -492,8 +494,8 @@ def weekly_costs(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_costs = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_costs")
 
                 return redirect("costs")
 
@@ -617,8 +619,8 @@ def entry_rates(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_numbers = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
                 stats = PopulationStats(historic_data)
 
@@ -730,8 +732,8 @@ def exit_rates(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_rates = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
                 stats = PopulationStats(historic_data)
 
@@ -844,8 +846,8 @@ def transition_rates(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_rates = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
                 stats = PopulationStats(historic_data)
 
