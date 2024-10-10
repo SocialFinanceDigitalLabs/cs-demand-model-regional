@@ -28,11 +28,21 @@ def filter_text(dict):
             html += f"<li>{la}</li>"
         html += "</ul>"
 
-    # Check for 'age_bins' and ensure it has non-empty values
-    if dict.get("age_bins"):
-        html += "Age bins:<ul>"
-        for age_bin in dict["age_bins"]:
+    # Check for 'ethnicity' and ensure it has non-empty values
+    if dict.get("ethnicity"):
+        html += "Ethnicity:<ul>"
+        for age_bin in dict["ethnicity"]:
             html += f"<li>{age_bin}</li>"
+        html += "</ul>"
+
+    # Only include 'sex' if its value is not 'all' and not empty
+    if dict.get("sex") and dict["sex"] != "all":
+        html += "Sex:<ul>"
+        # Check the value of dict["sex"]
+        if dict["sex"] == "1":
+            html += "<li>Male</li>"
+        else:
+            html += "<li>Female</li>"
         html += "</ul>"
 
     # Only include 'uasc' if its value is not 'all' and not empty

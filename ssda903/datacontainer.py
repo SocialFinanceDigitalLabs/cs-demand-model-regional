@@ -7,7 +7,13 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from ssda903.config import YEAR_IN_DAYS, AgeBrackets, Costs, PlacementCategories
+from ssda903.config import (
+    YEAR_IN_DAYS,
+    AgeBrackets,
+    Costs,
+    EthnicitySubcategory,
+    PlacementCategories,
+)
 from ssda903.data.ssda903 import SSDA903TableType
 from ssda903.datastore import DataFile, DataStore, TableType
 
@@ -112,8 +118,8 @@ class DemandModellingDataContainer:
             merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
         )
 
-        # create UASC flag if DECOM is less than DUC
-        merged["UASC"] = np.where(merged["DECOM"] < merged["DUC"], True, False)
+        # create UASC flag if DUC
+        merged["UASC"] = merged["DUC"].notna()
 
         return merged
 
@@ -226,6 +232,7 @@ class DemandModellingDataContainer:
             combined, -1, "placement_type_after"
         )
         combined = self._add_detailed_placement_category(combined)
+        combined = self._add_detailed_ethnicity_column(combined)
         return combined
 
     @cached_property
@@ -272,6 +279,10 @@ class DemandModellingDataContainer:
     @cached_property
     def unique_age_bins(self) -> pd.Series:
         return self.enriched_view.age_bin.unique()
+
+    @cached_property
+    def unique_ethnicity(self) -> pd.Series:
+        return self.enriched_view.ethnicity.unique()
 
     def _add_ages(self, combined: pd.DataFrame) -> pd.DataFrame:
         """
@@ -405,6 +416,14 @@ class DemandModellingDataContainer:
 
         combined["placement_type_detail"] = combined.apply(
             lookup_placement_type, axis=1
+        )
+
+        return combined
+
+    def _add_detailed_ethnicity_column(self, combined: pd.DataFrame) -> pd.DataFrame:
+        # Load the JSON file containing the ethnicity codes and subcategories
+        combined["ethnicity"] = combined["ETHNIC"].map(
+            lambda x: EthnicitySubcategory[x].value
         )
 
         return combined
