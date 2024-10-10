@@ -18,7 +18,7 @@
             <table id="transition-rate" class="table table-hover">
                 <form method="post">
                 {% csrf_token %}
-                {% convert_data_frame_to_html_table_plus_form placement_types form "New forecast proportion" %}
+                {% convert_df_plus_dynamicform_to_html_table placement_types form "New forecast proportion" %}
                     <tr>
                     {% if placement_types.columns|length == 3 %}
                         <td colspan="3">

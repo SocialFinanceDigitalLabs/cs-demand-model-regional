@@ -31,6 +31,7 @@ from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
     DataSourceUploadForm,
     DynamicForm,
+    DynamicRateForm,
     HistoricDataFilter,
     InflationForm,
     PredictFilter,
@@ -408,7 +409,9 @@ def placement_proportions(request):
                     dataframe=costs.proportions,
                     initial_data=session_scenario.adjusted_proportions,
                 )
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
 
                 return render(
                     request,
@@ -500,7 +503,9 @@ def weekly_costs(request):
                 return redirect("costs")
 
             else:
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
                 return render(
                     request,
                     "dm_regional_app/views/weekly_costs.html",
@@ -602,7 +607,7 @@ def entry_rates(request):
         entry_rates = entry_rate_table(prediction.entry_rates)
 
         if request.method == "POST":
-            form = DynamicForm(
+            form = DynamicRateForm(
                 request.POST,
                 dataframe=prediction.entry_rates,
                 initial_data=session_scenario.adjusted_numbers,
@@ -611,9 +616,17 @@ def entry_rates(request):
                 data = form.save()
 
                 if session_scenario.adjusted_numbers is not None:
-                    # if previous rate adjustments have been made, update old series with new adjustments
-                    rate_adjustments = session_scenario.adjusted_numbers
-                    new_numbers = data.combine_first(rate_adjustments)
+                    # if previous rate adjustments have been made, update old dataframe with new adjustments
+                    number_adjustments = session_scenario.adjusted_numbers
+                    new_numbers = number_adjustments.copy()
+                    for idx in data.index.intersection(number_adjustments.index):
+                        new_numbers.loc[idx] = data.loc[idx]
+
+                    # Add unmatched rows from data that are not in number_adjustments
+                    unmatched_data = data[~data.index.isin(number_adjustments.index)]
+
+                    # Concatenate the unmatched data to new_numbers
+                    new_numbers = pd.concat([new_numbers, unmatched_data])
 
                     session_scenario.adjusted_numbers = new_numbers
                     session_scenario.save()
@@ -652,8 +665,10 @@ def entry_rates(request):
                     },
                 )
             else:
-                messages.warning(request, "Form not saved, positive numbers only")
-                form = DynamicForm(
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
+                form = DynamicRateForm(
                     request.POST,
                     initial_data=session_scenario.adjusted_numbers,
                     dataframe=prediction.entry_rates,
@@ -672,7 +687,7 @@ def entry_rates(request):
                 )
 
         else:
-            form = DynamicForm(
+            form = DynamicRateForm(
                 initial_data=session_scenario.adjusted_numbers,
                 dataframe=prediction.entry_rates,
             )
@@ -715,7 +730,7 @@ def exit_rates(request):
         exit_rates = exit_rate_table(prediction.transition_rates)
 
         if request.method == "POST":
-            form = DynamicForm(
+            form = DynamicRateForm(
                 request.POST,
                 dataframe=prediction.transition_rates,
                 initial_data=session_scenario.adjusted_rates,
@@ -724,9 +739,17 @@ def exit_rates(request):
                 data = form.save()
 
                 if session_scenario.adjusted_rates is not None:
-                    # if previous rate adjustments have been made, update old series with new adjustments
+                    # if previous rate adjustments have been made, update old dataframe with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = data.combine_first(rate_adjustments)
+                    new_rates = rate_adjustments.copy()
+                    for idx in data.index.intersection(rate_adjustments.index):
+                        new_rates.loc[idx] = data.loc[idx]
+
+                    # Add unmatched rows from data that are not in rate_adjustments
+                    unmatched_data = data[~data.index.isin(rate_adjustments.index)]
+
+                    # Concatenate the unmatched data to new_rates
+                    new_rates = pd.concat([new_rates, unmatched_data])
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
@@ -766,12 +789,14 @@ def exit_rates(request):
                 )
 
             else:
-                form = DynamicForm(
+                form = DynamicRateForm(
                     request.POST,
                     initial_data=session_scenario.adjusted_rates,
                     dataframe=prediction.transition_rates,
                 )
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
 
                 is_post = False
 
@@ -786,7 +811,7 @@ def exit_rates(request):
             )
 
         else:
-            form = DynamicForm(
+            form = DynamicRateForm(
                 initial_data=session_scenario.adjusted_rates,
                 dataframe=prediction.transition_rates,
             )
@@ -829,7 +854,7 @@ def transition_rates(request):
         transition_rates = transition_rate_table(prediction.transition_rates)
 
         if request.method == "POST":
-            form = DynamicForm(
+            form = DynamicRateForm(
                 request.POST,
                 dataframe=prediction.transition_rates,
                 initial_data=session_scenario.adjusted_rates,
@@ -838,9 +863,17 @@ def transition_rates(request):
                 data = form.save()
 
                 if session_scenario.adjusted_rates is not None:
-                    # if previous rate adjustments have been made, update old series with new adjustments
+                    # if previous rate adjustments have been made, update old dataframe with new adjustments
                     rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = data.combine_first(rate_adjustments)
+                    new_rates = rate_adjustments.copy()
+                    for idx in data.index.intersection(rate_adjustments.index):
+                        new_rates.loc[idx] = data.loc[idx]
+
+                    # Add unmatched rows from data that are not in rate_adjustments
+                    unmatched_data = data[~data.index.isin(rate_adjustments.index)]
+
+                    # Concatenate the unmatched data to new_rates
+                    new_rates = pd.concat([new_rates, unmatched_data])
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
@@ -880,14 +913,16 @@ def transition_rates(request):
                 )
 
             else:
-                form = DynamicForm(
+                form = DynamicRateForm(
                     request.POST,
                     initial_data=session_scenario.adjusted_rates,
                     dataframe=prediction.transition_rates,
                 )
 
                 is_post = False
-                messages.warning(request, "Form not saved, positive numbers only")
+                messages.warning(
+                    request, "Form not saved, check fields for validation errors"
+                )
 
             return render(
                 request,
@@ -900,7 +935,7 @@ def transition_rates(request):
             )
 
         else:
-            form = DynamicForm(
+            form = DynamicRateForm(
                 initial_data=session_scenario.adjusted_rates,
                 dataframe=prediction.transition_rates,
             )
