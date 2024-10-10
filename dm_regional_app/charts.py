@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -262,6 +263,117 @@ def historic_chart(data: PopulationStats):
     return fig_html
 
 
+def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str):
+    data.df["DECOM"] = pd.to_datetime(data.df["DECOM"])
+    start_date, end_date = pd.to_datetime([start_date, end_date])
+    data.df["DECOM"] = data.df["DECOM"].dt.to_period("M").dt.to_timestamp()
+
+    # filter time-frame to form dates
+    df_filtered = data.df[
+        (data.df["DECOM"] >= start_date) & (data.df["DECOM"] <= end_date)
+    ]
+
+    # calculate placement duration (end_age - age)
+    df_filtered["placement_duration"] = df_filtered["end_age"] - df_filtered["age"]
+    # Create a range of all months to ensure we have complete months
+    all_months = pd.date_range(start=start_date, end=end_date, freq="M")
+
+    # Group by 'placement_type' and aggregate
+    df_entrants = (
+        df_filtered.groupby(
+            ["placement_type", pd.Grouper(key="DECOM", freq="M")]
+        )  # Group by month
+        .agg(count=("CHILD", "size"), avg_duration=("placement_duration", "mean"))
+        .reset_index()  # Reset index after grouping
+    )
+
+    df_entrants = (
+        df_entrants.set_index(["DECOM", "placement_type"])
+        .reindex(
+            pd.MultiIndex.from_product(
+                [all_months, df_entrants["placement_type"].unique()],
+                names=["DECOM", "placement_type"],
+            ),
+            fill_value=0,
+        )
+        .reset_index()
+    )
+
+    # convert avg_duration yrs to more sensical wks (using 52.14 wks pa)
+    df_entrants["avg_duration_weeks"] = (df_entrants["avg_duration"] * 52.14).round(2)
+
+    df_entrants["true_count"] = df_entrants["count"]
+    # min and max vals for y
+    min_count = df_entrants["true_count"].min()
+    max_count = df_entrants["true_count"].max()
+
+    # visualise
+    fig = px.line(
+        df_entrants,
+        y="true_count",
+        x="DECOM",
+        color="placement_type",
+        markers=True,
+        line_shape="spline",
+        labels={  # hover dict
+            "true_count": "Placements",
+            "DECOM": "Date",
+            "placement_type": "Placement Type",
+            "avg_duration_weeks": "Avg Duration (wks)",
+        },
+        title="Placement starts per month by Placement Type",
+        hover_data={"true_count": True, "avg_duration_weeks": True},
+    )
+
+    quarterly_months = df_entrants[df_entrants["DECOM"].dt.month.isin([1, 4, 7, 10])]
+    fig.update_layout(
+        xaxis=dict(
+            tickvals=quarterly_months["DECOM"],
+            ticktext=[f"{d:%b}" for d in quarterly_months["DECOM"]],
+            tickangle=45,
+            tickmode="array",
+            title=dict(text="Date", standoff=40),
+        ),
+        title="Placement starts per month",
+        hovermode="x",
+        font=dict(size=12),
+    )
+
+    for year in df_entrants["DECOM"].dt.year.unique():
+        fig.add_annotation(
+            x=f"{year}-07-01",
+            y=-0.18,
+            text=str(year),
+            showarrow=False,
+            xref="x",
+            yref="paper",
+            align="center",
+        )
+
+    fig.update_traces(line=dict(width=1), marker=dict(size=4))
+
+    # min and max date vals for x
+    fig.update_xaxes(
+        title_text="Date",
+        range=[
+            df_entrants["DECOM"].min(),
+            df_entrants["DECOM"].max(),
+        ],  # Use min and max date values
+    )
+
+    # ensure y-axis min to max vals
+    fig.update_yaxes(
+        title_text="Placements",
+        range=[min_count, max_count],  # set range based on data
+        tickvals=list(
+            range(int(min_count), int(max_count) + 10, 10)
+        ),  # generate tick marks
+        ticktext=[str(i) for i in range(int(min_count), int(max_count) + 10, 10)],
+    )
+    fig_html = fig.to_html(full_html=False)
+    return fig_html
+
+
 def transition_rate_table(data):
     df = data
 
@@ -379,7 +491,7 @@ def compare_forecast(
     historic_data: PopulationStats,
     base_forecast: Prediction,
     adjusted_forecast: Prediction,
-    **kwargs
+    **kwargs,
 ):
     # pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
