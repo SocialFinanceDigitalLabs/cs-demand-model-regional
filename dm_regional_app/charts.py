@@ -315,7 +315,12 @@ def exit_rate_table(data):
     df = df[df["to"].apply(lambda x: "Not in care" in x)]
 
     # creates new columns for age and placement from buckets
-    df[["Age Group", "Placement"]] = df["from"].str.split(" - ", expand=True)
+    try:
+        df[["Age Group", "Placement"]] = df["from"].str.split(" - ", expand=True)
+    # The above breaks if the data has no children leaving care, so instead we can return
+    # an empty dataframe in this instance.
+    except:
+        df[["Age Group", "Placement"]] = pd.NA
 
     # sets multiindex
     df.set_index(["from", "to"], inplace=True)
@@ -536,10 +541,11 @@ def transition_rate_changes(base, adjusted):
 
     df = df[df["base"] != df["adjusted"]]
 
+    df = transition_rate_table(df)
+
     if df.empty:
         return None
     else:
-        df = transition_rate_table(df)
         df = df[["From", "To", "base", "adjusted"]]
         df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
         df = df.round(4)
@@ -558,10 +564,11 @@ def exit_rate_changes(base, adjusted):
 
     df = df[df["base"] != df["adjusted"]]
 
+    df = exit_rate_table(df)
+
     if df.empty:
         return None
     else:
-        df = exit_rate_table(df)
         df = df[["Age Group", "Placement", "base", "adjusted"]]
         df.columns = ["Age Group", "Placement", "Base exit rate", "Adjusted exit rate"]
         df = df.round(4)
@@ -580,10 +587,11 @@ def entry_rate_changes(base, adjusted):
 
     df = df[df["base"] != df["adjusted"]]
 
+    df = entry_rate_table(df)
+
     if df.empty:
         return None
     else:
-        df = entry_rate_table(df)
         df = df[["Age Group", "Placement", "base", "adjusted"]]
         df.columns = [
             "Age Group",
