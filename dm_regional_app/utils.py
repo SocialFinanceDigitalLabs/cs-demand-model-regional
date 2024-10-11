@@ -13,18 +13,19 @@ def apply_filters(data: pd.DataFrame, filters: dict):
         loc = data.LA.astype(str).isin(filters["la"])
         data = data.loc[loc]
 
-    if filters["placement_types"] != []:
-        loc = data.placement_type.astype(str).isin(filters["placement_types"])
+    if filters["ethnicity"] != []:
+        loc = data.ethnicity.astype(str).isin(filters["ethnicity"])
         data = data.loc[loc]
 
-    if filters["age_bins"] != []:
-        loc = data.age_bin.astype(str).isin(filters["age_bins"])
-        data = data.loc[loc]
+    if filters["sex"] == "1":
+        data = data.loc[data.SEX == 1.0]
+    elif filters["sex"] == "2":
+        data = data.loc[data.SEX == 2.0]
 
     if filters["uasc"] == "True":
         data = data.loc[data.UASC == True]
     elif filters["uasc"] == "False":
-        data = data.loc[data.UASC == True]
+        data = data.loc[data.UASC == False]
 
     return data
 
