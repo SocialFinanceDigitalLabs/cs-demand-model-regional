@@ -14,7 +14,7 @@ def apply_filters(data: pd.DataFrame, filters: dict):
         data = data.loc[loc]
 
     if filters["ethnicity"] != []:
-        loc = data.ethnicity.astype(str).isin(filters["la"])
+        loc = data.ethnicity.astype(str).isin(filters["ethnicity"])
         data = data.loc[loc]
 
     if filters["sex"] == "1":
