@@ -128,32 +128,37 @@ def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast)
     return fig_html
 
 
-def placement_proportion_table(historic_proportions, current_proportion: CostForecast):
+def placement_proportion_table(historic_proportions, forecast_proportion: CostForecast):
     categories = {item.value.label: item.value.category.label for item in Costs}
 
-    current_proportion = current_proportion.proportions.sort_index()
+    forecast_proportion = forecast_proportion.proportions.sort_index()
     historic_proportions = historic_proportions.sort_index()
 
-    placement = current_proportion.index.map(categories)
+    # Align the series with a left join to retain all indices from forecast_proportion
+    forecast_proportion, historic_proportions = forecast_proportion.align(
+        historic_proportions, join="left", fill_value=0
+    )
 
-    if historic_proportions.equals(current_proportion):
+    placement = forecast_proportion.index.map(categories)
+
+    if historic_proportions.equals(forecast_proportion):
         proportions = pd.DataFrame(
             {
                 "Placement": placement,
-                "Placement type": current_proportion.index,
-                "Historic proportion": current_proportion.values,
+                "Placement type": forecast_proportion.index,
+                "Historic proportion": forecast_proportion.values,
             },
-            index=current_proportion.index,
+            index=forecast_proportion.index,
         )
     else:
         proportions = pd.DataFrame(
             {
                 "Placement": placement,
-                "Placement type": current_proportion.index,
+                "Placement type": forecast_proportion.index,
                 "Historic proportion": historic_proportions.values,
-                "Forecast proportion": current_proportion.values,
+                "Forecast proportion": forecast_proportion.values,
             },
-            index=current_proportion.index,
+            index=forecast_proportion.index,
         )
 
     proportions = proportions.sort_values(by=["Placement"])
