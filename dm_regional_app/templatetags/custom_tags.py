@@ -48,7 +48,12 @@ def filter_text(dict):
     # Only include 'uasc' if its value is not 'all' and not empty
     if dict.get("uasc") and dict["uasc"] != "all":
         html += "UASC:<ul>"
-        html += f"<li>{dict['uasc']}</li></ul>"
+        # Check the value of dict["uasc"]
+        if dict["uasc"] == "True":
+            html += "<li>UASC only</li>"
+        else:
+            html += "<li>UASC Excluded</li>"
+        html += "</ul>"
 
     if (
         html
