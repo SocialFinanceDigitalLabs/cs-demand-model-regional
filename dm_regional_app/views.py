@@ -148,13 +148,14 @@ def costs(request):
 
         stats = PopulationStats(historic_data)
 
-        placement_proportions, historic_population = stats.placement_proportions(
-            **session_scenario.prediction_parameters
-        )
+        (
+            historic_placement_proportions,
+            historic_population,
+        ) = stats.placement_proportions(**session_scenario.prediction_parameters)
 
         costs = convert_population_to_cost(
             prediction,
-            placement_proportions,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
             **session_scenario.inflation_parameters,
@@ -170,7 +171,7 @@ def costs(request):
 
         base_costs = convert_population_to_cost(
             base_prediction,
-            placement_proportions,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             **session_scenario.inflation_parameters,
         )
@@ -186,7 +187,7 @@ def costs(request):
 
         area_costs = area_chart_cost(historic_costs, costs)
 
-        proportions = placement_proportion_table(placement_proportions, costs)
+        proportions = placement_proportion_table(historic_placement_proportions, costs)
 
         summary_table = summary_tables(costs.summary_table)
 
@@ -364,18 +365,19 @@ def placement_proportions(request):
 
         stats = PopulationStats(historic_data)
 
-        placement_proportions, historic_population = stats.placement_proportions(
-            **session_scenario.prediction_parameters
-        )
+        (
+            historic_placement_proportions,
+            historic_population,
+        ) = stats.placement_proportions(**session_scenario.prediction_parameters)
 
         costs = convert_population_to_cost(
             prediction,
-            placement_proportions,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
 
-        proportions = placement_proportion_table(placement_proportions, costs)
+        proportions = placement_proportion_table(historic_placement_proportions, costs)
 
         if request.method == "POST":
             form = DynamicForm(
