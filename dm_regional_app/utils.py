@@ -36,12 +36,28 @@ class DateAwareJSONDecoder(json.JSONDecoder):
 
     def parse_object(self, obj):
         obj = self.parse_dates(obj)
+        # Check for Series
         if "__type__" in obj and obj["__type__"] == "pd.Series":
             if obj.get("is_multiindex", False):
-                index = pd.MultiIndex.from_tuples(obj["index"])
+                index = pd.MultiIndex.from_tuples(
+                    obj["index"], names=obj.get("index_names")
+                )
             else:
                 index = obj["index"]
             return pd.Series(obj["data"], index=index)
+
+        # Check for DataFrame
+        if "__type__" in obj and obj["__type__"] == "pd.DataFrame":
+            if obj.get("is_multiindex", False):
+                index = pd.MultiIndex.from_tuples(
+                    obj["index"], names=obj.get("index_names")
+                )
+                return pd.DataFrame(obj["data"], columns=obj["columns"], index=index)
+            else:
+                return pd.DataFrame(
+                    obj["data"], columns=obj["columns"], index=obj["index"]
+                )
+
         return obj
 
     def parse_dates(self, obj):
@@ -68,6 +84,37 @@ class SeriesAwareJSONEncoder(json.JSONEncoder):
                 "index": index,
                 "is_multiindex": isinstance(obj.index, pd.MultiIndex),
             }
+
+        if isinstance(obj, pd.DataFrame):
+            # Handle MultiIndex DataFrame
+            if isinstance(obj.index, pd.MultiIndex):
+                index = [
+                    list(tup) for tup in obj.index
+                ]  # Convert MultiIndex to list of lists
+                index_names = obj.index.names  # Get index names
+            else:
+                index = obj.index.tolist()
+                index_names = obj.index.names  # Get index names
+
+            # Transform NaN to None only when necessary
+            records = []
+            for record in obj.to_dict(orient="records"):
+                transformed_record = {
+                    key: (value if pd.notnull(value) else None)
+                    for key, value in record.items()
+                }
+                records.append(transformed_record)
+            columns = obj.columns.tolist()  # Get column names
+
+            return {
+                "__type__": "pd.DataFrame",
+                "data": records,
+                "columns": columns,
+                "index": index,
+                "index_names": index_names,
+                "is_multiindex": isinstance(obj.index, pd.MultiIndex),
+            }
+
         if isinstance(obj, date):
             return obj.isoformat()
         # Let the base class default method raise the TypeError
