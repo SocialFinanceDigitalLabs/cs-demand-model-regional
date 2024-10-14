@@ -45,11 +45,10 @@ def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd
             "Adjusted rate dataframe must have 'multiply_value' and 'add_value' columns."
         )
 
-    # Align original_rate and rate_adjustment DataFrame with an outer join to retain all indices
-    original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="outer")
+    # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rates
+    original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
 
-    # Fill missing values: original_rate with 0, multiply_value with 1 (neutral for multiplication), add_value with 0 (neutral for addition)
-    original_rate.fillna(0, inplace=True)
+    # Fill missing values: multiply_value with 1 (neutral for multiplication), add_value with 0 (neutral for addition)
     rate_adjustment["multiply_value"].fillna(1, inplace=True)
     rate_adjustment["add_value"].fillna(0, inplace=True)
 
