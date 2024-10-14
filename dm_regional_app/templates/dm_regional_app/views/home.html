@@ -2,6 +2,8 @@
 {% block content %}
     {% if not user.is_authenticated %}
         {% include "dm_regional_app/includes/guest_home.html" %}
+    {% elif user.is_authenticated %}
+        {% include "dm_regional_app/includes/authenticated_home.html" %}
     {% endif %}
 
 {% endblock %}
