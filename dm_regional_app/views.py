@@ -39,7 +39,11 @@ from dm_regional_app.forms import (
 )
 from dm_regional_app.models import DataSource, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
-from dm_regional_app.utils import apply_filters, number_format
+from dm_regional_app.utils import (
+    apply_filters,
+    combine_form_data_with_existing_rates,
+    number_format,
+)
 from ssda903.config import PlacementCategories
 from ssda903.costs import (
     convert_historic_population_to_cost,
@@ -614,17 +618,11 @@ def entry_rates(request):
                 data = form.save()
 
                 if session_scenario.adjusted_numbers is not None:
-                    # if previous rate adjustments have been made, update old dataframe with new adjustments
-                    number_adjustments = session_scenario.adjusted_numbers
-                    new_numbers = number_adjustments.copy()
-                    for idx in data.index.intersection(number_adjustments.index):
-                        new_numbers.loc[idx] = data.loc[idx]
+                    saved_number_adjustments = session_scenario.adjusted_numbers
 
-                    # Add unmatched rows from data that are not in number_adjustments
-                    unmatched_data = data[~data.index.isin(number_adjustments.index)]
-
-                    # Concatenate the unmatched data to new_numbers
-                    new_numbers = pd.concat([new_numbers, unmatched_data])
+                    new_numbers = combine_form_data_with_existing_rates(
+                        data, saved_number_adjustments
+                    )
 
                     session_scenario.adjusted_numbers = new_numbers
                     session_scenario.save()
@@ -738,16 +736,11 @@ def exit_rates(request):
 
                 if session_scenario.adjusted_rates is not None:
                     # if previous rate adjustments have been made, update old dataframe with new adjustments
-                    rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = rate_adjustments.copy()
-                    for idx in data.index.intersection(rate_adjustments.index):
-                        new_rates.loc[idx] = data.loc[idx]
+                    saved_rate_adjustments = session_scenario.adjusted_rates
 
-                    # Add unmatched rows from data that are not in rate_adjustments
-                    unmatched_data = data[~data.index.isin(rate_adjustments.index)]
-
-                    # Concatenate the unmatched data to new_rates
-                    new_rates = pd.concat([new_rates, unmatched_data])
+                    new_rates = combine_form_data_with_existing_rates(
+                        data, saved_rate_adjustments
+                    )
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()
@@ -861,17 +854,11 @@ def transition_rates(request):
                 data = form.save()
 
                 if session_scenario.adjusted_rates is not None:
-                    # if previous rate adjustments have been made, update old dataframe with new adjustments
-                    rate_adjustments = session_scenario.adjusted_rates
-                    new_rates = rate_adjustments.copy()
-                    for idx in data.index.intersection(rate_adjustments.index):
-                        new_rates.loc[idx] = data.loc[idx]
+                    saved_rate_adjustments = session_scenario.adjusted_rates
 
-                    # Add unmatched rows from data that are not in rate_adjustments
-                    unmatched_data = data[~data.index.isin(rate_adjustments.index)]
-
-                    # Concatenate the unmatched data to new_rates
-                    new_rates = pd.concat([new_rates, unmatched_data])
+                    new_rates = combine_form_data_with_existing_rates(
+                        data, saved_rate_adjustments
+                    )
 
                     session_scenario.adjusted_rates = new_rates
                     session_scenario.save()

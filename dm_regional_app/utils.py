@@ -132,3 +132,27 @@ def number_format(value):
         return f"-£{abs(value):,.2f}"
     else:
         return f"£{value:,.2f}"
+
+
+def combine_form_data_with_existing_rates(form_data, saved_data):
+    """
+    This function takes the form data from DynamicRateForm and rate or number adjustments which have been previously saved
+    It will take row data from the form where indices match
+    It will retain all other row data from the form and saved data
+    """
+
+    # start new data dataframe
+    new_data = saved_data.copy()
+
+    # for rows where both form_data and saved_data have the same index
+    for idx in form_data.index.intersection(saved_data.index):
+        # replace saved data with new data
+        new_data.loc[idx] = form_data.loc[idx]
+
+    # Select unmatched rows from form_data that are not in saved_data
+    unmatched_form_data = form_data[~form_data.index.isin(saved_data.index)]
+
+    # Concatenate the unmatched form_data to new_data
+    combined_data = pd.concat([new_data, unmatched_form_data])
+
+    return combined_data
