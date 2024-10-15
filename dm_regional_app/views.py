@@ -128,7 +128,7 @@ def costs(request):
             form = InflationForm(request.POST)
             if form.is_valid():
                 session_scenario.inflation_parameters = form.cleaned_data
-                session_scenario.save()
+                session_scenario.save(update_fields=["inflation_parameters"])
 
         else:
             inflation_parameters = session_scenario.inflation_parameters.copy()
@@ -345,7 +345,7 @@ def clear_proportion_adjustments(request):
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         session_scenario.adjusted_proportions = None
-        session_scenario.save()
+        session_scenario.save(update_fields=["adjusted_proportions"])
         messages.success(request, "Proportion adjustments cleared.")
     return redirect(next_url_name)
 
@@ -397,11 +397,11 @@ def placement_proportions(request):
                     new_numbers = data.combine_first(proportion_adjustments)
 
                     session_scenario.adjusted_proportions = new_numbers
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_proportions"])
 
                 else:
                     session_scenario.adjusted_proportions = data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_proportions"])
 
                 return redirect("costs")
 
@@ -496,11 +496,11 @@ def weekly_costs(request):
                     new_numbers = data.combine_first(cost_adjustments)
 
                     session_scenario.adjusted_costs = new_numbers
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_costs"])
 
                 else:
                     session_scenario.adjusted_costs = data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_costs"])
 
                 return redirect("costs")
 
@@ -584,7 +584,7 @@ def clear_rate_adjustments(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         session_scenario.adjusted_rates = None
         session_scenario.adjusted_numbers = None
-        session_scenario.save()
+        session_scenario.save(update_fields=["adjusted_rates", "adjusted_numbers"])
         messages.success(request, "Rate adjustments cleared.")
     return redirect(next_url_name)
 
@@ -625,11 +625,11 @@ def entry_rates(request):
                     )
 
                     session_scenario.adjusted_numbers = new_numbers
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_numbers"])
 
                 else:
                     session_scenario.adjusted_numbers = data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_numbers"])
 
                 stats = PopulationStats(historic_data)
 
@@ -743,11 +743,11 @@ def exit_rates(request):
                     )
 
                     session_scenario.adjusted_rates = new_rates
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_rates"])
 
                 else:
                     session_scenario.adjusted_rates = data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_rates"])
 
                 stats = PopulationStats(historic_data)
 
@@ -859,13 +859,12 @@ def transition_rates(request):
                     new_rates = combine_form_data_with_existing_rates(
                         data, saved_rate_adjustments
                     )
-
                     session_scenario.adjusted_rates = new_rates
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_rates"])
 
                 else:
                     session_scenario.adjusted_rates = data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_rates"])
 
                 stats = PopulationStats(historic_data)
 
@@ -967,7 +966,7 @@ def adjusted(request):
                 )
                 if historic_form.is_valid():
                     session_scenario.historic_filters = historic_form.cleaned_data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["historic_filters"])
 
                     historic_data = apply_filters(
                         datacontainer.enriched_view, historic_form.cleaned_data
@@ -992,7 +991,7 @@ def adjusted(request):
                 )
                 if predict_form.is_valid():
                     session_scenario.prediction_parameters = predict_form.cleaned_data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["prediction_parameters"])
 
         else:
             historic_form = HistoricDataFilter(
@@ -1089,7 +1088,7 @@ def prediction(request):
                 )
                 if historic_form.is_valid():
                     session_scenario.historic_filters = historic_form.cleaned_data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["historic_filters"])
 
                     historic_data = apply_filters(
                         datacontainer.enriched_view, historic_form.cleaned_data
@@ -1113,7 +1112,7 @@ def prediction(request):
                 )
                 if predict_form.is_valid():
                     session_scenario.prediction_parameters = predict_form.cleaned_data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["prediction_parameters"])
 
         else:
             historic_form = HistoricDataFilter(
@@ -1189,7 +1188,7 @@ def historic_data(request):
             if form.is_valid():
                 # save cleaned data to session scenarios historic filters
                 session_scenario.historic_filters = form.cleaned_data
-                session_scenario.save()
+                session_scenario.save(update_fields=["historic_filters"])
 
                 # update reference start and end
 
