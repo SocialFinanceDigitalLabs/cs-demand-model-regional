@@ -6,14 +6,14 @@ from dm_regional_app.forms import DynamicRateForm
 
 
 class DynamicRateFormTest(TestCase):
-    def setUp(self):
+    def setUpTestData(cls):
         # Setup initial dataframe and initial data
-        self.dataframe = pd.DataFrame(
+        cls.dataframe = pd.DataFrame(
             {"from": ["A", "B", "C"], "to": ["X", "Y", "Z"], "rate": [1.5, 2.0, 3.0]}
         ).set_index(["from", "to"])
 
         # Initial data containing values for multiply and add
-        self.initial_data = pd.DataFrame(
+        cls.initial_data = pd.DataFrame(
             {"multiply_value": [1.2, None, 1.8], "add_value": [None, 0.8, None]},
             index=pd.MultiIndex.from_tuples([("A", "X"), ("B", "Y"), ("C", "Z")]),
         )
@@ -48,10 +48,10 @@ class DynamicRateFormTest(TestCase):
         # After cleaning, check if cleaned_data is as expected
         cleaned_data = form.clean()
         self.assertEqual(cleaned_data["multiply_('A', 'X')"], 1.3)
-        self.assertTrue(cleaned_data["multiply_('B', 'Y')"] == None)
+        self.assertIsNone(cleaned_data["multiply_('B', 'Y')"])
         self.assertEqual(cleaned_data["add_('B', 'Y')"], 0.9)
 
-    def test_form_submission_with_invalid_data(self):
+    def test_form_submission_with_multiply_and_add_filled(self):
         # Test form submission with invalid data (both multiply and add are filled)
         form_data = {
             "multiply_('A', 'X')": 1.3,
@@ -73,6 +73,7 @@ class DynamicRateFormTest(TestCase):
         self.assertIn("multiply_('A', 'X')", form.errors)
         self.assertIn("add_('A', 'X')", form.errors)
 
+    def test_form_submission_with_negative_multiply_numbers(self):
         # Test form submission with invalid data (negative multiply numbers)
         form_data = {
             "multiply_('A', 'X')": -1.3,
