@@ -355,6 +355,10 @@ class DynamicRateForm(forms.Form):
                 except (KeyError, IndexError, ValueError):
                     initial_add = None
 
+            else:
+                initial_multiply = None
+                initial_add = None
+
             # Create form fields for each option
             self.fields[multiply_field_name] = forms.FloatField(
                 required=False,
