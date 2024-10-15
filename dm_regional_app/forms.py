@@ -343,20 +343,17 @@ class DynamicRateForm(forms.Form):
             multiply_field_name = f"multiply_{index}"
             add_field_name = f"add_{index}"
 
-            initial_multiply = None
-            initial_add = None
-
-            # Set initial values if available, otherwise leave as None
+            # Set initial values if available, otherwise set as None
             if initial_data is not None:
                 try:
                     initial_multiply = initial_data.loc[index, "multiply_value"]
                 except (KeyError, IndexError, ValueError):
-                    pass
+                    initial_multiply = None
 
                 try:
                     initial_add = initial_data.loc[index, "add_value"]
                 except (KeyError, IndexError, ValueError):
-                    pass
+                    initial_add = None
 
             # Create form fields for each option
             self.fields[multiply_field_name] = forms.FloatField(
