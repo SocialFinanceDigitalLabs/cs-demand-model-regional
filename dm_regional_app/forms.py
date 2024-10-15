@@ -394,9 +394,7 @@ class DynamicRateForm(forms.Form):
                     add_field_name, "You cannot fill both multiply and add fields."
                 )
 
-        for index in self.dataframe.index:
-            multiply_field_name = f"multiply_{index}"
-            multiply_value = cleaned_data.get(multiply_field_name)
+            # Validation logic: multiply value can't contain negative numbers
             if multiply_value is not None and multiply_value < 0:
                 self.add_error(
                     multiply_field_name,
@@ -419,8 +417,6 @@ class DynamicRateForm(forms.Form):
             add_value = self.cleaned_data.get(f"add_{index}", None)
 
             if multiply_value is not None or add_value is not None:
-                # multiply_value = np.nan if multiply_value is None else multiply_value
-                # add_value = np.nan if add_value is None else add_value
                 transitions.append(index)
                 multiply_values.append(multiply_value)
                 add_values.append(add_value)
