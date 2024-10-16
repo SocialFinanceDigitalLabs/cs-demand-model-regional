@@ -1,7 +1,7 @@
 {% extends "dm_regional_app/base.html" %}
 {% load crispy_forms_tags %}
 
-{% block content %} 
+{% block content %}
 <h2>Login</h2>
 
   {% if next %}
@@ -13,7 +13,7 @@
     {% endif %}
   {% endif %}
 
-  <form method="post" action="{% url 'login' %}">
+  <form method="post" action="{% url 'account_login' %}">
     {% csrf_token %}
     {{ form|crispy }}
     <div class="center-align">
@@ -21,5 +21,10 @@
     </div>
     <input type="hidden" name="next" value="{{ next }}">
   </form>
-  
+
+  <p>If you are accessing this site as an admin, please login via SSO:</p>
+    {% if SOCIALACCOUNT_ENABLED %}
+        {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+    {% endif %}
+
 {% endblock %}

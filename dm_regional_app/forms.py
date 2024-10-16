@@ -2,8 +2,8 @@ import pandas as pd
 from bootstrap_datepicker_plus.widgets import DatePickerInput
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import HTML, Column, Field, Layout, Row, Submit
-
 from django import forms
+from django.core.validators import FileExtensionValidator
 from django_select2 import forms as s2forms
 
 from dm_regional_app.models import SavedScenario
@@ -87,17 +87,17 @@ class HistoricDataFilter(forms.Form):
         required=False,
         choices=[],
     )
-    placement_types = forms.MultipleChoiceField(
+    ethnicity = forms.MultipleChoiceField(
         widget=s2forms.Select2MultipleWidget,
-        label="Placement Type",
+        label="Ethnicity",
         required=False,
         choices=[],
     )
-    age_bins = forms.MultipleChoiceField(
-        widget=s2forms.Select2MultipleWidget,
-        label="Age",
+    sex = forms.ChoiceField(
+        label="Sex",
         required=False,
-        choices=[],
+        choices=[("all", "All"), (1, "Male"), (2, "Female")],
+        initial="all",
     )
     uasc = forms.ChoiceField(
         label="UASC",
@@ -108,25 +108,20 @@ class HistoricDataFilter(forms.Form):
 
     def __init__(self, *args, **kwargs):
         la_choices = kwargs.pop("la")
-        placement_type_choices = kwargs.pop("placement_types")
-        age_bin_choices = kwargs.pop("age_bins")
+        ethnicity_choices = kwargs.pop("ethnicity")
 
         super().__init__(*args, **kwargs)
         self.fields["la"].choices = [(la, la) for la in la_choices]
-        self.fields["placement_types"].choices = [
-            (placement_type, placement_type)
-            for placement_type in placement_type_choices
-        ]
-        self.fields["age_bins"].choices = [
-            (age_bin, age_bin) for age_bin in age_bin_choices
+        self.fields["ethnicity"].choices = [
+            (ethnicity, ethnicity) for ethnicity in ethnicity_choices
         ]
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
             Row(
                 Column("la", css_class="form-group col-md-3 mb-0"),
-                Column("placement_types", css_class="form-group col-md-3 mb-0"),
-                Column("age_bins", css_class="form-group col-md-3 mb-0"),
+                Column("ethnicity", css_class="form-group col-md-3 mb-0"),
+                Column("sex", css_class="form-group col-md-3 mb-0"),
                 Column("uasc", css_class="form-group col-md-3 mb-0"),
                 css_class="form-row",
             ),
@@ -207,7 +202,7 @@ class DynamicForm(forms.Form):
 
         return data
 
-      
+
 class InflationForm(forms.Form):
     # Boolean field with radio buttons
     inflation = forms.BooleanField(
@@ -273,7 +268,7 @@ class InflationForm(forms.Form):
             ),
         )
 
-          
+
 class SavedScenarioForm(forms.ModelForm):
     name = forms.CharField(
         widget=forms.TextInput(attrs={"maxlength": 100}),
@@ -300,3 +295,28 @@ class SavedScenarioForm(forms.ModelForm):
             Field("name", css_class="form-control"),
             Field("description", css_class="form-control"),
         )
+
+
+class DataSourceUploadForm(forms.Form):
+    episodes = forms.FileField(
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv"], message="File must have extension .csv"
+            )
+        ]
+    )
+    header = forms.FileField(
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv"], message="File must have extension .csv"
+            )
+        ]
+    )
+    uasc = forms.FileField(
+        label="UASC",
+        validators=[
+            FileExtensionValidator(
+                allowed_extensions=["csv"], message="File must have extension .csv"
+            )
+        ],
+    )

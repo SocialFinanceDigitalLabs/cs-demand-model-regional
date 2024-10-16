@@ -1,5 +1,5 @@
 from ._api import DataFile, DataStore, Metadata, TableType
-from ._storage import StorageDataStore
+from ._storage import LocalDataStore, StorageDataStore
 
 __all__ = [
     "StorageDataStore",
@@ -8,4 +8,5 @@ __all__ = [
     "Metadata",
     "TableType",
     "fs_datastore",
+    "LocalDataStore",
 ]

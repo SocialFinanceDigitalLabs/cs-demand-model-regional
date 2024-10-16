@@ -18,19 +18,26 @@
             <table id="transition-rate" class="table table-hover">
                 <form method="post">
                 {% csrf_token %}
-                {% convert_data_frame_to_html_table_plus_form placement_types form "New proportion" %}
-                <tr>
-                <td colspan="3">
-                    <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="costs">Back</a></div>
-                </td>
-                <td>
-                    <div class="p-2 bd-highlight"><button type="submit" class="btn btn-primary">Save</button></div>
-                </td>
-                </tr>
-            </form>
+                {% convert_data_frame_to_html_table_plus_form placement_types form "New forecast proportion" %}
+                    <tr>
+                    {% if placement_types.columns|length == 3 %}
+                        <td colspan="3">
+                    {% else %}
+                        <td colspan="4">
+                    {% endif %}
+                            <div class="p-2 bd-highlight">
+                                <a class="btn btn-secondary" href="costs">Back</a>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="p-2 bd-highlight">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </td>
+                    </tr>
+                </form>
             </table>
         </div>
-
 
 </div>
 

@@ -23,4 +23,11 @@ urlpatterns = [
     ),
     path("save_scenario", views.save_scenario, name="save_scenario"),
     path("load_scenario/<int:pk>", views.load_saved_scenario, name="load_scenario"),
+    path(
+        "clear_proportions",
+        views.clear_proportion_adjustments,
+        name="clear_proportions",
+    ),
+    path("upload_data/", views.upload_data_source, name="upload_data"),
+
 ]

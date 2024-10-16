@@ -1,4 +1,4 @@
-{% load static %}
+{% load static sekizai_tags %}
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -28,5 +28,6 @@
             {% endif %}
             {% block content %}{% endblock %}
         </div>
+        {% render_block "js" %}
     </body>
 </html>

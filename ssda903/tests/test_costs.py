@@ -14,7 +14,6 @@ class TestCosts(unittest.TestCase):
             },
             "defaults": {
                 "cost_per_week": 100,
-                "proportion": 0.3,
             },
         }
         self.assertEqual(cost_item.toJSON(), expected_json)

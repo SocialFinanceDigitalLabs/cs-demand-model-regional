@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from decimal import Decimal, getcontext
-from typing import Iterable, Optional, Union
+from typing import Iterable, Union
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
@@ -22,18 +22,7 @@ class CostForecast:
     proportional_population: pd.DataFrame
 
 
-def get_cost_items_for_category(category_label: str):
-    """
-    Takes a placement category label and returns related enum costs in a list
-    """
-    cost_items = []
-    for cost in Costs:
-        if cost.value.category.label == category_label:
-            cost_items.append(cost.value)
-    return cost_items
-
-
-def normalize_proportions(cost_items, proportion_adjustment):
+def normalize_proportions(cost_items, historic_proportions, proportion_adjustment):
     """
     This function makes sure the proportions for each category sum to 1.
 
@@ -57,8 +46,8 @@ def normalize_proportions(cost_items, proportion_adjustment):
     for item in cost_items:
         if item.label in proportion_adjustment.index:
             adjustment_total += proportion_adjustment[item.label]
-        else:
-            remaining_total += item.defaults.proportion
+        elif item.label in historic_proportions.index:
+            remaining_total += historic_proportions[item.label]
 
     total_proportion = adjustment_total + remaining_total
 
@@ -67,8 +56,10 @@ def normalize_proportions(cost_items, proportion_adjustment):
         for item in cost_items:
             if item.label in proportion_adjustment.index:
                 normalised_proportions[item.label] = proportion_adjustment[item.label]
+            elif item.label in historic_proportions.index:
+                normalised_proportions[item.label] = historic_proportions[item.label]
             else:
-                normalised_proportions[item.label] = item.defaults.proportion
+                normalised_proportions[item.label] = 0
     elif adjustment_total >= 1 or remaining_total == 0:
         # For when adjustments are >= 1 and there are remaining; or adjustments are < 1 and there are no remaining
         # Scale adjustments up or down and set any remaining to 0
@@ -91,7 +82,7 @@ def normalize_proportions(cost_items, proportion_adjustment):
             if item.label in proportion_adjustment.index:
                 proportion = proportion_adjustment[item.label]
             else:
-                proportion = Decimal(str(item.defaults.proportion)) * Decimal(
+                proportion = Decimal(str(historic_proportions[item.label])) * Decimal(
                     str(scale_factor)
                 )
             normalised_proportions[item.label] = float(proportion)
@@ -125,6 +116,7 @@ def apply_inflation_to_cost_item(cost_per_day, inflation_rate):
 
 def convert_population_to_cost(
     data: Union[Prediction, PopulationStats],
+    historic_proportions: Union[pd.Series, Iterable[pd.Series]] = None,
     cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     proportion_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
     inflation: Union[bool] = None,
@@ -158,12 +150,12 @@ def convert_population_to_cost(
         for category in PlacementCategories:
             # for each category, check if the category label is in the column header
             if category.value.label in column:
-                cost_items = get_cost_items_for_category(category.value.label)
+                cost_items = Costs.get_cost_items_for_category(category.value.label)
 
                 if proportion_adjustment is not None:
                     # Apply proportion adjustments
                     normalised_proportions = normalize_proportions(
-                        cost_items, proportion_adjustment
+                        cost_items, historic_proportions, proportion_adjustment
                     )
 
                 for cost_item in cost_items:
@@ -185,8 +177,10 @@ def convert_population_to_cost(
                         and cost_item.label in normalised_proportions.index
                     ):
                         proportion = normalised_proportions[cost_item.label]
+                    elif cost_item.label in historic_proportions.index:
+                        proportion = historic_proportions[cost_item.label]
                     else:
-                        proportion = cost_item.defaults.proportion
+                        proportion = 0
                     # add proportion to proportions output
                     proportions[cost_item.label] = proportion
 
@@ -243,3 +237,37 @@ def convert_population_to_cost(
     return CostForecast(
         costs, proportions, cost_summary, summary_table, proportional_population
     )
+
+
+def convert_historic_population_to_cost(
+    input_population: pd.DataFrame,
+    cost_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
+) -> pd.DataFrame:
+    """
+    This will take a detailed historic population - proportion_population output from placement_proportions - and convert to a cost
+    """
+
+    costs = pd.DataFrame(index=input_population.index)
+
+    for column in input_population.columns:
+        # for each column, create a new series where we will sum the total cost output
+
+        for cost in Costs:
+            # for each category, check if the category label is in the column header
+            if cost.value.label in column:
+                cost_item = cost.value
+
+                if (
+                    cost_adjustment is not None
+                    and cost_item.label in cost_adjustment.index
+                ):
+                    cost_per_week = cost_adjustment[cost_item.label]
+                else:
+                    cost_per_week = cost_item.defaults.cost_per_week
+                # work out daily cost
+                cost_per_day = cost_per_week / 7
+
+                # for each cost item, multiply by cost per day
+                costs[cost_item.label] = input_population[column] * cost_per_day
+
+    return costs
