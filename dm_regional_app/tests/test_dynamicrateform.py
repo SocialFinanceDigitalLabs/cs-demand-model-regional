@@ -6,6 +6,7 @@ from dm_regional_app.forms import DynamicRateForm
 
 
 class DynamicRateFormTest(TestCase):
+    @classmethod
     def setUpTestData(cls):
         # Setup initial dataframe and initial data
         cls.dataframe = pd.DataFrame(

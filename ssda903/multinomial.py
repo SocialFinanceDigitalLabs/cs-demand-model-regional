@@ -39,12 +39,6 @@ def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd
     - Ensures the result of addition is not less than 0.
     - Excludes cases where original_rate is missing.
     """
-    # Ensure rate_adjustment has the required columns
-    if not {"multiply_value", "add_value"}.issubset(rate_adjustment.columns):
-        raise ValueError(
-            "Adjusted rate dataframe must have 'multiply_value' and 'add_value' columns."
-        )
-
     # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rates
     original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
 
