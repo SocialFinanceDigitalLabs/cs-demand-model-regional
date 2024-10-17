@@ -44,7 +44,6 @@ class DateAwareJSONDecoder(json.JSONDecoder):
 
         # Check for DataFrame
         if "__type__" in obj and obj["__type__"] == "pd.DataFrame":
-            print("saved", obj.get("is_multiindex"))
             if obj.get("is_multiindex") == True:
                 index = pd.MultiIndex.from_tuples(
                     obj["index"], names=obj.get("index_names")
@@ -102,7 +101,6 @@ class SeriesAwareJSONEncoder(json.JSONEncoder):
                 }
                 records.append(transformed_record)
             columns = obj.columns.tolist()  # Get column names
-            print("is multi index", isinstance(obj.index, pd.MultiIndex))
 
             output = {
                 "__type__": "pd.DataFrame",
@@ -112,7 +110,6 @@ class SeriesAwareJSONEncoder(json.JSONEncoder):
                 "index_names": index_names,
                 "is_multiindex": isinstance(obj.index, pd.MultiIndex),
             }
-            print(output)
 
             return output
 
