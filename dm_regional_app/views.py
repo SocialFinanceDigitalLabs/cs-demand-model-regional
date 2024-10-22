@@ -119,6 +119,8 @@ def costs(request):
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
+        request.session["prev_page"] = "costs"
+
         if request.method == "POST":
             form = InflationForm(request.POST)
             if form.is_valid():
@@ -587,6 +589,8 @@ def entry_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        prev_page = request.session["prev_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -649,6 +653,7 @@ def entry_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "prev_page": prev_page,
                     },
                 )
             else:
@@ -668,6 +673,7 @@ def entry_rates(request):
                         "entry_rate_table": entry_rates,
                         "form": form,
                         "is_post": is_post,
+                        "prev_page": prev_page,
                     },
                 )
 
@@ -686,8 +692,10 @@ def entry_rates(request):
                 "entry_rate_table": entry_rates,
                 "form": form,
                 "is_post": is_post,
+                "prev_page": prev_page,
             },
         )
+
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
@@ -700,6 +708,8 @@ def exit_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        prev_page = request.session["prev_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -762,6 +772,7 @@ def exit_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "prev_page": prev_page,
                     },
                 )
 
@@ -782,6 +793,7 @@ def exit_rates(request):
                     "exit_rate_table": exit_rates,
                     "form": form,
                     "is_post": is_post,
+                    "prev_page": prev_page,
                 },
             )
 
@@ -800,6 +812,7 @@ def exit_rates(request):
                 "exit_rate_table": exit_rates,
                 "form": form,
                 "is_post": is_post,
+                "prev_page": prev_page,
             },
         )
     else:
@@ -814,6 +827,8 @@ def transition_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        prev_page = request.session["prev_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -876,6 +891,7 @@ def transition_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "prev_page": prev_page,
                     },
                 )
 
@@ -896,6 +912,7 @@ def transition_rates(request):
                     "transition_rate_table": transition_rates,
                     "form": form,
                     "is_post": is_post,
+                    "prev_page": prev_page,
                 },
             )
 
@@ -914,6 +931,7 @@ def transition_rates(request):
                 "transition_rate_table": transition_rates,
                 "form": form,
                 "is_post": is_post,
+                "prev_page": prev_page,
             },
         )
     else:
@@ -930,6 +948,8 @@ def adjusted(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
+
+        request.session["prev_page"] = "adjusted"
 
         if request.method == "POST":
             # check if it was historic data filter form that was submitted
@@ -1011,7 +1031,10 @@ def adjusted(request):
                 data=historic_data, **session_scenario.prediction_parameters
             )
 
-            if session_scenario.adjusted_numbers is not None or session_scenario.adjusted_rates is not None:
+            if (
+                session_scenario.adjusted_numbers is not None
+                or session_scenario.adjusted_rates is not None
+            ):
                 stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
