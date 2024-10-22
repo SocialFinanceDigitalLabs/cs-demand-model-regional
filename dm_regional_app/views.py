@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -55,6 +56,9 @@ def home(request):
 
 @login_required
 def router_handler(request):
+    print("router_handler time start")
+    rh_total_start_time = time.time()
+
     # get next url page
     next_url_name = request.GET.get("next_url_name")
 
@@ -63,7 +67,11 @@ def router_handler(request):
     current_user = request.user
 
     # read data
+    rh_dc_start_time = time.time()
     datacontainer = read_data(source=settings.DATA_SOURCE)
+    rh_dc_end_time = time.time()
+    dc_exec_time = rh_dc_start_time - rh_dc_end_time
+    print(f"rh_dc_time = {dc_exec_time}")
 
     historic_filters = {
         "la": [],
@@ -110,12 +118,19 @@ def router_handler(request):
 
     # update the request session
     request.session["session_scenario_id"] = session_scenario.pk
+
+    rh_total_end_time = time.time()
+    rh_total_exec_time = rh_total_end_time - rh_total_start_time
+    print(f"router_handler time end, total exec = {rh_total_exec_time}")
+
     return redirect(next_url_name)
 
 
 @login_required
 def costs(request):
     if "session_scenario_id" in request.session:
+        print("costs time start")
+        costs_total_start_time = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
@@ -130,7 +145,11 @@ def costs(request):
             form = InflationForm(initial=inflation_parameters)
 
         # read data
+        costs_dc_start_time = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        costs_dc_end_time = time.time()
+        costs_dc_exec_time = costs_dc_end_time - costs_dc_start_time
+        print(f"costs dc exec time = {costs_dc_exec_time}")
 
         historic_data = apply_filters(
             datacontainer.enriched_view, session_scenario.historic_filters
@@ -139,14 +158,22 @@ def costs(request):
         historic_filters = session_scenario.historic_filters
 
         # Call predict function
+        costs_pred_start_time = time.time()
         prediction = predict(
             data=historic_data,
             **session_scenario.prediction_parameters,
             rate_adjustment=session_scenario.adjusted_rates,
             number_adjustment=session_scenario.adjusted_numbers,
         )
+        costs_pred_end_time = time.time()
+        costs_pred_exec_time = costs_pred_end_time - costs_pred_start_time
+        print(f"costs pred exec time = {costs_pred_exec_time}")
 
+        costs_stats_start_time = time.time()
         stats = PopulationStats(historic_data)
+        costs_stats_end_time = time.time()
+        costs_stats_exec_time = costs_stats_end_time - costs_stats_start_time
+        print(f"costs stats exec time = {costs_stats_exec_time}")
 
         (
             historic_placement_proportions,
@@ -165,9 +192,13 @@ def costs(request):
             historic_population, session_scenario.adjusted_costs
         )
 
+        costs_base_pred_start = time.time()
         base_prediction = predict(
             data=historic_data, **session_scenario.prediction_parameters
         )
+        costs_base_pred_end = time.time()
+        costs_base_pred_exec = costs_base_pred_end - costs_base_pred_start
+        print(f"costs base pred exec = {costs_base_pred_exec}")
 
         base_costs = convert_population_to_cost(
             base_prediction,
@@ -221,6 +252,9 @@ def costs(request):
         else:
             entry_rate_table = None
 
+        costs_end_time = time.time()
+        costs_exec = costs_end_time = costs_total_start_time
+        print(f"costs total exec = {costs_exec}")
         return render(
             request,
             "dm_regional_app/views/costs.html",
@@ -253,6 +287,8 @@ def costs(request):
 @login_required
 def save_scenario(request):
     if "session_scenario_id" in request.session:
+        print("save_scenario start")
+        save_scen_start = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         current_user = request.user
@@ -288,7 +324,9 @@ def save_scenario(request):
                     scenario_to_update.save()
 
                     messages.success(request, "Scenario updated.")
-
+                    save_scen_end_1 = time.time()
+                    save_scen_exec_1 = save_scen_end_1 - save_scen_start
+                    print(f"save scen 1 exec = {save_scen_exec_1}")
                     return redirect("scenarios")
 
             else:
@@ -316,8 +354,14 @@ def save_scenario(request):
 
                     messages.success(request, "Scenario saved.")
 
+                    save_scen_end_2 = time.time()
+                    save_scen_exec_2 = save_scen_end_2 - save_scen_start
+                    print(f"save scen 2 exec = {save_scen_exec_2}")
                     return redirect("scenarios")
 
+        save_scen_end_3 = time.time()
+        save_scen_exec_3 = save_scen_end_3 - save_scen_start
+        print(f"save scen 3 exec = {save_scen_exec_3}")
         return render(
             request,
             "dm_regional_app/views/save_scenario.html",
@@ -349,21 +393,36 @@ def clear_proportion_adjustments(request):
 @login_required
 def placement_proportions(request):
     if "session_scenario_id" in request.session:
+        print("placement proportions start")
+        place_prop_start = time.time()
+
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
+        place_prop_dc_start = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        place_prop_dc_end = time.time()
+        place_prop_dc_exec = place_prop_dc_end - place_prop_dc_start
+        print(f"place prop dc exec = {place_prop_dc_exec}")
 
         historic_data = apply_filters(
             datacontainer.enriched_view, session_scenario.historic_filters
         )
 
         # Call predict function
+        place_prop_pred_start = time.time()
         prediction = predict(
             data=historic_data, **session_scenario.prediction_parameters
         )
+        place_prop_pred_end = time.time()
+        place_prop_pred_exec = place_prop_pred_end - place_prop_pred_start
+        print(f"place prop pred exec = {place_prop_pred_exec}")
 
+        place_prop_stats_start = time.time()
         stats = PopulationStats(historic_data)
+        place_prop_stats_end = time.time()
+        place_prop_stats_exec = place_prop_stats_end - place_prop_stats_start
+        print(f"place prop stats exec = {place_prop_stats_exec}")
 
         (
             historic_placement_proportions,
@@ -402,6 +461,9 @@ def placement_proportions(request):
                         session_scenario.adjusted_proportions = data
                         session_scenario.save()
 
+                place_prop_end_1 = time.time()
+                place_prop_exec_1 = place_prop_end_1 - place_prop_start
+                print(f"place prop exec 1 = {place_prop_exec_1}")
                 return redirect("costs")
 
             else:
@@ -412,6 +474,9 @@ def placement_proportions(request):
                 )
                 messages.warning(request, "Form not saved, positive numbers only")
 
+                place_prop_end_2 = time.time()
+                place_prop_exec_2 = place_prop_end_2 - place_prop_start
+                print(f"place prop exec 2 = {place_prop_exec_2}")
                 return render(
                     request,
                     "dm_regional_app/views/placement_proportions.html",
@@ -427,6 +492,9 @@ def placement_proportions(request):
                 initial_data=session_scenario.adjusted_proportions,
             )
 
+            place_prop_end_3 = time.time()
+            place_prop_exec_3 = place_prop_end_3 - place_prop_start
+            print(f"place prop exec 3 = {place_prop_exec_3}")
             return render(
                 request,
                 "dm_regional_app/views/placement_proportions.html",
@@ -447,21 +515,35 @@ def placement_proportions(request):
 @login_required
 def weekly_costs(request):
     if "session_scenario_id" in request.session:
+        print("weekly costs start")
+        weekly_costs_start = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
+        weekly_costs_dc_start = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        weekly_costs_dc_end = time.time()
+        weekly_costs_dc_exec = weekly_costs_dc_end - weekly_costs_dc_start
+        print(f"weekly costs dc exec = {weekly_costs_dc_exec}")
 
         historic_data = apply_filters(
             datacontainer.enriched_view, session_scenario.historic_filters
         )
 
         # Call predict function
+        weekly_costs_pred_start = time.time()
         prediction = predict(
             data=historic_data, **session_scenario.prediction_parameters
         )
+        weekly_costs_pred_end = time.time()
+        weekly_costs_pred_exec = weekly_costs_pred_end - weekly_costs_pred_start
+        print(f"weekly costs pred exec = {weekly_costs_pred_exec}")
 
+        weekly_costs_stats_start = time.time()
         stats = PopulationStats(historic_data)
+        weekly_costs_stats_end = time.time()
+        weekly_costs_stats_exec = weekly_costs_stats_end - weekly_costs_stats_start
+        print(f"weekly costs stats exec = {weekly_costs_stats_exec}")
 
         placement_proportions, historic_population = stats.placement_proportions(
             **session_scenario.prediction_parameters
@@ -499,10 +581,16 @@ def weekly_costs(request):
                     # Check that the dataframe or series saved in the form is not empty, then save
                     save_data_if_not_empty(session_scenario, data, "adjusted_costs")
 
+                weekly_costs_end_1 = time.time()
+                weekly_costs_exec_1 = weekly_costs_end_1 - weekly_costs_start
+                print(f"weekly costs exec 1 = {weekly_costs_exec_1}")
                 return redirect("costs")
 
             else:
                 messages.warning(request, "Form not saved, positive numbers only")
+                weekly_costs_end_2 = time.time()
+                weekly_costs_exec_2 = weekly_costs_end_2 - weekly_costs_start
+                print(f"weekly costs exec 2 = {weekly_costs_exec_2}")
                 return render(
                     request,
                     "dm_regional_app/views/weekly_costs.html",
@@ -518,6 +606,9 @@ def weekly_costs(request):
                 initial_data=costs.cost_summary,
             )
 
+            weekly_costs_end_3 = time.time()
+            weekly_costs_exec_3 = weekly_costs_end_3 - weekly_costs_start
+            print(f"weekly costs exec 3 = {weekly_costs_exec_3}")
             return render(
                 request,
                 "dm_regional_app/views/weekly_costs.html",
@@ -535,6 +626,8 @@ def weekly_costs(request):
 
 @login_required
 def load_saved_scenario(request, pk):
+    print("load saved scenario start")
+    load_scen_start = time.time()
     # loading save scenario should copy it over to a session scenario and jump to the predict view with it
     saved_scenario = get_object_or_404(SavedScenario, pk=pk)
 
@@ -560,6 +653,9 @@ def load_saved_scenario(request, pk):
             "Scenario loaded. Current page will not show additional adjustments, click 'next' or navigate to Adjust Forecast to view these.",
         )
 
+        load_scen_end_1 = time.time()
+        load_scen_exec_1 = load_scen_end_1 - load_scen_start
+        print(f"load scen exec 1 = {load_scen_exec_1}")
         return redirect("prediction")
 
     else:
@@ -567,6 +663,9 @@ def load_saved_scenario(request, pk):
             request,
             "Scenario not loaded, can only load scenarios associated with your current local authority",
         )
+        load_scen_end_2 = time.time()
+        load_scen_exec_2 = load_scen_end_2 - load_scen_start
+        print(f"load scen exec 2 = {load_scen_exec_2}")
         return redirect("scenarios")
 
 
@@ -587,10 +686,16 @@ def clear_rate_adjustments(request):
 @login_required
 def entry_rates(request):
     if "session_scenario_id" in request.session:
+        print("entry rates start")
+        entry_rates_start = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
+        entry_rates_dc_start = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        entry_rates_dc_end = time.time()
+        entry_rates_dc_exec = entry_rates_dc_end - entry_rates_dc_start
+        print(f"entry rates dc exec = {entry_rates_dc_exec}")
 
         historic_data = apply_filters(
             datacontainer.enriched_view, session_scenario.historic_filters
@@ -1010,7 +1115,10 @@ def adjusted(request):
                 data=historic_data, **session_scenario.prediction_parameters
             )
 
-            if session_scenario.adjusted_numbers is not None or session_scenario.adjusted_rates is not None:
+            if (
+                session_scenario.adjusted_numbers is not None
+                or session_scenario.adjusted_rates is not None
+            ):
                 stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(

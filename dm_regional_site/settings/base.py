@@ -193,7 +193,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 
 # data source path
-DATA_SOURCE = config("DATA_SOURCE", default="samples/v1")
+DATA_SOURCE = config("DATA_SOURCE", default="samples/v2")
 
 MESSAGE_TAGS = {
     messages.DEBUG: "alert-info",
