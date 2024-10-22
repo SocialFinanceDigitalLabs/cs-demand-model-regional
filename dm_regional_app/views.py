@@ -119,6 +119,7 @@ def costs(request):
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
+        # Used to return user to this page when accessing rate change pages
         request.session["prev_page"] = "costs"
 
         if request.method == "POST":
@@ -946,10 +947,12 @@ def adjusted(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
+        # Used to return user to this page when accessing rate change pages
+        request.session["prev_page"] = "adjusted"
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-
-        request.session["prev_page"] = "adjusted"
 
         if request.method == "POST":
             # check if it was historic data filter form that was submitted
