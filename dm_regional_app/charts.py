@@ -2,16 +2,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-
 from dm_regional_app.utils import (
     add_ci_traces,
+    add_original_traces,
     add_traces,
     apply_variances,
     care_type_organiser,
     rate_table_sort,
-    remove_age_transitions
+    remove_age_transitions,
 )
-
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -393,119 +392,50 @@ def compare_forecast(
     # dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
     df_hd.columns = ["from", "date", "historic"]
-    df_hd = df_hd[["date", "historic"]].groupby(by="date").sum().reset_index()
-    df_hd["date"] = pd.to_datetime(df_hd["date"]).dt.date
+    # Organises historic data into dict of dfs by care type bucket
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
 
     # dataframe containing total children in base forecast
     df = base_forecast.population.unstack().reset_index()
 
     df.columns = ["from", "date", "forecast"]
-    df = df[df["from"].apply(lambda x: "Not in care" in x) == False]
-    df = df[["date", "forecast"]].groupby(by="date").sum().reset_index()
-    df["date"] = pd.to_datetime(df["date"]).dt.date
+    # Organises forecast data into dict of dfs by care type bucket
+    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "from")
 
     # dataframe containing upper and lower confidence intervals for base forecast
     df_ci = base_forecast.variance.unstack().reset_index()
     df_ci.columns = ["bin", "date", "variance"]
-    df_ci = df_ci[["date", "variance"]].groupby(by="date").sum().reset_index()
-    df_ci["date"] = pd.to_datetime(df_ci["date"]).dt.date
-    df_ci["upper"] = df["forecast"] + df_ci["variance"]
-    df_ci["lower"] = df["forecast"] - df_ci["variance"]
+    # Organises confidence interval data into dict of dfs by care type bucket
+    df_ci = care_type_organiser(df_ci, "variance", "bin")
+
+    df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
     # dataframe containing total children in adjusted forecast
     df_af = adjusted_forecast.population.unstack().reset_index()
-
     df_af.columns = ["from", "date", "forecast"]
-    df_af = df_af[df_af["from"].apply(lambda x: "Not in care" in x) == False]
-    df_af = df_af[["date", "forecast"]].groupby(by="date").sum().reset_index()
-    df_af["date"] = pd.to_datetime(df_af["date"]).dt.date
+    adjusted_care_by_type_dfs = care_type_organiser(df_af, "forecast", "from")
 
     # dataframe containing upper and lower confidence intervals for adjusted forecast
     df_df_ci = adjusted_forecast.variance.unstack().reset_index()
     df_df_ci.columns = ["bin", "date", "variance"]
-    df_df_ci = df_df_ci[["date", "variance"]].groupby(by="date").sum().reset_index()
-    df_df_ci["date"] = pd.to_datetime(df_df_ci["date"]).dt.date
-    df_df_ci["upper"] = df_af["forecast"] + df_df_ci["variance"]
-    df_df_ci["lower"] = df_af["forecast"] - df_df_ci["variance"]
+    # Organises adjusted confidence interval data into dict of dfs by care type bucket
+    df_df_ci = care_type_organiser(df_df_ci, "variance", "bin")
+
+    df_df_ci = apply_variances(adjusted_care_by_type_dfs, df_df_ci)
 
     # visualise prediction using unstacked dataframe
     fig = go.Figure()
 
-    # Display confidence interval as filled shape
-    fig.add_trace(
-        go.Scatter(
-            x=df_df_ci["date"],
-            y=df_df_ci["lower"],
-            line_color="rgba(255,255,255,0)",
-            name="Adjusted confidence interval",
-            showlegend=False,
-        )
-    )
-
-    fig.add_trace(
-        go.Scatter(
-            x=df_df_ci["date"],
-            y=df_df_ci["upper"],
-            fill="tonexty",
-            fillcolor="rgba(255,140,0,0.2)",
-            line_color="rgba(255,255,255,0)",
-            name="Adjusted confidence interval",
-            showlegend=True,
-        )
-    )
+    # Add forecast and historical traces
+    fig = add_traces(adjusted_care_by_type_dfs, historic_care_by_type_dfs, fig)
 
     # Display confidence interval as filled shape
-    fig.add_trace(
-        go.Scatter(
-            x=df_df_ci["date"],
-            y=df_ci["lower"],
-            line_color="rgba(255,255,255,0)",
-            name="Base confidence interval",
-            showlegend=False,
-        )
-    )
+    # Adjusted
+    fig = add_ci_traces(df_df_ci, fig)
+    # Original
+    fig = add_ci_traces(df_ci, fig)
 
-    fig.add_trace(
-        go.Scatter(
-            x=df_df_ci["date"],
-            y=df_df_ci["upper"],
-            fill="tonexty",
-            fillcolor="rgba(0,176,246,0.2)",
-            line_color="rgba(255,255,255,0)",
-            name="Base confidence interval",
-            showlegend=True,
-        )
-    )
-
-    # add base forecast for total children
-    fig.add_trace(
-        go.Scatter(
-            x=df_af["date"],
-            y=df_af["forecast"],
-            name="Adjusted Forecast",
-            line=dict(color="black", width=1.5, dash="dash"),
-        )
-    )
-
-    # add adjusted forecast for total children
-    fig.add_trace(
-        go.Scatter(
-            x=df["date"],
-            y=df["forecast"],
-            name="Base Forecast",
-            line=dict(color="black", width=1.5),
-        )
-    )
-
-    # add historic data for total children
-    fig.add_trace(
-        go.Scatter(
-            x=df_hd["date"],
-            y=df_hd["historic"],
-            name="Historic data",
-            line=dict(color="black", width=1.5, dash="dot"),
-        )
-    )
+    fig = add_original_traces(forecast_care_by_type_dfs, fig)
 
     # add shaded reference period
     fig.add_shape(

@@ -90,7 +90,7 @@ def number_format(value):
     else:
         return f"£{value:,.2f}"
 
-      
+
 def remove_age_transitions(df):
     """
     Used to remove age transitions from transitions rate table
@@ -146,6 +146,7 @@ def rate_table_sort(df, bin_col, transition=False):
         )
 
     return df
+
 
 def care_type_organiser(df, data_type, input_col):
     # Used on forecast, historic, and variance data to organise by care types,
@@ -217,15 +218,16 @@ def add_traces(dfs_forecast, dfs_historic, fig):
                 )
             )
 
-        # Add historic data.
-        fig.add_trace(
-            go.Scatter(
-                x=dfs_historic[care_type]["date"],
-                y=dfs_historic[care_type]["historic"],
-                name=f"Historic data ({care_type})",
-                line=dict(color=colour, width=1.5, dash="dot"),
+        if dfs_historic:
+            # Add historic data.
+            fig.add_trace(
+                go.Scatter(
+                    x=dfs_historic[care_type]["date"],
+                    y=dfs_historic[care_type]["historic"],
+                    name=f"Historic data ({care_type})",
+                    line=dict(color=colour, width=1.5, dash="dot"),
+                )
             )
-        )
 
     return fig
 
@@ -270,7 +272,35 @@ def add_ci_traces(df, fig):
 
     return fig
 
-  
+
+def add_original_traces(dfs_adjusted, fig):
+    care_types = [e.value.label for e in PlacementCategories]
+    care_types.append("Total")
+    care_types.remove("Not in care")
+
+    line_colours = {
+        "purple": "rgba(159, 0, 160, 1)",
+        "green": "rgba(0, 160, 36, 1)",
+        "blue": "rgba(6, 0, 160, 1)",
+        "red": "rgba(241, 0, 0, 1)",
+        "black": "rgba(0, 0, 0, 1)",
+    }
+
+    for care_type, line_colour in zip(care_types, line_colours.values()):
+        if dfs_adjusted:
+            # Add forecast data.
+            fig.add_trace(
+                go.Scatter(
+                    x=dfs_adjusted[care_type]["date"],
+                    y=dfs_adjusted[care_type]["forecast"],
+                    name=f"Forecast ({care_type})",
+                    line=dict(color=line_colour, width=1.5, dash="dash"),
+                )
+            )
+
+    return fig
+
+
 def save_data_if_not_empty(session_scenario, data, attribute_name):
     """
     Checks if series or dataframe is not empty, and saves to attribute of model if not
