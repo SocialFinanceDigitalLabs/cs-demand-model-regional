@@ -10,7 +10,6 @@ from ssda903.config._placement_categories import PlacementCategories, PlacementC
 @dataclass
 class CostDefaults:
     cost_per_week: int
-    proportion: int
 
 
 @dataclass
@@ -29,7 +28,6 @@ class CostItem:
             },
             "defaults": {
                 "cost_per_week": self.defaults.cost_per_week,
-                "proportion": self.defaults.proportion,
             },
         }
 
@@ -44,7 +42,7 @@ class Costs(Enum):
             "U3",
         ),
         place_provider=(),
-        defaults=CostDefaults(cost_per_week=100, proportion=0.3),
+        defaults=CostDefaults(cost_per_week=100),
     )
     FOSTER_IN_HOUSE = CostItem(
         label="Fostering (In-house)",
@@ -59,7 +57,7 @@ class Costs(Enum):
             "PR2",
             "PR3",
         ),
-        defaults=CostDefaults(cost_per_week=150, proportion=0.3),
+        defaults=CostDefaults(cost_per_week=150),
     )
     FOSTER_IFA = CostItem(
         label="Fostering (IFA)",
@@ -70,7 +68,7 @@ class Costs(Enum):
             "U6",
         ),
         place_provider=("PR4", "PR5"),
-        defaults=CostDefaults(cost_per_week=250, proportion=0.4),
+        defaults=CostDefaults(cost_per_week=250),
     )
     RESIDENTIAL_IN_HOUSE = CostItem(
         label="Residential (In-house)",
@@ -86,7 +84,7 @@ class Costs(Enum):
             "PR2",
             "PR3",
         ),
-        defaults=CostDefaults(cost_per_week=1000, proportion=0.5),
+        defaults=CostDefaults(cost_per_week=1000),
     )
     RESIDENTIAL_EXTERNAL = CostItem(
         label="Residential (External)",
@@ -98,7 +96,7 @@ class Costs(Enum):
             "S1",
         ),
         place_provider=("PR4", "PR5"),
-        defaults=CostDefaults(cost_per_week=1000, proportion=0.5),
+        defaults=CostDefaults(cost_per_week=1000),
     )
     SUPPORTED = CostItem(
         label="Supported accomodation",
@@ -108,28 +106,28 @@ class Costs(Enum):
             "P2",
         ),
         place_provider=(),
-        defaults=CostDefaults(cost_per_week=1000, proportion=1),
+        defaults=CostDefaults(cost_per_week=1000),
     )
     SECURE_HOME = CostItem(
         label="Secure home",
         category=PlacementCategories.OTHER.value,
         placement_types=("K1",),
         place_provider=(),
-        defaults=CostDefaults(cost_per_week=1000, proportion=0.3),
+        defaults=CostDefaults(cost_per_week=1000),
     )
     PLACED_WITH_FAMILY = CostItem(
         label="Placed with family",
         category=PlacementCategories.OTHER.value,
         placement_types=("P1",),
         place_provider=(),
-        defaults=CostDefaults(cost_per_week=1000, proportion=0.3),
+        defaults=CostDefaults(cost_per_week=1000),
     )
     OTHER = CostItem(
         label="Other",
         category=PlacementCategories.OTHER.value,
         placement_types=(),
         place_provider=(),
-        defaults=CostDefaults(cost_per_week=1000, proportion=0.4),
+        defaults=CostDefaults(cost_per_week=1000),
     )
 
     @classmethod
@@ -188,3 +186,10 @@ class Costs(Enum):
                     ] = c  # Empty string indicates match any provider
 
         return placement_type_map
+
+    @classmethod
+    def get_cost_items_for_category(cls, category_label: str):
+        """
+        Takes a placement category label and returns related enum costs in a list
+        """
+        return [cost for cost in cls.values() if cost.category.label == category_label]
