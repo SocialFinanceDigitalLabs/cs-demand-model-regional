@@ -4,7 +4,6 @@ import plotly.graph_objects as go
 
 from dm_regional_app.utils import (
     add_ci_traces,
-    add_original_traces,
     add_traces,
     apply_variances,
     care_type_organiser,
@@ -188,7 +187,12 @@ def summary_tables(df):
     return df_transposed
 
 
-def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **kwargs):
+def prediction_chart(
+    historic_data: PopulationStats, prediction: Prediction, **kwargs
+) -> str:
+    """
+    Outputs an html figure showing the historic and forecast (with CIs) child populations split by placement type
+    """
     # Pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
@@ -196,15 +200,15 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     # Dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
 
-    df.columns = ["from", "date", "forecast"]
+    df.columns = ["bin", "date", "forecast"]
     # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "from")
+    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "bin")
 
     # Dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
-    df_hd.columns = ["from", "date", "historic"]
+    df_hd.columns = ["bin", "date", "historic"]
     # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "bin")
 
     # Dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
@@ -218,10 +222,14 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     fig = go.Figure()
 
     # Add forecast and historical traces
-    fig = add_traces(forecast_care_by_type_dfs, historic_care_by_type_dfs, fig)
+    fig = add_traces(
+        fig=fig,
+        historic_by_type=historic_care_by_type_dfs,
+        forecast_by_type=forecast_care_by_type_dfs,
+    )
 
     # Display confidence interval as filled shape
-    fig = add_ci_traces(df_ci, fig)
+    fig = add_ci_traces(fig=fig, base_ci_dict=df_ci)
 
     # add shaded reference period
     fig.add_shape(
@@ -243,24 +251,30 @@ def prediction_chart(historic_data: PopulationStats, prediction: Prediction, **k
     )
 
     fig.update_layout(
-        title="Forecast", xaxis_title="Date", yaxis_title="Number of children"
+        title="Forecast child population over time",
+        xaxis_title="Date",
+        yaxis_title="Number of children",
     )
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
 
 
-def historic_chart(data: PopulationStats):
+def historic_chart(data: PopulationStats) -> str:
+    """
+    Outputs an html figure of the historic child population over time from the stock in population stats
+    """
+    # Organise the stock dataframe into a dictionary of dataframes split by the categories in an enum
     df_hd = data.stock.unstack().reset_index()
-    df_hd.columns = ["from", "date", "historic"]
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
+    df_hd.columns = ["bin", "date", "historic"]
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "bin")
 
     fig = go.Figure()
 
     # Add historical traces
-    fig = add_traces(None, historic_care_by_type_dfs, fig)
+    fig = add_traces(fig=fig, historic_by_type=historic_care_by_type_dfs)
 
-    fig.update_layout(title="Historic data")
+    fig.update_layout(title="Historic child population over time")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -384,23 +398,27 @@ def compare_forecast(
     base_forecast: Prediction,
     adjusted_forecast: Prediction,
     **kwargs
-):
+) -> str:
+    """
+    Returns an html graph that is shown to the user when adjustments to transition rates have been made.
+    It shows the historic data, the base forecast (with CIs) and the adjusted forecast (with CIs) by placement type.
+    """
     # pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
 
     # dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
-    df_hd.columns = ["from", "date", "historic"]
+    df_hd.columns = ["bin", "date", "historic"]
     # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "from")
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "bin")
 
     # dataframe containing total children in base forecast
-    df = base_forecast.population.unstack().reset_index()
+    df_base = base_forecast.population.unstack().reset_index()
 
-    df.columns = ["from", "date", "forecast"]
+    df_base.columns = ["bin", "date", "forecast"]
     # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "from")
+    forecast_care_by_type_dfs = care_type_organiser(df_base, "forecast", "bin")
 
     # dataframe containing upper and lower confidence intervals for base forecast
     df_ci = base_forecast.variance.unstack().reset_index()
@@ -412,30 +430,30 @@ def compare_forecast(
 
     # dataframe containing total children in adjusted forecast
     df_af = adjusted_forecast.population.unstack().reset_index()
-    df_af.columns = ["from", "date", "forecast"]
-    adjusted_care_by_type_dfs = care_type_organiser(df_af, "forecast", "from")
+    df_af.columns = ["bin", "date", "forecast"]
+    adjusted_care_by_type_dfs = care_type_organiser(df_af, "forecast", "bin")
 
     # dataframe containing upper and lower confidence intervals for adjusted forecast
-    df_df_ci = adjusted_forecast.variance.unstack().reset_index()
-    df_df_ci.columns = ["bin", "date", "variance"]
+    df_af_ci = adjusted_forecast.variance.unstack().reset_index()
+    df_af_ci.columns = ["bin", "date", "variance"]
     # Organises adjusted confidence interval data into dict of dfs by care type bucket
-    df_df_ci = care_type_organiser(df_df_ci, "variance", "bin")
+    df_af_ci = care_type_organiser(df_af_ci, "variance", "bin")
 
-    df_df_ci = apply_variances(adjusted_care_by_type_dfs, df_df_ci)
+    df_af_ci = apply_variances(adjusted_care_by_type_dfs, df_af_ci)
 
     # visualise prediction using unstacked dataframe
     fig = go.Figure()
 
-    # Add forecast and historical traces
-    fig = add_traces(adjusted_care_by_type_dfs, historic_care_by_type_dfs, fig)
+    # Add historical and forecast data to figure
+    fig = add_traces(
+        fig=fig,
+        historic_by_type=historic_care_by_type_dfs,
+        forecast_by_type=forecast_care_by_type_dfs,
+        adjusted_by_type=adjusted_care_by_type_dfs,
+    )
 
     # Display confidence interval as filled shape
-    # Adjusted
-    fig = add_ci_traces(df_df_ci, fig)
-    # Original
-    fig = add_ci_traces(df_ci, fig)
-
-    fig = add_original_traces(forecast_care_by_type_dfs, fig)
+    fig = add_ci_traces(fig=fig, base_ci_dict=df_ci, adjusted_ci_dict=df_af_ci)
 
     # add shaded reference period
     fig.add_shape(
@@ -457,7 +475,9 @@ def compare_forecast(
     )
 
     fig.update_layout(
-        title="Forecast", xaxis_title="Date", yaxis_title="Number of children"
+        title="Base and adjusted child population over time",
+        xaxis_title="Date",
+        yaxis_title="Number of children",
     )
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
