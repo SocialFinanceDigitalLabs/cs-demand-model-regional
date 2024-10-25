@@ -200,15 +200,15 @@ def prediction_chart(
     # Dataframe containing total children in prediction
     df = prediction.population.unstack().reset_index()
 
-    df.columns = ["bin", "date", "forecast"]
+    df.columns = ["bin", "date", "pop_size"]
     # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df, "forecast", "bin")
+    forecast_care_by_type_dfs = care_type_organiser(df, "pop_size", "bin")
 
     # Dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
-    df_hd.columns = ["bin", "date", "historic"]
+    df_hd.columns = ["bin", "date", "pop_size"]
     # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "bin")
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "pop_size", "bin")
 
     # Dataframe containing upper and lower confidence intervals
     df_ci = prediction.variance.unstack().reset_index()
@@ -221,15 +221,27 @@ def prediction_chart(
     # Visualise prediction using unstacked dataframe
     fig = go.Figure()
 
+    # Append graph info to population data dictionaries
+    historic_care_by_type_dfs["type"] = "Historic"
+    historic_care_by_type_dfs["dash"] = "dot"
+
+    forecast_care_by_type_dfs["type"] = "Base forecast"
+    forecast_care_by_type_dfs["dash"] = None
+
+    # Add dictionary to list to be added to graph
+    traces_list = [historic_care_by_type_dfs, forecast_care_by_type_dfs]
+
     # Add forecast and historical traces
-    fig = add_traces(
-        fig=fig,
-        historic_by_type=historic_care_by_type_dfs,
-        forecast_by_type=forecast_care_by_type_dfs,
-    )
+    fig = add_traces(fig, traces_list)
+
+    # Append graph info to ci data dictionaries
+    df_ci["type"] = "Base forecast"
+
+    # Add dictionary to list to be added to graph
+    ci_traces_list = [df_ci]
 
     # Display confidence interval as filled shape
-    fig = add_ci_traces(fig=fig, base_ci_dict=df_ci)
+    fig = add_ci_traces(fig, ci_traces_list)
 
     # add shaded reference period
     fig.add_shape(
@@ -266,13 +278,20 @@ def historic_chart(data: PopulationStats) -> str:
     """
     # Organise the stock dataframe into a dictionary of dataframes split by the categories in an enum
     df_hd = data.stock.unstack().reset_index()
-    df_hd.columns = ["bin", "date", "historic"]
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "bin")
+    df_hd.columns = ["bin", "date", "pop_size"]
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "pop_size", "bin")
 
     fig = go.Figure()
 
+    # Append graph info to historic data dictionary
+    historic_care_by_type_dfs["type"] = "Historic"
+    historic_care_by_type_dfs["dash"] = "dot"
+
+    # Add dictionary to list to be added to graph
+    traces_list = [historic_care_by_type_dfs]
+
     # Add historical traces
-    fig = add_traces(fig=fig, historic_by_type=historic_care_by_type_dfs)
+    fig = add_traces(fig, traces_list)
 
     fig.update_layout(title="Historic child population over time")
     fig.update_yaxes(rangemode="tozero")
@@ -409,16 +428,16 @@ def compare_forecast(
 
     # dataframe containing total children in historic data
     df_hd = historic_data.stock.unstack().reset_index()
-    df_hd.columns = ["bin", "date", "historic"]
+    df_hd.columns = ["bin", "date", "pop_size"]
     # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "historic", "bin")
+    historic_care_by_type_dfs = care_type_organiser(df_hd, "pop_size", "bin")
 
     # dataframe containing total children in base forecast
     df_base = base_forecast.population.unstack().reset_index()
 
-    df_base.columns = ["bin", "date", "forecast"]
+    df_base.columns = ["bin", "date", "pop_size"]
     # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df_base, "forecast", "bin")
+    forecast_care_by_type_dfs = care_type_organiser(df_base, "pop_size", "bin")
 
     # dataframe containing upper and lower confidence intervals for base forecast
     df_ci = base_forecast.variance.unstack().reset_index()
@@ -430,8 +449,8 @@ def compare_forecast(
 
     # dataframe containing total children in adjusted forecast
     df_af = adjusted_forecast.population.unstack().reset_index()
-    df_af.columns = ["bin", "date", "forecast"]
-    adjusted_care_by_type_dfs = care_type_organiser(df_af, "forecast", "bin")
+    df_af.columns = ["bin", "date", "pop_size"]
+    adjusted_care_by_type_dfs = care_type_organiser(df_af, "pop_size", "bin")
 
     # dataframe containing upper and lower confidence intervals for adjusted forecast
     df_af_ci = adjusted_forecast.variance.unstack().reset_index()
@@ -444,16 +463,35 @@ def compare_forecast(
     # visualise prediction using unstacked dataframe
     fig = go.Figure()
 
+    # Append graph info to population data dictionaries
+    historic_care_by_type_dfs["type"] = "Historic"
+    historic_care_by_type_dfs["dash"] = "dot"
+
+    forecast_care_by_type_dfs["type"] = "Base forecast"
+    forecast_care_by_type_dfs["dash"] = None
+
+    adjusted_care_by_type_dfs["type"] = "Adjusted forecast"
+    adjusted_care_by_type_dfs["dash"] = "dash"
+
+    # Add dictionary to list to be added to graph
+    traces_list = [
+        historic_care_by_type_dfs,
+        forecast_care_by_type_dfs,
+        adjusted_care_by_type_dfs,
+    ]
+
     # Add historical and forecast data to figure
-    fig = add_traces(
-        fig=fig,
-        historic_by_type=historic_care_by_type_dfs,
-        forecast_by_type=forecast_care_by_type_dfs,
-        adjusted_by_type=adjusted_care_by_type_dfs,
-    )
+    fig = add_traces(fig, traces_list)
+
+    # Append graph info to ci data dictionaries
+    df_ci["type"] = "Base forecast"
+    df_af_ci["type"] = "Adjusted forecast"
+
+    # Add dictionary to list to be added to graph
+    ci_traces_list = [df_ci, df_af_ci]
 
     # Display confidence interval as filled shape
-    fig = add_ci_traces(fig=fig, base_ci_dict=df_ci, adjusted_ci_dict=df_af_ci)
+    fig = add_ci_traces(fig, ci_traces_list)
 
     # add shaded reference period
     fig.add_shape(

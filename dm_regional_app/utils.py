@@ -1,7 +1,6 @@
 import ast
 import json
 from datetime import date, datetime
-from typing import Optional
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -188,23 +187,18 @@ def apply_variances(forecast_by_type: dict, ci_by_type: dict) -> dict:
 
     for care_type in care_types:
         ci_by_type[care_type]["upper"] = (
-            forecast_by_type[care_type]["forecast"] + ci_by_type[care_type]["variance"]
+            forecast_by_type[care_type]["pop_size"] + ci_by_type[care_type]["variance"]
         )
         ci_by_type[care_type]["lower"] = (
-            forecast_by_type[care_type]["forecast"] - ci_by_type[care_type]["variance"]
+            forecast_by_type[care_type]["pop_size"] - ci_by_type[care_type]["variance"]
         )
 
     return ci_by_type
 
 
-def add_traces(
-    fig: go.Figure,
-    historic_by_type: Optional[dict] = None,
-    forecast_by_type: Optional[dict] = None,
-    adjusted_by_type: Optional[dict] = None,
-) -> go.Figure:
+def add_traces(fig: go.Figure, traces_list: list) -> go.Figure:
     """
-    Adds populations (forecast and historic) to graph, split by five categories e.g. placement categories
+    Adds list of one or more populations (e.g. historic data, base forecast, adjusted forecast) to graph, with each population split by placement categories
     """
     care_types = [e.value.label for e in PlacementCategories]
     care_types.append("Total")
@@ -219,50 +213,21 @@ def add_traces(
     }
 
     for care_type, colour in zip(care_types, colours.values()):
-        if forecast_by_type:
-            # Add forecast data.
+        for care_dict in traces_list:
             fig.add_trace(
                 go.Scatter(
-                    x=forecast_by_type[care_type]["date"],
-                    y=forecast_by_type[care_type]["forecast"],
-                    name=f"Base forecast ({care_type})",
-                    legendgroup=f"Base {care_type}",
-                    line=dict(color=colour, width=1.5),
-                )
-            )
-
-        if adjusted_by_type:
-            # Add adjusted data.
-            fig.add_trace(
-                go.Scatter(
-                    x=adjusted_by_type[care_type]["date"],
-                    y=adjusted_by_type[care_type]["forecast"],
-                    name=f"Adjusted forecast ({care_type})",
-                    legendgroup=f"Adjusted {care_type}",
-                    line=dict(color=colour, width=1.5, dash="dash"),
-                )
-            )
-
-        if historic_by_type:
-            # Add historic data.
-            fig.add_trace(
-                go.Scatter(
-                    x=historic_by_type[care_type]["date"],
-                    y=historic_by_type[care_type]["historic"],
-                    name=f"Historic data ({care_type})",
-                    legendgroup=f"Historic {care_type}",
-                    line=dict(color=colour, width=1.5, dash="dot"),
+                    x=care_dict[care_type]["date"],
+                    y=care_dict[care_type]["pop_size"],
+                    name=f"{care_dict['type']} ({care_type})",
+                    legendgroup=f"{care_dict['type']} {care_type}",
+                    line=dict(color=colour, width=1.5, dash=care_dict["dash"]),
                 )
             )
 
     return fig
 
 
-def add_ci_traces(
-    fig: go.Figure,
-    base_ci_dict: Optional[dict] = None,
-    adjusted_ci_dict: Optional[dict] = None,
-) -> go.Figure:
+def add_ci_traces(fig: go.Figure, ci_traces_list: list) -> go.Figure:
     """
     Adds confidence interval lines to a plotly graph using data from a dictionary of dataframes split by an enum of placement categories
     """
@@ -278,15 +243,15 @@ def add_ci_traces(
         "black": "rgba(0, 0, 0, 0.2)",
     }
 
-    if base_ci_dict:
-        for care_type, colour in zip(care_types, colours.values()):
+    for care_type, colour in zip(care_types, colours.values()):
+        for ci_dict in ci_traces_list:
             # Add lower bounds for confidence intervals.
             fig.add_trace(
                 go.Scatter(
-                    x=base_ci_dict[care_type]["date"],
-                    y=base_ci_dict[care_type]["lower"],
+                    x=ci_dict[care_type]["date"],
+                    y=ci_dict[care_type]["lower"],
                     line_color="rgba(255,255,255,0)",
-                    legendgroup=f"Base {care_type}",
+                    legendgroup=f"{ci_dict['type']} {care_type}",
                     showlegend=False,
                 )
             )
@@ -294,38 +259,12 @@ def add_ci_traces(
             # Add upper bounds for confidence intervals.
             fig.add_trace(
                 go.Scatter(
-                    x=base_ci_dict[care_type]["date"],
-                    y=base_ci_dict[care_type]["upper"],
+                    x=ci_dict[care_type]["date"],
+                    y=ci_dict[care_type]["upper"],
                     fill="tonexty",
                     fillcolor=colour,
                     line_color="rgba(255,255,255,0)",
-                    legendgroup=f"Base {care_type}",
-                    showlegend=False,
-                )
-            )
-
-    if adjusted_ci_dict:
-        for care_type, colour in zip(care_types, colours.values()):
-            # Add lower bounds for confidence intervals.
-            fig.add_trace(
-                go.Scatter(
-                    x=adjusted_ci_dict[care_type]["date"],
-                    y=adjusted_ci_dict[care_type]["lower"],
-                    line_color="rgba(255,255,255,0)",
-                    legendgroup=f"Adjusted {care_type}",
-                    showlegend=False,
-                )
-            )
-
-            # Add upper bounds for confidence intervals.
-            fig.add_trace(
-                go.Scatter(
-                    x=adjusted_ci_dict[care_type]["date"],
-                    y=adjusted_ci_dict[care_type]["upper"],
-                    fill="tonexty",
-                    fillcolor=colour,
-                    line_color="rgba(255,255,255,0)",
-                    legendgroup=f"Adjusted {care_type}",
+                    legendgroup=f"{ci_dict['type']} {care_type}",
                     showlegend=False,
                 )
             )
