@@ -90,7 +90,7 @@ def number_format(value):
     else:
         return f"£{value:,.2f}"
 
-      
+
 def remove_age_transitions(df):
     """
     Used to remove age transitions from transitions rate table
@@ -147,9 +147,11 @@ def rate_table_sort(df, bin_col, transition=False):
 
     return df
 
-def care_type_organiser(df, data_type, input_col):
-    # Used on forecast, historic, and variance data to organise by care types,
-    # outpouts to a dictionary of dfs.
+
+def care_type_organiser(df: pd.DataFrame, data_type: str, input_col: str) -> dict:
+    """
+    Takes a dataframe of a population over time and splits it into a dictionary of dataframes based on the categories in an enum
+    """
     care_types = [e.value.label for e in PlacementCategories]
     care_types.append("Total")
     care_types.remove("Not in care")
@@ -174,25 +176,30 @@ def care_type_organiser(df, data_type, input_col):
     return care_type_dict
 
 
-def apply_variances(care_by_type, ci_by_type):
-    # Applies pre-calculated variance make the df needed for plotting
-    # confidence intervals.
+def apply_variances(forecast_by_type: dict, ci_by_type: dict) -> dict:
+    """
+    Takes a dictionary of forecast populations and a dictionary of variances, both split by the same categories defined by an enum e.g. placement type
+    Outputs two new series in the variances dictionary, one each for upper/lower CI
+    """
     care_types = [e.value.label for e in PlacementCategories]
     care_types.append("Total")
     care_types.remove("Not in care")
 
     for care_type in care_types:
         ci_by_type[care_type]["upper"] = (
-            care_by_type[care_type]["forecast"] + ci_by_type[care_type]["variance"]
+            forecast_by_type[care_type]["pop_size"] + ci_by_type[care_type]["variance"]
         )
         ci_by_type[care_type]["lower"] = (
-            care_by_type[care_type]["forecast"] - ci_by_type[care_type]["variance"]
+            forecast_by_type[care_type]["pop_size"] - ci_by_type[care_type]["variance"]
         )
 
     return ci_by_type
 
 
-def add_traces(dfs_forecast, dfs_historic, fig):
+def add_traces(fig: go.Figure, traces_list: list) -> go.Figure:
+    """
+    Adds list of one or more populations (e.g. historic data, base forecast, adjusted forecast) to graph, with each population split by placement categories
+    """
     care_types = [e.value.label for e in PlacementCategories]
     care_types.append("Total")
     care_types.remove("Not in care")
@@ -206,31 +213,24 @@ def add_traces(dfs_forecast, dfs_historic, fig):
     }
 
     for care_type, colour in zip(care_types, colours.values()):
-        if dfs_forecast:
-            # Add forecast data.
+        for care_dict in traces_list:
             fig.add_trace(
                 go.Scatter(
-                    x=dfs_forecast[care_type]["date"],
-                    y=dfs_forecast[care_type]["forecast"],
-                    name=f"Forecast ({care_type})",
-                    line=dict(color=colour, width=1.5),
+                    x=care_dict[care_type]["date"],
+                    y=care_dict[care_type]["pop_size"],
+                    name=f"{care_dict['type']} ({care_type})",
+                    legendgroup=f"{care_dict['type']} {care_type}",
+                    line=dict(color=colour, width=1.5, dash=care_dict["dash"]),
                 )
             )
-
-        # Add historic data.
-        fig.add_trace(
-            go.Scatter(
-                x=dfs_historic[care_type]["date"],
-                y=dfs_historic[care_type]["historic"],
-                name=f"Historic data ({care_type})",
-                line=dict(color=colour, width=1.5, dash="dot"),
-            )
-        )
 
     return fig
 
 
-def add_ci_traces(df, fig):
+def add_ci_traces(fig: go.Figure, ci_traces_list: list) -> go.Figure:
+    """
+    Adds confidence interval lines to a plotly graph using data from a dictionary of dataframes split by an enum of placement categories
+    """
     care_types = [e.value.label for e in PlacementCategories]
     care_types.append("Total")
     care_types.remove("Not in care")
@@ -244,33 +244,34 @@ def add_ci_traces(df, fig):
     }
 
     for care_type, colour in zip(care_types, colours.values()):
-        # Add lower bounds for confidence intervals.
-        fig.add_trace(
-            go.Scatter(
-                x=df[care_type]["date"],
-                y=df[care_type]["lower"],
-                line_color="rgba(255,255,255,0)",
-                name=f"Confidence interval ({care_type})",
-                showlegend=False,
+        for ci_dict in ci_traces_list:
+            # Add lower bounds for confidence intervals.
+            fig.add_trace(
+                go.Scatter(
+                    x=ci_dict[care_type]["date"],
+                    y=ci_dict[care_type]["lower"],
+                    line_color="rgba(255,255,255,0)",
+                    legendgroup=f"{ci_dict['type']} {care_type}",
+                    showlegend=False,
+                )
             )
-        )
 
-        # Add upper bounds for confidence intervals.
-        fig.add_trace(
-            go.Scatter(
-                x=df[care_type]["date"],
-                y=df[care_type]["upper"],
-                fill="tonexty",
-                fillcolor=colour,
-                line_color="rgba(255,255,255,0)",
-                name=f"Confidence interval ({care_type})",
-                showlegend=True,
+            # Add upper bounds for confidence intervals.
+            fig.add_trace(
+                go.Scatter(
+                    x=ci_dict[care_type]["date"],
+                    y=ci_dict[care_type]["upper"],
+                    fill="tonexty",
+                    fillcolor=colour,
+                    line_color="rgba(255,255,255,0)",
+                    legendgroup=f"{ci_dict['type']} {care_type}",
+                    showlegend=False,
+                )
             )
-        )
 
     return fig
 
-  
+
 def save_data_if_not_empty(session_scenario, data, attribute_name):
     """
     Checks if series or dataframe is not empty, and saves to attribute of model if not
