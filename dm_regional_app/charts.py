@@ -228,20 +228,14 @@ def prediction_chart(
     forecast_care_by_type_dfs["type"] = "Base forecast"
     forecast_care_by_type_dfs["dash"] = None
 
-    # Add dictionary to list to be added to graph
-    traces_list = [historic_care_by_type_dfs, forecast_care_by_type_dfs]
-
     # Add forecast and historical traces
-    fig = add_traces(fig, traces_list)
+    fig = add_traces(fig, [historic_care_by_type_dfs, forecast_care_by_type_dfs])
 
     # Append graph info to ci data dictionaries
     df_ci["type"] = "Base forecast"
 
-    # Add dictionary to list to be added to graph
-    ci_traces_list = [df_ci]
-
     # Display confidence interval as filled shape
-    fig = add_ci_traces(fig, ci_traces_list)
+    fig = add_ci_traces(fig, [df_ci])
 
     # add shaded reference period
     fig.add_shape(
@@ -287,11 +281,8 @@ def historic_chart(data: PopulationStats) -> str:
     historic_care_by_type_dfs["type"] = "Historic"
     historic_care_by_type_dfs["dash"] = "dot"
 
-    # Add dictionary to list to be added to graph
-    traces_list = [historic_care_by_type_dfs]
-
     # Add historical traces
-    fig = add_traces(fig, traces_list)
+    fig = add_traces(fig, [historic_care_by_type_dfs])
 
     fig.update_layout(title="Historic child population over time")
     fig.update_yaxes(rangemode="tozero")
@@ -473,25 +464,22 @@ def compare_forecast(
     adjusted_care_by_type_dfs["type"] = "Adjusted forecast"
     adjusted_care_by_type_dfs["dash"] = "dash"
 
-    # Add dictionary to list to be added to graph
-    traces_list = [
-        historic_care_by_type_dfs,
-        forecast_care_by_type_dfs,
-        adjusted_care_by_type_dfs,
-    ]
-
     # Add historical and forecast data to figure
-    fig = add_traces(fig, traces_list)
+    fig = add_traces(
+        fig,
+        [
+            historic_care_by_type_dfs,
+            forecast_care_by_type_dfs,
+            adjusted_care_by_type_dfs,
+        ],
+    )
 
     # Append graph info to ci data dictionaries
     df_ci["type"] = "Base forecast"
     df_af_ci["type"] = "Adjusted forecast"
 
-    # Add dictionary to list to be added to graph
-    ci_traces_list = [df_ci, df_af_ci]
-
     # Display confidence interval as filled shape
-    fig = add_ci_traces(fig, ci_traces_list)
+    fig = add_ci_traces(fig, [df_ci, df_af_ci])
 
     # add shaded reference period
     fig.add_shape(
