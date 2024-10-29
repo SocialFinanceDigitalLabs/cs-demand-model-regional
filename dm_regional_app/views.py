@@ -120,7 +120,7 @@ def costs(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
         # Used to return user to this page when accessing rate change pages
-        request.session["prev_page"] = "costs"
+        request.session["rate_change_origin_page"] = "costs"
 
         if request.method == "POST":
             form = InflationForm(request.POST)
@@ -590,7 +590,7 @@ def entry_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
-        prev_page = request.session["prev_page"]
+        rate_change_origin_page = request.session["rate_change_origin_page"]
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -654,7 +654,7 @@ def entry_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
-                        "prev_page": prev_page,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
             else:
@@ -674,7 +674,7 @@ def entry_rates(request):
                         "entry_rate_table": entry_rates,
                         "form": form,
                         "is_post": is_post,
-                        "prev_page": prev_page,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -693,7 +693,7 @@ def entry_rates(request):
                 "entry_rate_table": entry_rates,
                 "form": form,
                 "is_post": is_post,
-                "prev_page": prev_page,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
 
@@ -709,7 +709,7 @@ def exit_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
-        prev_page = request.session["prev_page"]
+        rate_change_origin_page = request.session["rate_change_origin_page"]
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -773,7 +773,7 @@ def exit_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
-                        "prev_page": prev_page,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -794,7 +794,7 @@ def exit_rates(request):
                     "exit_rate_table": exit_rates,
                     "form": form,
                     "is_post": is_post,
-                    "prev_page": prev_page,
+                    "rate_change_origin_page": rate_change_origin_page,
                 },
             )
 
@@ -813,7 +813,7 @@ def exit_rates(request):
                 "exit_rate_table": exit_rates,
                 "form": form,
                 "is_post": is_post,
-                "prev_page": prev_page,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
     else:
@@ -828,7 +828,7 @@ def transition_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
-        prev_page = request.session["prev_page"]
+        rate_change_origin_page = request.session["rate_change_origin_page"]
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
@@ -892,7 +892,7 @@ def transition_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
-                        "prev_page": prev_page,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -913,7 +913,7 @@ def transition_rates(request):
                     "transition_rate_table": transition_rates,
                     "form": form,
                     "is_post": is_post,
-                    "prev_page": prev_page,
+                    "rate_change_origin_page": rate_change_origin_page,
                 },
             )
 
@@ -932,7 +932,7 @@ def transition_rates(request):
                 "transition_rate_table": transition_rates,
                 "form": form,
                 "is_post": is_post,
-                "prev_page": prev_page,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
     else:
@@ -949,7 +949,7 @@ def adjusted(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
         # Used to return user to this page when accessing rate change pages
-        request.session["prev_page"] = "adjusted"
+        request.session["rate_change_origin_page"] = "adjusted"
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)

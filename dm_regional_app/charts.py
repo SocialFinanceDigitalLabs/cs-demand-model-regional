@@ -2,16 +2,14 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-
 from dm_regional_app.utils import (
     add_ci_traces,
     add_traces,
     apply_variances,
     care_type_organiser,
     rate_table_sort,
-    remove_age_transitions
+    remove_age_transitions,
 )
-
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
 from ssda903.multinomial import Prediction
@@ -421,7 +419,7 @@ def compare_forecast(
     # visualise prediction using unstacked dataframe
     fig = go.Figure()
 
-    # Display confidence interval as filled shape
+    # Display adjusted confidence interval as filled shape
     fig.add_trace(
         go.Scatter(
             x=df_df_ci["date"],
@@ -447,7 +445,7 @@ def compare_forecast(
     # Display confidence interval as filled shape
     fig.add_trace(
         go.Scatter(
-            x=df_df_ci["date"],
+            x=df_ci["date"],
             y=df_ci["lower"],
             line_color="rgba(255,255,255,0)",
             name="Base confidence interval",
@@ -457,8 +455,8 @@ def compare_forecast(
 
     fig.add_trace(
         go.Scatter(
-            x=df_df_ci["date"],
-            y=df_df_ci["upper"],
+            x=df_ci["date"],
+            y=df_ci["upper"],
             fill="tonexty",
             fillcolor="rgba(0,176,246,0.2)",
             line_color="rgba(255,255,255,0)",
