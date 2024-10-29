@@ -120,7 +120,7 @@ def costs(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
         # Used to return user to this page when accessing rate change pages
-        request.session["rate_change_origin_page"] = "costs"
+        request.session["rate_change_origin_page"] = reverse("costs")
 
         if request.method == "POST":
             form = InflationForm(request.POST)
@@ -949,7 +949,7 @@ def adjusted(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
         # Used to return user to this page when accessing rate change pages
-        request.session["rate_change_origin_page"] = "adjusted"
+        request.session["rate_change_origin_page"] = reverse("adjusted")
 
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
