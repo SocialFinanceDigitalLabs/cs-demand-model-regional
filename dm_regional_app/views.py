@@ -67,8 +67,8 @@ def router_handler(request):
 
     historic_filters = {
         "la": [],
-        "placement_types": [],
-        "age_bins": [],
+        "ethnicity": [],
+        "sex": "all",
         "uasc": "all",
     }
 
@@ -151,13 +151,14 @@ def costs(request):
 
         stats = PopulationStats(historic_data)
 
-        placement_proportions, historic_population = stats.placement_proportions(
-            **session_scenario.prediction_parameters
-        )
+        (
+            historic_placement_proportions,
+            historic_population,
+        ) = stats.placement_proportions(**session_scenario.prediction_parameters)
 
         costs = convert_population_to_cost(
             prediction,
-            placement_proportions,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
             **session_scenario.inflation_parameters,
@@ -173,7 +174,7 @@ def costs(request):
 
         base_costs = convert_population_to_cost(
             base_prediction,
-            placement_proportions,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             **session_scenario.inflation_parameters,
         )
@@ -189,7 +190,7 @@ def costs(request):
 
         area_costs = area_chart_cost(historic_costs, costs)
 
-        proportions = placement_proportion_table(placement_proportions, costs)
+        proportions = placement_proportion_table(historic_placement_proportions, costs)
 
         summary_table = summary_tables(costs.summary_table)
 
@@ -367,18 +368,19 @@ def placement_proportions(request):
 
         stats = PopulationStats(historic_data)
 
-        placement_proportions, historic_population = stats.placement_proportions(
-            **session_scenario.prediction_parameters
-        )
+        (
+            historic_placement_proportions,
+            historic_population,
+        ) = stats.placement_proportions(**session_scenario.prediction_parameters)
 
         costs = convert_population_to_cost(
             prediction,
-            placement_proportions,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
 
-        proportions = placement_proportion_table(placement_proportions, costs)
+        proportions = placement_proportion_table(historic_placement_proportions, costs)
 
         if request.method == "POST":
             form = DynamicForm(
@@ -960,8 +962,7 @@ def adjusted(request):
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
@@ -986,8 +987,7 @@ def adjusted(request):
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
 
                 historic_data = apply_filters(
@@ -1001,8 +1001,7 @@ def adjusted(request):
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
@@ -1106,8 +1105,7 @@ def prediction(request):
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
@@ -1131,8 +1129,7 @@ def prediction(request):
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
 
                 historic_data = apply_filters(
@@ -1146,8 +1143,7 @@ def prediction(request):
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
@@ -1209,8 +1205,7 @@ def historic_data(request):
             form = HistoricDataFilter(
                 request.POST,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
 
             if form.is_valid():
@@ -1231,8 +1226,7 @@ def historic_data(request):
             form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             data = apply_filters(datacontainer.enriched_view, form.initial)
 
