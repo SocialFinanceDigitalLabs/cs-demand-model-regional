@@ -1307,9 +1307,9 @@ def validate_with_prediction(files):
             reference_end_date=datacontainer.end_date,
         )
     except ValueError:
-        return False, "At least one file is invalid."
+        return None, "At least one file is invalid."
     else:
-        return True, "Successful prediction created."
+        return datacontainer, "Successful prediction created."
 
 
 @user_is_admin
@@ -1327,9 +1327,13 @@ def upload_data_source(request):
     if request.method == "POST":
         if form.is_valid():
             files = [files for files in request.FILES.values()]
-            success, msg = validate_with_prediction(files)
-            if success:
-                DataSource.objects.create(uploaded_by=request.user)
+            datacontainer, msg = validate_with_prediction(files)
+            if datacontainer:
+                DataSource.objects.create(
+                    uploaded_by=request.user,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
                 for filename, file in request.FILES.items():
                     full_path = Path(settings.DATA_SOURCE, f"{filename}.csv")
                     # Overwrite files if they already exist
