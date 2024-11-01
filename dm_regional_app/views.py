@@ -70,66 +70,6 @@ def home(request):
 
 
 @login_required
-def router_handler(request):
-    # get next url page
-    next_url_name = request.GET.get("next_url_name")
-
-    # initialise a SessionScenario when the user is coming from a direct link to any of the views
-    session_scenario_id = request.session.get("session_scenario_id", None)
-    current_user = request.user
-
-    # read data
-    datacontainer = read_data(source=settings.DATA_SOURCE)
-
-    historic_filters = {
-        "la": [],
-        "ethnicity": [],
-        "sex": "all",
-        "uasc": "all",
-    }
-
-    prediction_parameters = {
-        "reference_start_date": datacontainer.start_date,
-        "reference_end_date": datacontainer.end_date,
-        "prediction_start_date": None,
-        "prediction_end_date": None,
-    }
-    historic_stock = {
-        "population": {},
-        "base_rates": [],
-    }
-    adjusted_costs = None
-
-    adjusted_rates = None
-
-    adjusted_proportions = None
-
-    inflation_parameters = {
-        "inflation": False,
-        "inflation_rate": 0.1,
-    }
-
-    # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
-    session_scenario, created = SessionScenario.objects.get_or_create(
-        id=session_scenario_id,
-        defaults={
-            "user_id": current_user.id,
-            "historic_filters": historic_filters,
-            "prediction_parameters": prediction_parameters,
-            "historic_stock": historic_stock,
-            "adjusted_costs": adjusted_costs,
-            "adjusted_rates": adjusted_rates,
-            "adjusted_proportions": adjusted_proportions,
-            "inflation_parameters": inflation_parameters,
-        },
-    )
-
-    # update the request session
-    request.session["session_scenario_id"] = session_scenario.pk
-    return redirect(next_url_name)
-
-
-@login_required
 def costs(request):
     pk = request.session["session_scenario_id"]
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
