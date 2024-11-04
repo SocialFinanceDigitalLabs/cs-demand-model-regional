@@ -162,10 +162,16 @@ class PopulationStats:
 
     @lru_cache(maxsize=5)
     def raw_transition_rates(self, start_date: date, end_date: date):
+        all_possible_transitions = self.transition_combinations
+
+        df = pd.DataFrame(columns=all_possible_transitions)
+        df.loc[0] = pd.NA
+        df.columns = pd.MultiIndex.from_tuples(
+            df.columns, names=["start_bin", "end_bin"]
+        )
+
         # Ensure we can calculate the transition rates by aligning the dataframes
         stock = self.stock.truncate(before=start_date, after=end_date)
-
-        all_possible_transitions = self.transition_combinations
 
         stock.columns.name = "start_bin"
         transitions = self.transitions.truncate(before=start_date, after=end_date)
@@ -173,12 +179,15 @@ class PopulationStats:
         # Calculate the transition rates
         stock, transitions = stock.align(transitions)
         transition_rates = transitions / stock.shift(1).fillna(method="bfill")
+
+        transition_rates = pd.concat([transition_rates, df], sort=False)
+
         transition_rates = transition_rates.fillna(0)
 
         # Use the mean rates
         transition_rates = transition_rates.mean(axis=0)
         transition_rates.name = "transition_rate"
-
+        transition_rates.to_csv("out.csv")
         return transition_rates
 
     @property
