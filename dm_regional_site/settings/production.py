@@ -1,6 +1,18 @@
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
 from .base import *  # NOQA
 
 # heroku configuration - found on https://github.com/heroku/python-getting-started
+
+SENTRY_DSN = config("SENTRY_DSN", default=None)
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=0.1,
+    send_default_pii=True,
+)
 
 # Use WhiteNoise's runserver implementation instead of the Django default, for dev-prod parity.
 INSTALLED_APPS = ["whitenoise.runserver_nostatic"] + INSTALLED_APPS + ["storages"]
