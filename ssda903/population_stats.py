@@ -1,5 +1,6 @@
 from datetime import date
 from functools import lru_cache
+from itertools import product
 
 import pandas as pd
 
@@ -88,10 +89,84 @@ class PopulationStats:
 
         return transitions
 
+    @property
+    def transition_combinations(self):
+        """
+        Used to calculate possible transitions with respect to age and placement
+        """
+
+        def get_number(data):
+            """
+            Gets the first age from age bins to sort the list of age bins
+            """
+            return int(data.split(" ")[0])
+
+        def age_check(transition, bins):
+            """
+            Takes the sorted age bins and transitions and ensures the transitions are possible
+            """
+            beginning_age = transition[0].split("-")[0].strip()
+            end_age = transition[1].split("-")[0].strip()
+
+            beginning_place = transition[0].split("-")[-1].strip()
+            end_place = transition[1].split("-")[-1].strip()
+
+            start_bin_loc = bins.index(beginning_age)
+            end_bin_loc = bins.index(end_age)
+
+            # A transition is valid IFF the ages are the same and the placement is different
+            # OR if the end age bin is one older than the start age bin, regardless of placement
+            # This does not account for impsssible placements such as 5-10 supported
+            if (beginning_age == end_age) & (beginning_place != end_place):
+                return True
+            elif end_bin_loc == start_bin_loc + 1:
+                return True
+            else:
+                return False
+
+        transitions = self.df.copy()
+
+        beginning_placements = transitions["placement_type"].unique()
+        end_placements = transitions["placement_type_after"].unique()
+
+        age_bins = list(
+            set(transitions["age_bin"].unique())
+            | set(transitions["end_age_bin"].unique())
+        )
+        age_bins.remove(None)
+        age_bins = sorted(age_bins, key=get_number)
+
+        beginning_placement_product = list(product(beginning_placements, age_bins))
+        all_beginning_placements = [
+            f"{age} - {placement}" for placement, age in beginning_placement_product
+        ]
+
+        end_placement_product = list(product(end_placements, age_bins))
+        all_end_placements = [
+            f"{age} - {placement}" for placement, age in end_placement_product
+        ]
+
+        all_transitions = list(product(all_beginning_placements, all_end_placements))
+
+        transition_possibility = [
+            age_check(transition, age_bins) for transition in all_transitions
+        ]
+
+        possible_transitions = [
+            transition
+            for transition, possibility in zip(all_transitions, transition_possibility)
+            if possibility == True
+        ]
+
+        return possible_transitions
+
     @lru_cache(maxsize=5)
     def raw_transition_rates(self, start_date: date, end_date: date):
         # Ensure we can calculate the transition rates by aligning the dataframes
         stock = self.stock.truncate(before=start_date, after=end_date)
+
+        all_possible_transitions = self.transition_combinations
+
         stock.columns.name = "start_bin"
         transitions = self.transitions.truncate(before=start_date, after=end_date)
 
