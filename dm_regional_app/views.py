@@ -161,6 +161,9 @@ def costs(request):
     year_one_cost_base = number_format(year_one_cost_base)
     year_one_cost_difference = number_format(year_one_cost_difference)
 
+    transition_rate_table = None
+    exit_rate_table = None
+    entry_rate_table = None
     if session_scenario.adjusted_rates is not None:
         transition_rate_table = transition_rate_changes(
             base_prediction.transition_rates, prediction.transition_rates
@@ -168,16 +171,11 @@ def costs(request):
         exit_rate_table = exit_rate_changes(
             base_prediction.transition_rates, prediction.transition_rates
         )
-    else:
-        transition_rate_table = None
-        exit_rate_table = None
 
     if session_scenario.adjusted_numbers is not None:
         entry_rate_table = entry_rate_changes(
             base_prediction.entry_rates, prediction.entry_rates
         )
-    else:
-        entry_rate_table = None
 
     return render(
         request,
