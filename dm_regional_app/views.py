@@ -51,7 +51,23 @@ from ssda903.reader import read_data, read_local_data
 
 
 def home(request):
-    return render(request, "dm_regional_app/views/home.html")
+    try:
+        most_recent_datasource = DataSource.objects.latest("uploaded")
+        start_date = most_recent_datasource.start_date.date()
+        end_date = most_recent_datasource.end_date.date()
+
+    except DataSource.DoesNotExist:
+        start_date = None
+        end_date = None
+
+    return render(
+        request,
+        "dm_regional_app/views/home.html",
+        {
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+    )
 
 
 @login_required
