@@ -1,9 +1,10 @@
 import logging
 import os
 from contextlib import contextmanager
-from typing import BinaryIO
+from typing import BinaryIO, List
 
 from django.core.files.storage import Storage
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 from ._api import DataFile, DataStore, Metadata
 
@@ -33,3 +34,23 @@ class StorageDataStore(DataStore):
     def open(self, file: DataFile) -> BinaryIO:
         with self.__storage.open(file.metadata.path, "rb") as f:
             yield f
+
+
+class LocalDataStore(DataStore):
+    """DataStore implementation for files in memory."""
+
+    def __init__(self, files: List[InMemoryUploadedFile]):
+        self.__files = files
+
+    @property
+    def files(self) -> DataFile:
+        for file in self.__files:
+            yield DataFile(
+                name=file.name,
+                metadata=Metadata(name=file.name, size=file.size),
+                contents=file,
+            )
+
+    @contextmanager
+    def open(self, file: DataFile) -> BinaryIO:
+        yield file.contents

@@ -1,0 +1,43 @@
+{
+    "name": "CS Demand Model Regional",
+    "keywords": [
+      "Social Finance",
+      "Demand Model",
+      "Children Services"
+    ],
+    "repository": "https://github.com/SocialFinanceDigitalLabs/cs-demand-model-regional",
+    "success_url": "/",
+    "env": {
+      "DJANGO_SECRET_KEY": {
+        "description": "The Django SECRET_KEY - do not share this value",
+        "generator": "secret"
+      },
+      "DISABLE_POETRY_CREATE_RUNTIME_FILE": {
+        "description": "We provide a specific python version in runtime.txt.",
+        "value": "1"
+      },
+      "POETRY_VERSION": {
+        "description": "poetry version",
+        "required": true,
+        "value": "1.2.2"
+      }
+    },
+    "formation": {
+      "worker": {
+        "quantity": 1
+      },
+      "web": {
+        "quantity": 1
+      }
+    },
+    "addons": ["heroku-postgresql"],
+    "buildpacks": [
+      {
+        "url": "https://github.com/SocialFinanceDigitalLabs/python-poetry-buildpack.git"
+      },
+      {
+        "url": "heroku/python"
+      }
+    ],
+    "stack": "heroku-22"
+  }

@@ -127,3 +127,7 @@ dmypy.json
 
 
 .vscode/
+
+datauploads/
+
+.terraform

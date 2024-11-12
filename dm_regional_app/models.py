@@ -59,3 +59,10 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     show_instructions = models.BooleanField(default=True)
     la = models.CharField(max_length=100, null=True, blank=True)
+
+
+class DataSource(models.Model):
+    uploaded = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)

@@ -1,8 +1,10 @@
+from pathlib import Path
+
 import pandas as pd
-from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.files.storage import default_storage
 from django.forms.models import model_to_dict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -25,22 +27,27 @@ from dm_regional_app.charts import (
     transition_rate_table,
     year_one_costs,
 )
+from dm_regional_app.decorators import user_is_admin
 from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
+    DataSourceUploadForm,
     DynamicForm,
     HistoricDataFilter,
     InflationForm,
     PredictFilter,
     SavedScenarioForm,
 )
-from dm_regional_app.models import SavedScenario, SessionScenario
+from dm_regional_app.models import DataSource, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
-from dm_regional_app.utils import apply_filters, number_format
+from dm_regional_app.utils import apply_filters, number_format, save_data_if_not_empty
 from ssda903.config import PlacementCategories
-from ssda903.costs import convert_population_to_cost
+from ssda903.costs import (
+    convert_historic_population_to_cost,
+    convert_population_to_cost,
+)
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
-from ssda903.reader import read_data
+from ssda903.reader import read_data, read_local_data
 
 
 def home(request):
@@ -61,8 +68,8 @@ def router_handler(request):
 
     historic_filters = {
         "la": [],
-        "placement_types": [],
-        "age_bins": [],
+        "ethnicity": [],
+        "sex": "all",
         "uasc": "all",
     }
 
@@ -113,6 +120,9 @@ def costs(request):
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
+        # Used to return user to this page when accessing rate change pages
+        request.session["rate_change_origin_page"] = reverse("costs")
+
         if request.method == "POST":
             form = InflationForm(request.POST)
             if form.is_valid():
@@ -140,19 +150,23 @@ def costs(request):
             number_adjustment=session_scenario.adjusted_numbers,
         )
 
+        stats = PopulationStats(historic_data)
+
+        (
+            historic_placement_proportions,
+            historic_population,
+        ) = stats.placement_proportions(**session_scenario.prediction_parameters)
+
         costs = convert_population_to_cost(
             prediction,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
             **session_scenario.inflation_parameters,
         )
 
-        stats = PopulationStats(historic_data)
-
-        historic_costs = convert_population_to_cost(
-            stats,
-            session_scenario.adjusted_costs,
-            session_scenario.adjusted_proportions,
+        historic_costs = convert_historic_population_to_cost(
+            historic_population, session_scenario.adjusted_costs
         )
 
         base_prediction = predict(
@@ -161,6 +175,7 @@ def costs(request):
 
         base_costs = convert_population_to_cost(
             base_prediction,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             **session_scenario.inflation_parameters,
         )
@@ -172,11 +187,11 @@ def costs(request):
             }
         )
 
-        area_numbers = area_chart_population(historic_costs, costs)
+        area_numbers = area_chart_population(historic_population, costs)
 
         area_costs = area_chart_cost(historic_costs, costs)
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(historic_placement_proportions, costs)
 
         summary_table = summary_tables(costs.summary_table)
 
@@ -323,6 +338,19 @@ def save_scenario(request):
 
 
 @login_required
+def clear_proportion_adjustments(request):
+    if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_proportions = None
+        session_scenario.save()
+        messages.success(request, "Proportion adjustments cleared.")
+    return redirect(next_url_name)
+
+
+@login_required
 def placement_proportions(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
@@ -339,13 +367,21 @@ def placement_proportions(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        (
+            historic_placement_proportions,
+            historic_population,
+        ) = stats.placement_proportions(**session_scenario.prediction_parameters)
+
         costs = convert_population_to_cost(
             prediction,
+            historic_placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
 
-        proportions = placement_proportion_table(costs)
+        proportions = placement_proportion_table(historic_placement_proportions, costs)
 
         if request.method == "POST":
             form = DynamicForm(
@@ -365,8 +401,10 @@ def placement_proportions(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_proportions = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    if isinstance(data, (pd.DataFrame, pd.Series)) and not data.empty:
+                        session_scenario.adjusted_proportions = data
+                        session_scenario.save()
 
                 return redirect("costs")
 
@@ -427,8 +465,15 @@ def weekly_costs(request):
             data=historic_data, **session_scenario.prediction_parameters
         )
 
+        stats = PopulationStats(historic_data)
+
+        placement_proportions, historic_population = stats.placement_proportions(
+            **session_scenario.prediction_parameters
+        )
+
         costs = convert_population_to_cost(
             prediction,
+            placement_proportions,
             session_scenario.adjusted_costs,
             session_scenario.adjusted_proportions,
         )
@@ -455,8 +500,8 @@ def weekly_costs(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_costs = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_costs")
 
                 return redirect("costs")
 
@@ -548,6 +593,8 @@ def entry_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        rate_change_origin_page = request.session["rate_change_origin_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -580,8 +627,8 @@ def entry_rates(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_numbers = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
                 stats = PopulationStats(historic_data)
 
@@ -610,6 +657,7 @@ def entry_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
             else:
@@ -629,6 +677,7 @@ def entry_rates(request):
                         "entry_rate_table": entry_rates,
                         "form": form,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -647,8 +696,10 @@ def entry_rates(request):
                 "entry_rate_table": entry_rates,
                 "form": form,
                 "is_post": is_post,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
+
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
@@ -661,6 +712,8 @@ def exit_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        rate_change_origin_page = request.session["rate_change_origin_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -693,8 +746,8 @@ def exit_rates(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_rates = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
                 stats = PopulationStats(historic_data)
 
@@ -723,6 +776,7 @@ def exit_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -743,6 +797,7 @@ def exit_rates(request):
                     "exit_rate_table": exit_rates,
                     "form": form,
                     "is_post": is_post,
+                    "rate_change_origin_page": rate_change_origin_page,
                 },
             )
 
@@ -761,6 +816,7 @@ def exit_rates(request):
                 "exit_rate_table": exit_rates,
                 "form": form,
                 "is_post": is_post,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
     else:
@@ -775,6 +831,8 @@ def transition_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        rate_change_origin_page = request.session["rate_change_origin_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -807,8 +865,8 @@ def transition_rates(request):
                     session_scenario.save()
 
                 else:
-                    session_scenario.adjusted_rates = data
-                    session_scenario.save()
+                    # Check that the dataframe or series saved in the form is not empty, then save
+                    save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
                 stats = PopulationStats(historic_data)
 
@@ -837,6 +895,7 @@ def transition_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -857,6 +916,7 @@ def transition_rates(request):
                     "transition_rate_table": transition_rates,
                     "form": form,
                     "is_post": is_post,
+                    "rate_change_origin_page": rate_change_origin_page,
                 },
             )
 
@@ -875,6 +935,7 @@ def transition_rates(request):
                 "transition_rate_table": transition_rates,
                 "form": form,
                 "is_post": is_post,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
     else:
@@ -889,6 +950,10 @@ def adjusted(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
+        # Used to return user to this page when accessing rate change pages
+        request.session["rate_change_origin_page"] = reverse("adjusted")
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -898,8 +963,7 @@ def adjusted(request):
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
@@ -924,8 +988,7 @@ def adjusted(request):
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
 
                 historic_data = apply_filters(
@@ -939,8 +1002,7 @@ def adjusted(request):
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
@@ -968,24 +1030,48 @@ def adjusted(request):
 
             stats = PopulationStats(historic_data)
 
-            # Call predict function with default dates
-            prediction = predict(
-                data=historic_data,
-                **session_scenario.prediction_parameters,
-                rate_adjustment=session_scenario.adjusted_rates,
-                number_adjustment=session_scenario.adjusted_numbers,
+            original_prediction = predict(
+                data=historic_data, **session_scenario.prediction_parameters
             )
 
-            # build chart
-            chart = prediction_chart(
-                stats, prediction, **session_scenario.prediction_parameters
+            if (
+                session_scenario.adjusted_numbers is not None
+                or session_scenario.adjusted_rates is not None
+            ):
+                stats = PopulationStats(historic_data)
+
+                adjusted_prediction = predict(
+                    data=historic_data,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers,
+                )
+
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    original_prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters,
+                )
+
+                current_prediction = adjusted_prediction
+
+            else:
+                # build chart
+                chart = prediction_chart(
+                    stats, original_prediction, **session_scenario.prediction_parameters
+                )
+
+                current_prediction = original_prediction
+
+            transition_rates = transition_rate_table(
+                current_prediction.transition_rates
             )
 
-            transition_rates = transition_rate_table(prediction.transition_rates)
+            exit_rates = exit_rate_table(current_prediction.transition_rates)
 
-            exit_rates = exit_rate_table(prediction.transition_rates)
-
-            entry_rates = entry_rate_table(prediction.entry_rates)
+            entry_rates = entry_rate_table(current_prediction.entry_rates)
 
         return render(
             request,
@@ -1014,15 +1100,13 @@ def prediction(request):
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
-        print(session_scenario.user.profile.la)
 
         if request.method == "POST":
             if "uasc" in request.POST:
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
@@ -1046,8 +1130,7 @@ def prediction(request):
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
-                    placement_types=datacontainer.unique_placement_types,
-                    age_bins=datacontainer.unique_age_bins,
+                    ethnicity=datacontainer.unique_ethnicity,
                 )
 
                 historic_data = apply_filters(
@@ -1061,8 +1144,7 @@ def prediction(request):
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
@@ -1124,8 +1206,7 @@ def historic_data(request):
             form = HistoricDataFilter(
                 request.POST,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
 
             if form.is_valid():
@@ -1159,8 +1240,7 @@ def historic_data(request):
             form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
-                placement_types=datacontainer.unique_placement_types,
-                age_bins=datacontainer.unique_age_bins,
+                ethnicity=datacontainer.unique_ethnicity,
             )
             data = apply_filters(datacontainer.enriched_view, form.initial)
 
@@ -1217,7 +1297,6 @@ def scenarios(request):
 
     table = SavedScenarioTable(filtered_scenarios)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-    print(table)
 
     return render(
         request,
@@ -1235,4 +1314,58 @@ def scenario_detail(request, pk):
     scenario = get_object_or_404(SavedScenario, pk=pk, user=request.user)
     return render(
         request, "dm_regional_app/views/scenario_detail.html", {"scenario": scenario}
+    )
+
+
+def validate_with_prediction(files):
+    """Validate files creating a prediction."""
+    try:
+        datacontainer = read_local_data(files)
+        predict(
+            data=datacontainer.enriched_view,
+            reference_start_date=datacontainer.start_date,
+            reference_end_date=datacontainer.end_date,
+        )
+    except ValueError:
+        return None, "At least one file is invalid."
+    else:
+        return datacontainer, "Successful prediction created."
+
+
+@user_is_admin
+def upload_data_source(request):
+    """Allow staff users to upload data.
+
+    3 files must be uploaded: `episodes`, `header`, and `uasc`. Files must be of type `.csv`.
+    A prediction will be run to validate the files. If the prediction fails, the files will
+    not be successfully uploaded.
+    """
+    form = DataSourceUploadForm(request.POST or None, request.FILES or None)
+    uploads = DataSource.objects.select_related("uploaded_by").order_by("-uploaded")[
+        :10
+    ]
+    if request.method == "POST":
+        if form.is_valid():
+            files = [files for files in request.FILES.values()]
+            datacontainer, msg = validate_with_prediction(files)
+            if datacontainer:
+                DataSource.objects.create(
+                    uploaded_by=request.user,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
+                for filename, file in request.FILES.items():
+                    full_path = Path(settings.DATA_SOURCE, f"{filename}.csv")
+                    # Overwrite files if they already exist
+                    if default_storage.exists(full_path):
+                        default_storage.delete(full_path)
+                    default_storage.save(full_path, file)
+                messages.success(request, "Data uploaded successfully")
+            else:
+                messages.error(request, f"Data not uploaded successfully: {msg}")
+            return redirect("upload_data")
+    return render(
+        request,
+        "dm_regional_app/views/upload_data_source.html",
+        {"form": form, "uploads": uploads},
     )

@@ -5,17 +5,6 @@
 
 {% block content %}
 
-{% if messages %}
-    <div class="container mt-4">
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    </div>
-{% endif %}
-
 <br>
     <h1>Adjust entry rates</h1>
     <br>
@@ -33,7 +22,7 @@
                 {% convert_data_frame_to_html_table_plus_form entry_rate_table form "Rate multiplication" %}
                 <tr>
                 <td colspan="3">
-                    <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="adjusted">Back</a></div>
+                    <div class="p-2 bd-highlight"><a class="btn btn-secondary" href={{rate_change_origin_page}}>Back</a></div>
                 </td>
                 <td>
                     <div class="p-2 bd-highlight"><button type="submit" class="btn btn-primary">Save</button></div>
@@ -52,9 +41,15 @@
 </div>
 
 <div class="d-flex bd-highlight mb-3">
-    <div class="p-2 bd-highlight"><a class="btn btn-warning" href="{% url 'clear_rates' %}?next_url_name=adjusted">Clear all rate adjustments</a></div>
-    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=adjusted">Return to adjusted forecast</a></div>
-    </div>
+    <div class="p-2 bd-highlight"><a class="btn btn-warning" href="{% url 'clear_rates' %}?next_url_name={{rate_change_origin_page}}">Clear all rate adjustments</a></div>
+    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name={{rate_change_origin_page}}">
+        {% if rate_change_origin_page == '/costs' %}
+            Return to projecting spend
+        {% elif rate_change_origin_page == '/adjusted' %}
+            Return to adjust forecast
+        {% endif %}
+    </a></div>
+</div>
 
 {% endif %}
 

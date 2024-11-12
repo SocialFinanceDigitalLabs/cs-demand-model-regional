@@ -6,6 +6,7 @@ from enum import Enum
 from typing import BinaryIO, Iterator
 
 import pandas as pd
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 class TableType(Enum):
@@ -25,6 +26,7 @@ class Metadata:
 class DataFile:
     name: str
     metadata: Metadata
+    contents: InMemoryUploadedFile = None
 
 
 class DataStore(ABC):
