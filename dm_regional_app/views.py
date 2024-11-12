@@ -119,6 +119,9 @@ def costs(request):
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
+        # Used to return user to this page when accessing rate change pages
+        request.session["rate_change_origin_page"] = reverse("costs")
+
         if request.method == "POST":
             form = InflationForm(request.POST)
             if form.is_valid():
@@ -589,6 +592,8 @@ def entry_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        rate_change_origin_page = request.session["rate_change_origin_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -651,6 +656,7 @@ def entry_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
             else:
@@ -670,6 +676,7 @@ def entry_rates(request):
                         "entry_rate_table": entry_rates,
                         "form": form,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -688,8 +695,10 @@ def entry_rates(request):
                 "entry_rate_table": entry_rates,
                 "form": form,
                 "is_post": is_post,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
+
     else:
         next_url_name = "router_handler"
         # Construct the URL for the router handler view and append the next_url_name as a query parameter
@@ -702,6 +711,8 @@ def exit_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        rate_change_origin_page = request.session["rate_change_origin_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -764,6 +775,7 @@ def exit_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -784,6 +796,7 @@ def exit_rates(request):
                     "exit_rate_table": exit_rates,
                     "form": form,
                     "is_post": is_post,
+                    "rate_change_origin_page": rate_change_origin_page,
                 },
             )
 
@@ -802,6 +815,7 @@ def exit_rates(request):
                 "exit_rate_table": exit_rates,
                 "form": form,
                 "is_post": is_post,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
     else:
@@ -816,6 +830,8 @@ def transition_rates(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        rate_change_origin_page = request.session["rate_change_origin_page"]
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -878,6 +894,7 @@ def transition_rates(request):
                         "form": form,
                         "chart": chart,
                         "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
                     },
                 )
 
@@ -898,6 +915,7 @@ def transition_rates(request):
                     "transition_rate_table": transition_rates,
                     "form": form,
                     "is_post": is_post,
+                    "rate_change_origin_page": rate_change_origin_page,
                 },
             )
 
@@ -916,6 +934,7 @@ def transition_rates(request):
                 "transition_rate_table": transition_rates,
                 "form": form,
                 "is_post": is_post,
+                "rate_change_origin_page": rate_change_origin_page,
             },
         )
     else:
@@ -930,6 +949,10 @@ def adjusted(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
+        # Used to return user to this page when accessing rate change pages
+        request.session["rate_change_origin_page"] = reverse("adjusted")
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
@@ -1010,7 +1033,10 @@ def adjusted(request):
                 data=historic_data, **session_scenario.prediction_parameters
             )
 
-            if session_scenario.adjusted_numbers is not None or session_scenario.adjusted_rates is not None:
+            if (
+                session_scenario.adjusted_numbers is not None
+                or session_scenario.adjusted_rates is not None
+            ):
                 stats = PopulationStats(historic_data)
 
                 adjusted_prediction = predict(
@@ -1281,9 +1307,9 @@ def validate_with_prediction(files):
             reference_end_date=datacontainer.end_date,
         )
     except ValueError:
-        return False, "At least one file is invalid."
+        return None, "At least one file is invalid."
     else:
-        return True, "Successful prediction created."
+        return datacontainer, "Successful prediction created."
 
 
 @user_is_admin
@@ -1301,9 +1327,13 @@ def upload_data_source(request):
     if request.method == "POST":
         if form.is_valid():
             files = [files for files in request.FILES.values()]
-            success, msg = validate_with_prediction(files)
-            if success:
-                DataSource.objects.create(uploaded_by=request.user)
+            datacontainer, msg = validate_with_prediction(files)
+            if datacontainer:
+                DataSource.objects.create(
+                    uploaded_by=request.user,
+                    start_date=datacontainer.start_date,
+                    end_date=datacontainer.end_date,
+                )
                 for filename, file in request.FILES.items():
                     full_path = Path(settings.DATA_SOURCE, f"{filename}.csv")
                     # Overwrite files if they already exist
