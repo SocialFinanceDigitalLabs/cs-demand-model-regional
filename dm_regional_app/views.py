@@ -1198,11 +1198,15 @@ def historic_data(request):
     if "session_scenario_id" in request.session:
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
+
         # read data
         datacontainer = read_data(source=settings.DATA_SOURCE)
 
+        start_date = datacontainer.start_date
+        end_date = datacontainer.end_date
+
         if request.method == "POST":
-            # initialize form with data
+            # initialise form with data
             form = HistoricDataFilter(
                 request.POST,
                 la=datacontainer.unique_las,
@@ -1218,35 +1222,18 @@ def historic_data(request):
 
                 data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
 
-                # # Get start_date and end_date from form.cleaned_data
-                # start_date = form.cleaned_data["start_date"]
-                # end_date = form.cleaned_data["end_date"]
-                start_date = datacontainer.start_date
-                end_date = datacontainer.end_date
-
             else:
-                # If the form is not valid, use default dates from datacontainer
+                # use default data if form is not valid
                 data = datacontainer.enriched_view
 
-                # get datacontainer dates
-                start_date = datacontainer.start_date
-                end_date = datacontainer.end_date
-
         else:
-            # read data
-            datacontainer = read_data(source=settings.DATA_SOURCE)
-
-            # initialize form with default dates
+            # initialise form with default dates
             form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
                 ethnicity=datacontainer.unique_ethnicity,
             )
             data = apply_filters(datacontainer.enriched_view, form.initial)
-
-            # get datacontainer dates
-            start_date = form.initial.get("start_date", datacontainer.start_date)
-            end_date = form.initial.get("end_date", datacontainer.end_date)
 
         entry_into_care_count = data.loc[
             data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label
@@ -1257,7 +1244,7 @@ def historic_data(request):
 
         stats = PopulationStats(data)
 
-        chart = historic_chart(stats)  # consider name revision
+        chart = historic_chart(stats)
         plmt_starts_chart = placement_starts_chart(stats, start_date, end_date)
 
         return render(
