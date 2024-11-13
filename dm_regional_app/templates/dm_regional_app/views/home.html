@@ -1,9 +1,9 @@
 {% extends "dm_regional_app/base.html" %}
 {% block content %}
-    {% if not user.is_authenticated %}
-        {% include "dm_regional_app/includes/guest_home.html" %}
-    {% elif user.is_authenticated %}
+    {% if user.is_authenticated %}
         {% include "dm_regional_app/includes/authenticated_home.html" %}
+    {% else %}
+        {% include "dm_regional_app/includes/guest_home.html" %}
     {% endif %}
 
 {% endblock %}
