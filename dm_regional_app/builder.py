@@ -23,6 +23,7 @@ class Builder:
         email: Optional[str] = None,
         password: Optional[str] = None,
         superuser: Optional[bool] = False,
+        force_password_update: Optional[bool] = False,
         **kwargs,
     ) -> User:
         password = make_password(password or DEFAULT_PASSWORD)
@@ -31,6 +32,7 @@ class Builder:
             last_name=last_name or self.fake.last_name(),
             email=email or self.fake.email(),
             password=password,
+            force_password_update=force_password_update,
         )
         if superuser:
             user = User.objects.create_superuser(**data, **kwargs)
