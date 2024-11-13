@@ -96,7 +96,13 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_SESSION_REMEMBER = False
-ACCOUNT_FORMS = {"login": "accounts.forms.CustomLoginForm"}
+ACCOUNT_FORMS = {
+    "login": "accounts.forms.CustomLoginForm",
+    "change_password": "accounts.forms.CustomChangePasswordForm",
+}
+SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
 
 ROOT_URLCONF = "dm_regional_site.urls"
 X_FRAME_OPTIONS = "SAMEORIGIN"
