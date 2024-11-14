@@ -291,90 +291,114 @@ def historic_chart(data: PopulationStats) -> str:
 
 
 def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str):
-    data.df["DECOM"] = pd.to_datetime(data.df["DECOM"])
+    """
+    Outputs an html figure of placement counts over time from the stock in population stats
+    """
+    df_stats_data = data.df.copy()
+
     start_date, end_date = pd.to_datetime([start_date, end_date])
-    data.df["DECOM"] = data.df["DECOM"].dt.to_period("M").dt.to_timestamp()
+    df_stats_data["DECOM"] = (
+        df_stats_data["DECOM"].dt.to_period("M").dt.to_timestamp()
+    )  # requ format for plot timestamps (mths)
 
     # filter time-frame to form dates
-    df_filtered = data.df[
-        (data.df["DECOM"] >= start_date) & (data.df["DECOM"] <= end_date)
+    df_filtered = df_stats_data[
+        (df_stats_data["DECOM"] >= start_date) & (df_stats_data["DECOM"] <= end_date)
     ]
 
     # calculate placement duration (end_age - age)
-    df_filtered["placement_duration"] = df_filtered["end_age"] - df_filtered["age"]
-    # Create a range of all months to ensure we have complete months
-    all_months = pd.date_range(start=start_date, end=end_date, freq="M")
-
-    # Group by 'placement_type' and aggregate
-    df_entrants = (
-        df_filtered.groupby(
-            ["placement_type", pd.Grouper(key="DECOM", freq="M")]
-        )  # Group by month
-        .agg(count=("CHILD", "size"), avg_duration=("placement_duration", "mean"))
-        .reset_index()  # Reset index after grouping
+    # df_filtered["placement_duration"] = df_filtered["end_age"] - df_filtered["age"]
+    df_filtered.loc[:, "placement_duration"] = (
+        df_filtered["end_age"] - df_filtered["age"]
     )
 
+    # calc count and avg duration of each placement type
     df_entrants = (
-        df_entrants.set_index(["DECOM", "placement_type"])
-        .reindex(
-            pd.MultiIndex.from_product(
-                [all_months, df_entrants["placement_type"].unique()],
-                names=["DECOM", "placement_type"],
-            ),
-            fill_value=0,
-        )
+        df_filtered.groupby(["DECOM", "placement_type"])
+        .agg(count=("CHILD", "size"), avg_duration=("placement_duration", "mean"))
         .reset_index()
     )
 
-    # convert avg_duration yrs to more sensical wks (using 52.14 wks pa)
+    # convert avg_duration to weeks (52.14 weeks per year)
     df_entrants["avg_duration_weeks"] = (df_entrants["avg_duration"] * 52.14).round(2)
 
-    df_entrants["true_count"] = df_entrants["count"]
-    # min and max vals for y
-    min_count = df_entrants["true_count"].min()
-    max_count = df_entrants["true_count"].max()
+    # for each care type trace
+    colours = {
+        "Fostering": "rgba(159, 0, 160, 1)",  # purple
+        "Residential": "rgba(0, 160, 36, 1)",  # green
+        "Supported": "rgba(6, 0, 160, 1)",  # blue
+        "Other": "rgba(241, 0, 0, 1)",  # red
+        "Total": "rgba(0, 0, 0, 1)",  # black
+    }
 
-    # visualise
-    fig = px.line(
-        df_entrants,
-        y="count",
-        x="DECOM",
-        color="placement_type",
-        markers=True,
-        line_shape="spline",
-        labels={
-            "count": "Placements",
-            "DECOM": "Date",
-            "placement_type": "Placement Type",
-            "avg_duration_weeks": "Avg Duration (wks)",
-        },
-        # title="Placement starts per month by Placement Type",
-        hover_data={"true_count": True, "avg_duration_weeks": True},
-    )
+    fig = go.Figure()
 
+    # each placement type trace(incl. total)
+    for placement_type, colour in colours.items():
+        if placement_type == "Total":
+            # calc total summing across placement types
+            df_type = df_entrants.groupby("DECOM")["count"].sum().reset_index()
+            max_total_count = df_type[
+                "count"
+            ].max()  # used to constrain/coerce chart x boundary
+
+        else:
+            # filter individual placement type
+            df_type = df_entrants[df_entrants["placement_type"] == placement_type]
+
+        if not df_type.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=df_type["DECOM"],
+                    y=df_type["count"],
+                    mode="lines",
+                    name=placement_type,
+                    line=dict(color=colour, width=1.5, dash="dot"),
+                )
+            )
+
+    # config layout and axis labels
     quarterly_months = df_entrants[
         df_entrants["DECOM"].dt.month.isin([1, 4, 7, 10])
     ]  # reduce labels only Jan, Apr, Jul, Oct for clarity
-    max_count = df_entrants["count"].max()
+
+    # chart contraints
+    min_date = df_entrants["DECOM"].min()
+    max_date = df_entrants["DECOM"].max()
 
     fig.update_layout(
         xaxis=dict(
             tickvals=quarterly_months["DECOM"],
             ticktext=[
                 f"{d:%b}" for d in quarterly_months["DECOM"]
-            ],  # qtr/mth abbr (Jan, Apr, Jul, Oct)
+            ],  # qtr/mth abbr labels (Jan, Apr, Jul, Oct)
             tickangle=45,
             tickmode="array",
-            title=dict(text="Date", standoff=40),
+            title=dict(text="Month", standoff=40),
+            range=[
+                min_date,
+                max_date,
+            ],  # coerce the stop point on x due to labelling qtr mths
         ),
-        title="Placement starts per month by Placement Type",
-        hovermode="x",
+        yaxis=dict(
+            title_text="Placements",
+            tickvals=list(
+                range(0, int(max_total_count) + 10, 10)
+            ),  # interval 10 up to max count(Total)
+            ticktext=[
+                str(i) for i in range(0, int(max_total_count) + 10, 10)
+            ],  # align with tick intervals
+            range=[0, max_total_count * 1.1],  # 10% upper padding
+        ),
+        title="Placement starts per month",
         font=dict(size=12),
+        hovermode="closest",  # show info for nearest line
     )
 
+    # add year annotations & center year labels
     for year in df_entrants["DECOM"].dt.year.unique():
         fig.add_annotation(
-            x=f"{year}-07-01",  # center yr labels
+            x=f"{year}-07-01",  # coerce center year labels
             y=-0.18,
             text=str(year),
             showarrow=False,
@@ -383,29 +407,6 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
             align="center",
         )
 
-    fig.update_traces(line=dict(width=1), marker=dict(size=4))
-
-    # min and max date vals for x
-    fig.update_xaxes(
-        title_text="Date",
-        range=[
-            df_entrants["DECOM"].min(),
-            df_entrants["DECOM"].max(),
-        ],  # Use min and max date values
-    )
-
-    # ensure y-axis min to max vals
-    fig.update_yaxes(
-        title_text="Placements",
-        range=[
-            min_count,
-            max_count * 1.1,
-        ],  # raise y-axis to give top end data visual space
-        tickvals=list(
-            range(int(min_count), int(max_count) + 10, 10)
-        ),  # generate tick marks
-        ticktext=[str(i) for i in range(int(min_count), int(max_count) + 10, 10)],
-    )
     fig_html = fig.to_html(full_html=False)
     return fig_html
 
