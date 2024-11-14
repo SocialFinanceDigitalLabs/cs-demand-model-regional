@@ -307,10 +307,11 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
     ]
 
     # calculate placement duration (end_age - age)
-    # df_filtered["placement_duration"] = df_filtered["end_age"] - df_filtered["age"]
     df_filtered.loc[:, "placement_duration"] = (
         df_filtered["end_age"] - df_filtered["age"]
     )
+
+    print(df_filtered)  # testing
 
     # calc count and avg duration of each placement type
     df_entrants = (
