@@ -363,7 +363,7 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         df_entrants["DECOM"].dt.month.isin([1, 4, 7, 10])
     ]  # reduce labels only Jan, Apr, Jul, Oct for clarity
 
-    # chart contraints
+    # chart constraints
     min_date = df_entrants["DECOM"].min()
     max_date = df_entrants["DECOM"].max()
 
