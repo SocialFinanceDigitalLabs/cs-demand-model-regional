@@ -39,7 +39,7 @@
                     <p class="card-text">Check historic data from the SSDA903.</p>
                     <p class="card-text">You can filter to focus on a particular population.</p>
                     <p class="card-text"><i>Time required to complete: 3-5 minutes.</i></p>
-                    <a href="{% url 'router_handler' %}?next_url_name=historic_data" class="btn btn-primary">Start here</a>
+                    <a href="{% url 'historic_data' %}" class="btn btn-primary">Start here</a>
                     </div>
                 </div>
             </div>
@@ -57,7 +57,7 @@
                         </ul>
                         <i>Time required to complete: 4-7 minutes</i>
                     </p>
-                    <a href="{% url 'router_handler' %}?next_url_name=prediction" class="btn btn-primary">Start here</a>
+                    <a href="{% url 'prediction' %}" class="btn btn-primary">Start here</a>
                     </div>
                 </div>
             </div>
@@ -85,7 +85,7 @@
                     <div class="card-body">
                     <p class="card-text">Search and load scenarios that have been previously saved by yourself or colleagues at your Local Authority.</p>
                     <p class="card-text"><i>Time required to complete: 2-5 minutes</i></p>
-                    <a href="{% url 'router_handler' %}?next_url_name=scenarios" class="btn btn-primary">Start here</a>
+                    <a href="{% url 'scenarios' %}" class="btn btn-primary">Start here</a>
                     </div>
                 </div>
             </div>    
@@ -93,5 +93,5 @@
     </div>
 
     <div class="d-flex bd-highlight mb-3">
-        <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=historic_data">Next</a></div>
+        <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'historic_data' %}">Next</a></div>
       </div>

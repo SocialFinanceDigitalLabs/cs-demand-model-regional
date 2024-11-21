@@ -16,10 +16,10 @@
         {% if user.is_authenticated %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='home' name='Home' url_names="['home']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='scenarios' name='Saved Scenarios' url_names="['scenarios', 'scenario_detail']" %}
-          {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=historic_data" name='Historic Data' url_names="['historic_data']" %}
-          {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=prediction" name='Start Modelling' url_names="['prediction']" %}
-          {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=adjusted" name='Adjust Forecast' url_names="['adjusted']" %}
-          {% include 'dm_regional_app/includes/navbar-item.html' with url='router_handler' query="next_url_name=costs" name='Projecting Spend' url_names="['costs']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='historic_data' name='Historic Data' url_names="['historic_data']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='prediction' name='Start Modelling' url_names="['prediction']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='adjusted' name='Adjust Forecast' url_names="['adjusted']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='costs' name='Projecting Spend' url_names="['costs']" %}
           {% get_social_accounts user as accounts %}
           {% if user.is_staff and accounts %}
                 {% include 'dm_regional_app/includes/navbar-item.html' with url='upload_data' name='Data Source Upload' url_names="['upload_data']" %}
