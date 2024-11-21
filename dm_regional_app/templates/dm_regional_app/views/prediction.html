@@ -30,7 +30,7 @@
             <form id="modalForm" method="POST">
                 {% csrf_token %}
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="dontShowAgain" name="dont_show_again" />
+                    <input class="form-check-input" type="checkbox" id="dontShowAgain" name="dont_show_again" {% if not show_instructions %}checked{% endif %}>
                     <label class="form-check-label" for="dontShowAgain">
                         Don't show me this again
                     </label>
