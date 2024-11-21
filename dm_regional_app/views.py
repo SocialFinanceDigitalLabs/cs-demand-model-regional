@@ -38,7 +38,7 @@ from dm_regional_app.forms import (
     PredictFilter,
     SavedScenarioForm,
 )
-from dm_regional_app.models import DataSource, SavedScenario, SessionScenario
+from dm_regional_app.models import DataSource, Profile, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters, number_format, save_data_if_not_empty
 from ssda903.config import PlacementCategories
@@ -999,6 +999,8 @@ def prediction(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
+    show_instructions = Profile.objects.get(user=request.user).show_instructions
+
     if request.method == "POST":
         if "uasc" in request.POST:
             historic_form = HistoricDataFilter(
@@ -1082,6 +1084,7 @@ def prediction(request):
             "historic_form": historic_form,
             "chart": chart,
             "empty_dataframe": empty_dataframe,
+            "show_instructions": show_instructions,
         },
     )
 
@@ -1092,6 +1095,8 @@ def historic_data(request):
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
+
+    show_instructions = Profile.objects.get(user=request.user).show_instructions
 
     if request.method == "POST":
         # initialize form with data
@@ -1142,6 +1147,7 @@ def historic_data(request):
             "entry_into_care_count": entry_into_care_count,
             "exiting_care_count": exiting_care_count,
             "chart": chart,
+            "show_instructions": show_instructions,
         },
     )
 
