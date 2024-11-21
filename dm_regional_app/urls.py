@@ -29,5 +29,9 @@ urlpatterns = [
         name="clear_proportions",
     ),
     path("upload_data/", views.upload_data_source, name="upload_data"),
-
+    path(
+        "update_modal_preference/",
+        views.update_modal_preference,
+        name="update_modal_preference",
+    ),
 ]

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.forms.models import model_to_dict
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2 import RequestConfig
@@ -52,9 +54,9 @@ from ssda903.reader import read_data, read_local_data
 def home(request):
     user = request.user
     if (
-            user.is_authenticated
-            and user.has_usable_password()
-            and user.force_password_update
+        user.is_authenticated
+        and user.has_usable_password()
+        and user.force_password_update
     ):
         # If the user is not using SSO and this is their first time logging in, redirect to change password
         return redirect("account_change_password")
@@ -1374,3 +1376,16 @@ def upload_data_source(request):
         "dm_regional_app/views/upload_data_source.html",
         {"form": form, "uploads": uploads},
     )
+
+
+@login_required
+def update_modal_preference(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        show_instructions = data.get("show_instructions", True)
+
+        profile = request.user.profile
+        profile.show_instructions = show_instructions
+        profile.save()
+
+        return JsonResponse({"status": "success"})
