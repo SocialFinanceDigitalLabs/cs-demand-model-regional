@@ -44,7 +44,7 @@
 </div>
 
 <!-- Custom Script for Modal -->
-<script>
+   <script>
     document.getElementById('savePreference').addEventListener('click', () => {
         const dontShowAgain = document.getElementById('dontShowAgain').checked;
 
@@ -73,12 +73,14 @@
 
     // Show the modal if show_instructions is true
     if ({{ show_instructions|yesno:"true,false" }}) {
-        $('#filteringModal').modal('show');
+        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
+        modal.show();
     }
 
     // Show modal when the button is clicked
     document.getElementById('showModalButton').addEventListener('click', () => {
-        $('#filteringModal').modal('show');
+        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
+        modal.show();
     });
 
 </script>
