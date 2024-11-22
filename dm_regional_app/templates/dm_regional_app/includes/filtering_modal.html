@@ -1,6 +1,5 @@
 <!-- Modal -->
-<div class="modal fade" id="filteringModal" tabindex="-1" aria-labelledby="filteringModalLabel" aria-hidden="true" 
-{% if not show_instructions %}style="display:none;"{% endif %}>
+<div class="modal fade" id="filteringModal" tabindex="-1" aria-labelledby="filteringModalLabel" aria-hidden="true">
 <div class="modal-dialog modal-lg">
     <div class="modal-content">
         <div class="modal-header">
@@ -75,6 +74,11 @@
     if ({{ show_instructions|yesno:"true,false" }}) {
         const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
         modal.show();
+    }
+
+    else {
+        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
+        modal.hide();
     }
 
     // Show modal when the button is clicked
