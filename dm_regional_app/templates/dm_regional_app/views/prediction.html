@@ -2,48 +2,6 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-
-<!-- Modal -->
-<div class="modal fade" id="filteringModal" tabindex="-1" aria-labelledby="filteringModalLabel" aria-hidden="true" 
-{% if not show_instructions %}style="display:none;"{% endif %}>
-<div class="modal-dialog modal-lg">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title" id="filteringModalLabel">Understanding filtering</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            <p>
-                Filter the data to see the pattern of children in care over time across dimensions such as:
-                <ul>
-                    <li>Local Authority</li>
-                    <li>Ethnicity</li>
-                    <li>Sex</li>
-                    <li>Unaccompanied asylum seeker children (UASC)</li>
-                </ul>
-                You may want to filter to focus in on a certain population or child characteristic. 
-                For example, you may have a large UASC population and want to create a separate dashboard and model just for that or focus in on sub-regions.
-            </p>
-            <p>
-                The tool will retain any filters or adjustments you make as you go through the tool. You can always continue to filter or change your view as you progress through the tool.
-            </p>
-            <form id="modalForm" method="POST">
-                {% csrf_token %}
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="dontShowAgain" name="dont_show_again" {% if not show_instructions %}checked{% endif %}>
-                    <label class="form-check-label" for="dontShowAgain">
-                        Don't show me this again
-                    </label>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-primary" id="savePreference">Save</button>
-        </div>
-    </div>
-</div>
-</div>
-
 <br>
     <h1>Model Base Forecast</h1>
     <br>
@@ -94,80 +52,7 @@
 
 {% endif %}
 
-    <!-- Custom Script for Modal -->
-    <script>
-        document.getElementById('savePreference').addEventListener('click', () => {
-            const dontShowAgain = document.getElementById('dontShowAgain').checked;
-
-            if (dontShowAgain) {
-                // Send a POST request to save the user's preference
-                fetch("{% url 'update_modal_preference' %}", {
-                    method: "POST",
-                    headers: {
-                        "X-CSRFToken": "{{ csrf_token }}",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ show_instructions: false })
-                }).then(response => {
-                    if (response.ok) {
-                        console.log("Preference saved");
-                    } else {
-                        console.error("Failed to save preference");
-                    }
-                });
-            }
-
-            // Hide the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('filteringModal'));
-            modal.hide();
-        });
-
-        // Show the modal if show_instructions is true
-        if ({{ show_instructions|yesno:"true,false" }}) {
-            const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
-            modal.show();
-        }
-
-        // Show modal when the button is clicked
-        document.getElementById('showModalButton').addEventListener('click', () => {
-            const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
-            modal.show();
-        });
-    </script>
 {% endblock content %}
-
-{% block js %}
-<script>
-    document.getElementById('savePreference').addEventListener('click', () => {
-        const dontShowAgain = document.getElementById('dontShowAgain').checked;
-
-        if (dontShowAgain) {
-            // Send a POST request to save the user's preference
-            fetch("{% url 'update_modal_preference' %}", {
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ hide_modal: true })
-            }).then(response => {
-                if (response.ok) {
-                    console.log("Preference saved");
-                } else {
-                    console.error("Failed to save preference");
-                }
-            });
-        }
-
-        // Hide the modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('filteringModal'));
-        modal.hide();
-    });
-
-    // Show the modal if hide_modal is false
-    if (!{{ hide_modal|lower }}) {
-        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
-        modal.show();
-    }
-</script>
-{% endblock js %}
+{% block modals %}
+{% include "dm_regional_app/includes/filtering_modal.html" %}
+{% endblock %}
