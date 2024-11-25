@@ -1,3 +1,5 @@
+{% load static sekizai_tags %}
+
 <!-- Modal -->
 <div class="modal fade" id="filteringModal" tabindex="-1" aria-labelledby="filteringModalLabel" aria-hidden="true">
 <div class="modal-dialog modal-lg">
@@ -42,6 +44,7 @@
 </div>
 </div>
 
+{% addtoblock "js" %}
 <!-- Custom Script for Modal -->
    <script>
     document.getElementById('savePreference').addEventListener('click', () => {
@@ -88,3 +91,4 @@
     });
 
 </script>
+{% endaddtoblock "js" %}
