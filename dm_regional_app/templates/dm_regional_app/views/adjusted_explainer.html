@@ -1,0 +1,47 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+<br>
+    <h1>
+        Adjusting the forecast
+    </h1>
+    <br>
+    <p>
+        The tool creates a simplified model of the future demand for placements based on the entry and exit rates of children 
+        between, in and out of care placements. 
+    </p>
+    <p>
+        You have selected the base forecast so the time-period the tool will learn from and forecast has been set but you can 
+        change this by returning to the previous step.
+    </p>
+    <p>
+        In this step, you can also manually adjust the flow rates of young people entering care, exiting care and between placement types.
+    </p>
+    <br>
+    <h2>Why would I want to change the flow rate?</h2>
+    <br>
+    <p>Adjusting the flow rates allows you to compare the difference between two similar scenarios and experiment. You can take account 
+        of contextual factors or help make better assumptions based on changes coming in the future. This helps the tool apply reality to the forecast.
+        For example:
+    <ul>
+        <li>You may be aware of a step-down programme to get more young people from fostering into residential</li>
+        <li>You may know about a new policy to increase kinship placements or;</li>
+        <li>You may simply want to hypothesise what the demand could be if things escalate faster than we might expect as more young people move into care.</li>
+    </ul></p>
+    <br>
+    <h2>
+        Find out more
+    </h2>
+    <br>
+    <!-- TODO update video with instructional vid - currently placeholder -->
+    <iframe width="850" height="500" src="https://www.youtube.com/embed/tgbNymZ7vqY">
+    </iframe>
+    <div class="d-flex bd-highlight mb-3">
+        <div class="ms-auto p-2 bd-highlight">    
+            <a class="btn btn-primary" href="{% url 'account_login' %}">Start</a>
+        </div>
+    </div>
+
+{% endblock content %}
