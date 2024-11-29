@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.forms.models import model_to_dict
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2 import RequestConfig
@@ -36,7 +38,7 @@ from dm_regional_app.forms import (
     PredictFilter,
     SavedScenarioForm,
 )
-from dm_regional_app.models import DataSource, SavedScenario, SessionScenario
+from dm_regional_app.models import DataSource, Profile, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
 from dm_regional_app.utils import apply_filters, number_format, save_data_if_not_empty
 from ssda903.config import PlacementCategories
@@ -52,9 +54,9 @@ from ssda903.reader import read_data, read_local_data
 def home(request):
     user = request.user
     if (
-            user.is_authenticated
-            and user.has_usable_password()
-            and user.force_password_update
+        user.is_authenticated
+        and user.has_usable_password()
+        and user.force_password_update
     ):
         # If the user is not using SSO and this is their first time logging in, redirect to change password
         return redirect("account_change_password")
@@ -997,6 +999,8 @@ def prediction(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
+    show_instructions = Profile.objects.get(user=request.user).show_instructions
+
     if request.method == "POST":
         if "uasc" in request.POST:
             historic_form = HistoricDataFilter(
@@ -1080,6 +1084,7 @@ def prediction(request):
             "historic_form": historic_form,
             "chart": chart,
             "empty_dataframe": empty_dataframe,
+            "show_instructions": show_instructions,
         },
     )
 
@@ -1090,6 +1095,8 @@ def historic_data(request):
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
+
+    show_instructions = Profile.objects.get(user=request.user).show_instructions
 
     if request.method == "POST":
         # initialize form with data
@@ -1140,6 +1147,7 @@ def historic_data(request):
             "entry_into_care_count": entry_into_care_count,
             "exiting_care_count": exiting_care_count,
             "chart": chart,
+            "show_instructions": show_instructions,
         },
     )
 
@@ -1235,3 +1243,16 @@ def upload_data_source(request):
         "dm_regional_app/views/upload_data_source.html",
         {"form": form, "uploads": uploads},
     )
+
+
+@login_required
+def update_modal_preference(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        show_instructions = data.get("show_instructions", True)
+
+        profile = request.user.profile
+        profile.show_instructions = show_instructions
+        profile.save()
+
+        return JsonResponse({"status": "success"})
