@@ -999,7 +999,9 @@ def prediction(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
-    show_instructions = Profile.objects.get(user=request.user).show_instructions
+    show_instructions = Profile.objects.get(
+        user=request.user
+    ).show_filtering_instructions
 
     if request.method == "POST":
         if "uasc" in request.POST:
@@ -1096,7 +1098,9 @@ def historic_data(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
-    show_instructions = Profile.objects.get(user=request.user).show_instructions
+    show_instructions = Profile.objects.get(
+        user=request.user
+    ).show_filtering_instructions
 
     if request.method == "POST":
         # initialize form with data
