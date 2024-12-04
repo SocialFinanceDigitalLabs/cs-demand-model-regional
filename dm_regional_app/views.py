@@ -981,7 +981,6 @@ def adjusted(request):
 
         entry_rates = entry_rate_table(current_prediction.entry_rates)
 
-    print(show_rate_adjustment_instructions)
     return render(
         request,
         "dm_regional_app/views/adjusted.html",
@@ -1274,4 +1273,6 @@ def update_modal_preference(request):
             return JsonResponse({"status": "success"})
 
         else:
-            return JsonResponse({"error": "Invalid request."}, status=400)
+            return JsonResponse(
+                {"error": "Invalid request - unknown modal type."}, status=400
+            )
