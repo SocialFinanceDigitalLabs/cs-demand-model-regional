@@ -1,12 +1,19 @@
 {% extends "dm_regional_app/base.html" %}
 {% load crispy_forms_tags %}
+{% load static sekizai_tags %}
+
 {% block content %}
+
     <br>
     <h1>Viewing the SSDA903 data</h1>
     <br>
-    <p>Explore the make-up of the care population as represented in the SSDA903 returns. You can filter the data to see the pattern of new care episodes over time across dimensions such as placement type, provider type, child age, child ethnicity, child gender, and whether the new placement followed a breakdown.</p>
-    <br>
-    <p><i>Select the period of data in the SSDA903 dataset you want to explore</i></p>
+    <p>Explore the make-up of the care population as represented in the SSDA903 returns. You can filter the data to see the pattern of new care episodes over time.</p>
+            <!-- Button to manually show the modal -->
+            <button type="button" class="btn btn-primary" id="showModalButton">
+                Show Instructions
+            </button>
+    <br><br>
+    <p><i>Filter the population in the SSDA903 dataset to match your target population forecast</i></p>
     {{ form.media }}
     <form method="POST">
         {% csrf_token %}
@@ -27,6 +34,10 @@
     {{chart|safe}}
 </div>
 <div class="d-flex bd-highlight mb-3">
-    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=prediction">Next</a></div>
+    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'prediction' %}">Next</a></div>
   </div>
-{% endblock %}
+
+{% endblock content %}
+{% block modals %}
+{% include "dm_regional_app/includes/filtering_modal.html" %}
+{% endblock modals%}

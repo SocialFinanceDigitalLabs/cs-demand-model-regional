@@ -179,6 +179,8 @@ def convert_population_to_cost(
                         proportion = normalised_proportions[cost_item.label]
                     elif cost_item.label in historic_proportions.index:
                         proportion = historic_proportions[cost_item.label]
+                    else:
+                        proportion = 0
                     # add proportion to proportions output
                     proportions[cost_item.label] = proportion
 
