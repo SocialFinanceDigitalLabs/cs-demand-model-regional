@@ -23,7 +23,7 @@
             <p>
                 The tool will retain any filters or adjustments you make as you go through the tool. You can always continue to filter or change your view as you progress through the tool.
             </p>
-            {% if show_instructions %}
+            {% if show_filtering_instructions %}
             <form id="modalForm" method="POST">
                 {% csrf_token %}
                 <div class="form-check">
@@ -36,8 +36,8 @@
             {% endif %}
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-primary" id="savePreference" {% if not show_instructions %}data-bs-dismiss="modal"{% endif %}>
-                {% if show_instructions %}Save{% else %}Close{% endif %}
+            <button type="button" class="btn btn-primary" id="savePreference" {% if not show_filtering_instructions %}data-bs-dismiss="modal"{% endif %}>
+                {% if show_filtering_instructions %}Save{% else %}Close{% endif %}
             </button>
         </div>
     </div>
@@ -46,49 +46,15 @@
 
 {% addtoblock "js" %}
 <!-- Custom Script for Modal -->
-   <script>
-    if ({{ show_instructions|yesno:"true,false" }}) {
-        document.getElementById('savePreference').addEventListener('click', () => {
-            const dontShowAgain = document.getElementById('dontShowAgain').checked;
-
-            if (dontShowAgain) {
-                // Send a POST request to save the user's preference
-                fetch("{% url 'update_modal_preference' %}", {
-                    method: "POST",
-                    headers: {
-                        "X-CSRFToken": "{{ csrf_token }}",
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ show_instructions: false })
-                }).then(response => {
-                    if (response.ok) {
-                        console.log("Preference saved");
-                    } else {
-                        console.error("Failed to save preference");
-                    }
-                });
-            }
-
-            // Hide the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('filteringModal'));
-            modal.hide();
-        });
-
-        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
-        modal.show();
-
-    }
-
-    else {
-        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
-        modal.hide();
-    }
-
-    // Show modal when the button is clicked
-    document.getElementById('showModalButton').addEventListener('click', () => {
-        const modal = new bootstrap.Modal(document.getElementById('filteringModal'));
-        modal.show();
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        initModal(
+            "filteringModal",                // Modal ID
+            "{{ csrf_token }}",               // CSRF token
+            {{ show_filtering_instructions|yesno:"true,false" }},  // Logic to show/hide modal
+            "showModalButton",
+            "{% url 'update_modal_preference' %}"
+        );
     });
-
-</script>
+    </script>
 {% endaddtoblock "js" %}

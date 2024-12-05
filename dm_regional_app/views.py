@@ -863,6 +863,10 @@ def adjusted(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
+    show_rate_adjustment_instructions = Profile.objects.get(
+        user=request.user
+    ).show_rate_adjustment_instructions
+
     if request.method == "POST":
         # check if it was historic data filter form that was submitted
         if "uasc" in request.POST:
@@ -988,6 +992,7 @@ def adjusted(request):
             "transition_rate_table": transition_rates,
             "exit_rate_table": exit_rates,
             "entry_rate_table": entry_rates,
+            "show_rate_adjustment_instructions": show_rate_adjustment_instructions,
         },
     )
 
@@ -999,7 +1004,9 @@ def prediction(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
-    show_instructions = Profile.objects.get(user=request.user).show_instructions
+    show_filtering_instructions = Profile.objects.get(
+        user=request.user
+    ).show_filtering_instructions
 
     if request.method == "POST":
         if "uasc" in request.POST:
@@ -1084,7 +1091,7 @@ def prediction(request):
             "historic_form": historic_form,
             "chart": chart,
             "empty_dataframe": empty_dataframe,
-            "show_instructions": show_instructions,
+            "show_filtering_instructions": show_filtering_instructions,
         },
     )
 
@@ -1096,7 +1103,9 @@ def historic_data(request):
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
 
-    show_instructions = Profile.objects.get(user=request.user).show_instructions
+    show_filtering_instructions = Profile.objects.get(
+        user=request.user
+    ).show_filtering_instructions
 
     if request.method == "POST":
         # initialize form with data
@@ -1147,7 +1156,7 @@ def historic_data(request):
             "entry_into_care_count": entry_into_care_count,
             "exiting_care_count": exiting_care_count,
             "chart": chart,
-            "show_instructions": show_instructions,
+            "show_filtering_instructions": show_filtering_instructions,
         },
     )
 
@@ -1249,10 +1258,21 @@ def upload_data_source(request):
 def update_modal_preference(request):
     if request.method == "POST":
         data = json.loads(request.body)
-        show_instructions = data.get("show_instructions", True)
-
+        modal_name = data.get("modal_name")
+        show_modal = data.get("show_modal", True)
         profile = request.user.profile
-        profile.show_instructions = show_instructions
-        profile.save()
 
-        return JsonResponse({"status": "success"})
+        if modal_name == "rateModal":
+            profile.show_rate_adjustment_instructions = show_modal
+            profile.save()
+            return JsonResponse({"status": "success"})
+
+        elif modal_name == "filteringModal":
+            profile.show_filtering_instructions = show_modal
+            profile.save()
+            return JsonResponse({"status": "success"})
+
+        else:
+            return JsonResponse(
+                {"error": "Invalid request - unknown modal type."}, status=400
+            )

@@ -15,7 +15,11 @@
         <li>Edit the daily rate of different age groups and placement types to create an adjusted forecast</li>
         <li>Edit the number of children into/out of each age group and placement type to create an adjusted forecast</li>
     </ul></p>
-    <br>
+    <!-- Button to manually show the modal -->
+    <button type="button" class="btn btn-primary" id="showModalButton">
+        Show Instructions
+    </button>
+    <br><br>
     {% if empty_dataframe is True %}
         <div class="alert alert-warning" role="alert">
             <h2>There are no children in the historic dataset that match this filter selection</h2>
@@ -125,3 +129,6 @@
 
 
 {% endblock %}
+{% block modals %}
+{% include "dm_regional_app/includes/adjusted_modal.html" %}
+{% endblock modals%}
