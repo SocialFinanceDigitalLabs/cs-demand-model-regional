@@ -52,15 +52,6 @@ from ssda903.reader import read_data, read_local_data
 
 
 def home(request):
-    user = request.user
-    if (
-        user.is_authenticated
-        and user.has_usable_password()
-        and user.force_password_update
-    ):
-        # If the user is not using SSO and this is their first time logging in, redirect to change password
-        return redirect("account_change_password")
-
     try:
         most_recent_datasource = DataSource.objects.latest("uploaded")
         start_date = most_recent_datasource.start_date.date()
