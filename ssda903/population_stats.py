@@ -3,7 +3,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from ssda903.config import AgeBrackets, Costs, PlacementCategories
+from ssda903.config import Costs, PlacementCategories
 
 
 class PopulationStats:
@@ -105,31 +105,6 @@ class PopulationStats:
         transition_rates.name = "transition_rate"
 
         return transition_rates
-
-    @property
-    def ageing_out(self) -> pd.Series:
-        """
-        Returns the probability of ageing out from one bin to the other.
-        """
-        ageing_out = []
-        for age_group in AgeBrackets:
-            for pt in PlacementCategories:
-                next_name = (
-                    (age_group.next.value.label, pt.value.label)
-                    if age_group.next
-                    else tuple()
-                )
-                ageing_out.append(
-                    {
-                        "from": (age_group.value.label, pt.value.label),
-                        "to": next_name,
-                        "rate": age_group.value.daily_probability,
-                    }
-                )
-
-        df = pd.DataFrame(ageing_out)
-        df.set_index(["from", "to"], inplace=True)
-        return df.rate
 
     @lru_cache(maxsize=5)
     def placement_proportions(
