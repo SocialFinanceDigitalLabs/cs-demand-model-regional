@@ -7,6 +7,15 @@ from ssda903.config import Costs, PlacementCategories
 
 
 class PopulationStats:
+    """
+    Transforms an episode-level table from datacontainer into a series of tables showing the following:
+    - stock: child populations by model state by day for the total time period
+    - transitions: state transitions by day e.g. 10-15 Fostering->16-18 Fostering for the total time period
+    - raw transition rates: a rate for each state transition for a defined reference period
+    - placement proportions: the proportion of placements within a placement category (as defined by PlacementCategories enum) belonging to more granular placement types for a defined reference period
+    - entry rates: the rate of entry per day for each model state for a defined reference period
+    """
+
     def __init__(self, df: pd.DataFrame):
         self.__df = df
 
@@ -54,22 +63,28 @@ class PopulationStats:
         # Resample to daily counts and forward-fill in missing days
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
-        # Add the missing age bins and fill with zeros
-
         return pops
 
     @lru_cache(maxsize=5)
-    def stock_at(self, start_date) -> pd.Series:
-        start_date = pd.to_datetime(start_date)
+    def stock_at(self, date) -> pd.Series:
+        """
+        Returns the stock on a given date
+        """
+        date = pd.to_datetime(date)
 
-        index = self.stock.index.get_indexer([start_date], method="nearest")
+        index = self.stock.index.get_indexer([date], method="nearest")
 
         stock = self.stock.iloc[index[0]].T
-        stock.name = start_date
+        stock.name = date
         return stock
 
     @property
     def transitions(self):
+        """
+        Returns the number of transitions per day for each model state for the total time period in the input data
+        Transitions include exits from care e.g. 5-10 Residential -> Not in care
+        Transitions do not include entrants to care
+        """
         transitions = self.df.copy()
         transitions["start_bin"] = transitions.apply(
             lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
@@ -90,6 +105,12 @@ class PopulationStats:
 
     @lru_cache(maxsize=5)
     def raw_transition_rates(self, start_date: date, end_date: date):
+        """
+        Calculates transition rates for each transition using:
+        - stock
+        - transitions
+        - reference dates
+        """
         # Ensure we can calculate the transition rates by aligning the dataframes
         stock = self.stock.truncate(before=start_date, after=end_date)
         stock.columns.name = "start_bin"
@@ -110,6 +131,10 @@ class PopulationStats:
     def placement_proportions(
         self, reference_start_date: date, reference_end_date: date, **kwargs
     ):
+        """
+        Calculates the proportion of placements in each placement category that were from a more granular set of placements for the historic data over a defined reference period
+        - placement categories from PlacementCategories enum
+        """
         start_date = pd.to_datetime(reference_start_date)
         end_date = pd.to_datetime(reference_end_date)
 
@@ -171,7 +196,7 @@ class PopulationStats:
     @lru_cache(maxsize=5)
     def daily_entrants(self, start_date: date, end_date: date) -> pd.Series:
         """
-        Returns the number of entrants and the daily_probability of entrants for each age bracket and placement type.
+        Returns the daily probability of entrants for each model state
         """
         start_date = pd.to_datetime(start_date)
         end_date = pd.to_datetime(end_date)
@@ -208,6 +233,12 @@ class PopulationStats:
         return df.daily_entry_probability
 
     def to_excel(self, output_file: str, start_date: date, end_date: date):
+        """
+        Produces xlsx file showing set of model outputs/inputs:
+        - stock at prediction end
+        - transition rates
+        - entry rates
+        """
         with pd.ExcelWriter(output_file) as writer:
             self.stock_at(end_date).to_excel(writer, sheet_name="population")
             self.raw_transition_rates(start_date, end_date).to_excel(
