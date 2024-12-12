@@ -56,7 +56,7 @@ def home(request):
 
 @login_required
 def router_handler(request):
-    print("router_handler time start")
+    print("router_handler start")
     rh_total_start_time = time.time()
 
     # get next url page
@@ -70,9 +70,10 @@ def router_handler(request):
     rh_dc_start_time = time.time()
     datacontainer = read_data(source=settings.DATA_SOURCE)
     rh_dc_end_time = time.time()
-    dc_exec_time = rh_dc_start_time - rh_dc_end_time
+    dc_exec_time = rh_dc_end_time - rh_dc_start_time
     print(f"rh_dc_time = {dc_exec_time}")
 
+    rh_params_start = time.time()
     historic_filters = {
         "la": [],
         "ethnicity": [],
@@ -100,8 +101,11 @@ def router_handler(request):
         "inflation": False,
         "inflation_rate": 0.1,
     }
+    rh_params_end = time.time()
+    print(f"rh params exec = {rh_params_end - rh_params_start}")
 
     # default_values should define the model default parameters, like reference_date and the stock data and so on. Decide what should be default with Michael
+    rh_sess_create_start = time.time()
     session_scenario, created = SessionScenario.objects.get_or_create(
         id=session_scenario_id,
         defaults={
@@ -115,10 +119,14 @@ def router_handler(request):
             "inflation_parameters": inflation_parameters,
         },
     )
+    rh_sess_create_end = time.time()
+    print(f"rh session creation exec = {rh_sess_create_end - rh_sess_create_start}")
 
     # update the request session
+    rh_sess_update_start = time.time()
     request.session["session_scenario_id"] = session_scenario.pk
-
+    rh_sess_update_end = time.time()
+    print(f"rh session update exec = {rh_sess_update_end - rh_sess_update_start}")
     rh_total_end_time = time.time()
     rh_total_exec_time = rh_total_end_time - rh_total_start_time
     print(f"router_handler time end, total exec = {rh_total_exec_time}")
@@ -129,8 +137,9 @@ def router_handler(request):
 @login_required
 def costs(request):
     if "session_scenario_id" in request.session:
-        print("costs time start")
+        print("costs start")
         costs_total_start_time = time.time()
+
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
 
@@ -253,7 +262,7 @@ def costs(request):
             entry_rate_table = None
 
         costs_end_time = time.time()
-        costs_exec = costs_end_time = costs_total_start_time
+        costs_exec = costs_end_time - costs_total_start_time
         print(f"costs total exec = {costs_exec}")
         return render(
             request,
@@ -387,6 +396,7 @@ def clear_proportion_adjustments(request):
         session_scenario.adjusted_proportions = None
         session_scenario.save()
         messages.success(request, "Proportion adjustments cleared.")
+        # WHAT IF IF STATEMENT NOT TRUE?
     return redirect(next_url_name)
 
 
@@ -680,6 +690,7 @@ def clear_rate_adjustments(request):
         session_scenario.adjusted_numbers = None
         session_scenario.save()
         messages.success(request, "Rate adjustments cleared.")
+    # WHAT IF NOT IF STATEMENT?
     return redirect(next_url_name)
 
 
@@ -702,9 +713,13 @@ def entry_rates(request):
         )
 
         # Call predict function
+        entry_rates_pred_start = time.time()
         prediction = predict(
             data=historic_data, **session_scenario.prediction_parameters
         )
+        entry_rates_pred_end = time.time()
+        entry_rates_pred_exec = entry_rates_pred_end - entry_rates_pred_start
+        print(f"entry rates pred exec = {entry_rates_pred_exec}")
 
         entry_rates = entry_rate_table(prediction.entry_rates)
 
@@ -729,14 +744,22 @@ def entry_rates(request):
                     # Check that the dataframe or series saved in the form is not empty, then save
                     save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
+                entry_rates_stats_start = time.time()
                 stats = PopulationStats(historic_data)
+                entry_rates_stats_end = time.time()
+                entry_rates_stats_exec = entry_rates_stats_end - entry_rates_stats_start
+                print(f"entry rates stats exec = {entry_rates_stats_exec}")
 
+                entry_rates_adj_start = time.time()
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
                     rate_adjustment=session_scenario.adjusted_rates,
                     number_adjustment=session_scenario.adjusted_numbers,
                 )
+                entry_rates_adj_end = time.time()
+                entry_rates_adj_exec = entry_rates_adj_end - entry_rates_adj_start
+                print(f"entry rates adj exec = {entry_rates_adj_exec}")
 
                 # build chart
                 chart = compare_forecast(
@@ -747,6 +770,10 @@ def entry_rates(request):
                 )
 
                 is_post = True
+
+                entry_rates_end_1 = time.time()
+                entry_rates_exec_1 = entry_rates_end_1 - entry_rates_start
+                print(f"entry rates exec 1 = {entry_rates_exec_1}")
 
                 return render(
                     request,
@@ -767,7 +794,9 @@ def entry_rates(request):
                 )
 
                 is_post = False
-
+                entry_rates_end_2 = time.time()
+                entry_rates_exec_2 = entry_rates_end_2 - entry_rates_start
+                print(f"entry rates exec 2 = {entry_rates_exec_2}")
                 return render(
                     request,
                     "dm_regional_app/views/entry_rates.html",
@@ -785,7 +814,9 @@ def entry_rates(request):
             )
 
             is_post = False
-
+        entry_rates_end_3 = time.time()
+        entry_rates_exec_3 = entry_rates_end_3 - entry_rates_start
+        print(f"entry rates exec 3 = {entry_rates_exec_3}")
         return render(
             request,
             "dm_regional_app/views/entry_rates.html",
@@ -1033,10 +1064,16 @@ def transition_rates(request):
 @login_required
 def adjusted(request):
     if "session_scenario_id" in request.session:
+        print("adjusted start")
+        adjusted_start = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
+        adjusted_dc_start = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        adjusted_dc_end = time.time()
+        adjusted_dc_exec = adjusted_dc_end - adjusted_dc_start
+        print(f"adjusted dc exec = {adjusted_dc_exec}")
 
         if request.method == "POST":
             # check if it was historic data filter form that was submitted
@@ -1071,7 +1108,7 @@ def adjusted(request):
                     la=datacontainer.unique_las,
                     ethnicity=datacontainer.unique_ethnicity,
                 )
-
+                # Is this necessary - the form was the predict form
                 historic_data = apply_filters(
                     datacontainer.enriched_view, historic_form.initial
                 )
@@ -1095,7 +1132,7 @@ def adjusted(request):
                 start_date=datacontainer.start_date,
                 end_date=datacontainer.end_date,
             )
-
+        # When would this happen?
         if historic_data.empty:
             empty_dataframe = True
             chart = None
@@ -1108,41 +1145,64 @@ def adjusted(request):
 
         else:
             empty_dataframe = False
-
+            adjusted_stats_start = time.time()
             stats = PopulationStats(historic_data)
+            adjusted_stats_end = time.time()
+            adjusted_stats_exec = adjusted_stats_end - adjusted_stats_start
+            print(f"adjusted stats exec = {adjusted_stats_exec}")
 
+            adjusted_pred_start = time.time()
             original_prediction = predict(
                 data=historic_data, **session_scenario.prediction_parameters
             )
-
+            adjusted_pred_end = time.time()
+            adjusted_pred_exec = adjusted_pred_end - adjusted_pred_start
+            print(f"adjusted pred exec = {adjusted_pred_exec}")
             if (
                 session_scenario.adjusted_numbers is not None
                 or session_scenario.adjusted_rates is not None
             ):
+                adjusted_stats_2_start = time.time()
+                # Surely this is unneccessary - historic data hasn't changed?
                 stats = PopulationStats(historic_data)
+                adjusted_stats_2_end = time.time()
+                adjusted_stats_2_exec = adjusted_stats_2_end - adjusted_stats_2_start
+                print(f"adjusted stats 2 exec = {adjusted_stats_2_exec}")
 
+                adjusted_adj_start = time.time()
                 adjusted_prediction = predict(
                     data=historic_data,
                     **session_scenario.prediction_parameters,
                     rate_adjustment=session_scenario.adjusted_rates,
                     number_adjustment=session_scenario.adjusted_numbers,
                 )
+                adjusted_adj_end = time.time()
+                adjusted_adj_exec = adjusted_adj_end - adjusted_adj_start
+                print(f"adjusted adj exec = {adjusted_adj_exec}")
 
                 # build chart
+                adjusted_comp_ch_start = time.time()
                 chart = compare_forecast(
                     stats,
                     original_prediction,
                     adjusted_prediction,
                     **session_scenario.prediction_parameters,
                 )
+                adjusted_comp_ch_end = time.time()
+                adjusted_comp_ch_exec = adjusted_comp_ch_end - adjusted_comp_ch_start
+                print(f"compare chart exec = {adjusted_comp_ch_exec}")
 
                 current_prediction = adjusted_prediction
 
             else:
                 # build chart
+                adjusted_pred_ch_start = time.time()
                 chart = prediction_chart(
                     stats, original_prediction, **session_scenario.prediction_parameters
                 )
+                adjusted_pred_ch_end = time.time()
+                adjusted_pred_ch_exec = adjusted_pred_ch_end - adjusted_pred_ch_start
+                print(f"pred chart exec = {adjusted_pred_ch_exec}")
 
                 current_prediction = original_prediction
 
@@ -1153,7 +1213,9 @@ def adjusted(request):
             exit_rates = exit_rate_table(current_prediction.transition_rates)
 
             entry_rates = entry_rate_table(current_prediction.entry_rates)
-
+        adjusted_end = time.time()
+        adjusted_exec = adjusted_end - adjusted_start
+        print(f"adjusted exec = {adjusted_exec}")
         return render(
             request,
             "dm_regional_app/views/adjusted.html",
@@ -1177,22 +1239,36 @@ def adjusted(request):
 @login_required
 def prediction(request):
     if "session_scenario_id" in request.session:
+        print("prediction started")
+        pred_start = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
+        pred_dc_start = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
+        pred_dc_end = time.time()
+        print(f"pred_dc exec = {pred_dc_end - pred_dc_start}")
 
         if request.method == "POST":
+            pred_form_start = time.time()
             if "uasc" in request.POST:
+                pred_HDF_start = time.time()
                 historic_form = HistoricDataFilter(
                     request.POST,
                     la=datacontainer.unique_las,
                     ethnicity=datacontainer.unique_ethnicity,
                 )
+                pred_HDF_end = time.time()
+                print(f"pred HDF exec = {pred_HDF_end - pred_HDF_start}")
+                pred_pred_form_start = time.time()
                 predict_form = PredictFilter(
                     initial=session_scenario.prediction_parameters,
                     start_date=datacontainer.start_date,
                     end_date=datacontainer.end_date,
+                )
+                pred_pred_form_end = time.time()
+                print(
+                    f"pred prediction form exec = {pred_pred_form_end - pred_pred_form_start}"
                 )
                 if historic_form.is_valid():
                     session_scenario.historic_filters = historic_form.cleaned_data
@@ -1203,17 +1279,24 @@ def prediction(request):
                     )
 
             if "reference_start_date" in request.POST:
+                pred_pred_form_2_start = time.time()
                 predict_form = PredictFilter(
                     request.POST,
                     start_date=datacontainer.start_date,
                     end_date=datacontainer.end_date,
                 )
+                pred_pred_form_2_end = time.time()
+                print(
+                    f"pred pred form 2 exec = {pred_pred_form_2_end - pred_pred_form_2_start}"
+                )
+                pred_HDF_2_start = time.time()
                 historic_form = HistoricDataFilter(
                     initial=session_scenario.historic_filters,
                     la=datacontainer.unique_las,
                     ethnicity=datacontainer.unique_ethnicity,
                 )
-
+                pred_HDF_2_end = time.time()
+                print(f"pred HDF 2 exec = {pred_HDF_2_end - pred_HDF_2_start}")
                 historic_data = apply_filters(
                     datacontainer.enriched_view, historic_form.initial
                 )
@@ -1222,20 +1305,28 @@ def prediction(request):
                     session_scenario.save()
 
         else:
+            pred_HDF_3_start = time.time()
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
                 ethnicity=datacontainer.unique_ethnicity,
             )
+            pred_HDF_3_end = time.time()
+            print(f"pred HDF 3 exec = {pred_HDF_3_end - pred_HDF_3_start}")
             historic_data = apply_filters(
                 datacontainer.enriched_view, historic_form.initial
             )
 
             # initialize form with default dates
+            pred_pred_form_3_start = time.time()
             predict_form = PredictFilter(
                 initial=session_scenario.prediction_parameters,
                 start_date=datacontainer.start_date,
                 end_date=datacontainer.end_date,
+            )
+            pred_pred_form_3_end = time.time()
+            print(
+                f"pred pred form 3 exec = {pred_pred_form_3_end - pred_pred_form_3_start}"
             )
 
         if historic_data.empty:
@@ -1244,19 +1335,27 @@ def prediction(request):
 
         else:
             empty_dataframe = False
-
+            pred_stats_start = time.time()
             stats = PopulationStats(historic_data)
-
+            pred_stats_end = time.time()
+            print(f"pred stats exec = {pred_stats_end - pred_stats_start}")
             # Call predict function with default dates
+            pred_pred_start = time.time()
             prediction = predict(
                 data=historic_data, **session_scenario.prediction_parameters
             )
+            pred_pred_end = time.time()
+            print(f"pred prediction exec = {pred_pred_end - pred_pred_start}")
 
             # build chart
+            pred_chart_start = time.time()
             chart = prediction_chart(
                 stats, prediction, **session_scenario.prediction_parameters
             )
-
+            pred_chart_end = time.time()
+            print(f"pred chart exec = {pred_chart_end - pred_chart_start}")
+            pred_end = time.time()
+            print(f"pred exec = {pred_end - pred_start}")
         return render(
             request,
             "dm_regional_app/views/prediction.html",
@@ -1277,52 +1376,94 @@ def prediction(request):
 @login_required
 def historic_data(request):
     if "session_scenario_id" in request.session:
+        print("hist start")
+        hist_start = time.time()
         pk = request.session["session_scenario_id"]
         session_scenario = get_object_or_404(SessionScenario, pk=pk)
         # read data
+        hist_dc_start = time.time()
         datacontainer = read_data(source=settings.DATA_SOURCE)
-
+        hist_dc_end = time.time()
+        print(f"hist dc exec = {hist_dc_end - hist_dc_start}")
         if request.method == "POST":
+            hist_form_start = time.time()
             # initialize form with data
+            hist_form_HDF_start = time.time()
             form = HistoricDataFilter(
                 request.POST,
                 la=datacontainer.unique_las,
                 ethnicity=datacontainer.unique_ethnicity,
             )
+            hist_form_HDF_end = time.time()
+            print(f"hist form HDF exec = {hist_form_HDF_end - hist_form_HDF_start}")
 
             if form.is_valid():
+                hist_form_sess_start = time.time()
                 # save cleaned data to session scenarios historic filters
                 session_scenario.historic_filters = form.cleaned_data
                 session_scenario.save()
+                hist_form_sess_end = time.time()
+                print(
+                    f"hist form sess exec = {hist_form_sess_end - hist_form_sess_start}"
+                )
 
                 # update reference start and end
-
+                hist_apply_filt_start = time.time()
                 data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
+                hist_apply_filt_end = time.time()
+                print(
+                    f"hist apply filters exec = {hist_apply_filt_end - hist_apply_filt_start}"
+                )
+                hist_form_end = time.time()
+                print(f"hist form exec = {hist_form_end - hist_form_start}")
             else:
                 data = datacontainer.enriched_view
         else:
+            hist_non_form_start = time.time()
+            # SURELY THIS IS UNNECESSARY
             # read data
+            hist_dc_2_start = time.time()
             datacontainer = read_data(source=settings.DATA_SOURCE)
-
+            hist_dc_2_end = time.time()
+            print(f"hist dc 2 exec = {hist_dc_2_end - hist_dc_2_start}")
             # initialize form with default dates
+            hist_non_form_HDF_start = time.time()
             form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
                 la=datacontainer.unique_las,
                 ethnicity=datacontainer.unique_ethnicity,
             )
+            hist_non_form_HDF_end = time.time()
+            print(
+                f"hist non form HDF exec = {hist_non_form_HDF_end - hist_non_form_HDF_start}"
+            )
+            hist_non_form_filters_start = time.time()
             data = apply_filters(datacontainer.enriched_view, form.initial)
+            hist_non_form_filters_end = time.time()
+            print(
+                f"hist non form filters apply exec = {hist_non_form_filters_end - hist_non_form_filters_start}"
+            )
+            hist_non_form_end = time.time()
+            print(f"hist non form exec = {hist_non_form_end - hist_non_form_start}")
 
+        hist_count_start = time.time()
         entry_into_care_count = data.loc[
             data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label
         ]["CHILD"].nunique()
         exiting_care_count = data.loc[
             data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label
         ]["CHILD"].nunique()
-
+        hist_count_end = time.time()
+        print(f"hist count exec = {hist_count_end - hist_count_start}")
+        hist_stats_start = time.time()
         stats = PopulationStats(data)
-
+        hist_stats_end = time.time()
+        print(f"hist stats exec = {hist_stats_end - hist_stats_start}")
+        hist_chart_start = time.time()
         chart = historic_chart(stats)
-
+        hist_chart_end = time.time()
+        print(f"hist chart exec = {hist_chart_end - hist_chart_start}")
+        print(f"hist exec = {hist_chart_end - hist_start}")
         return render(
             request,
             "dm_regional_app/views/historic.html",
@@ -1342,6 +1483,8 @@ def historic_data(request):
 
 @login_required
 def scenarios(request):
+    print("scen start")
+    scen_start = time.time()
     user_la = request.user.profile.la
 
     scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
@@ -1359,7 +1502,8 @@ def scenarios(request):
 
     table = SavedScenarioTable(filtered_scenarios)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
-
+    scen_end = time.time()
+    print(f"scen exec = {scen_end - scen_start}")
     return render(
         request,
         "dm_regional_app/views/scenarios.html",
