@@ -301,17 +301,21 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         df_stats_data["DECOM"].dt.to_period("M").dt.to_timestamp()
     )  # requ format for plot timestamps (mths)
 
-    # filter time-frame to form dates
+    # filter time-frame to passed/form dates
     df_filtered = df_stats_data[
         (df_stats_data["DECOM"] >= start_date) & (df_stats_data["DECOM"] <= end_date)
     ]
+
+    # filter episodes if child transitioned to older age bucket
+    df_filtered = df_filtered.sort_values(
+        by=["CHILD", "DECOM", "placement_type", "age_bin"],
+        ascending=[True, True, True, False],
+    ).drop_duplicates(subset=["CHILD", "DECOM", "placement_type"], keep="first")
 
     # calculate placement duration (end_age - age)
     df_filtered.loc[:, "placement_duration"] = (
         df_filtered["end_age"] - df_filtered["age"]
     )
-
-    print(df_filtered)  # testing
 
     # calc count and avg duration of each placement type
     df_entrants = (
@@ -355,6 +359,7 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
                     mode="lines",
                     name=placement_type,
                     line=dict(color=colour, width=1.5, dash="dot"),
+                    hovertemplate="%{x|%b %Y}, %{y}",  # re-align hover-tick inconsistency
                 )
             )
 
