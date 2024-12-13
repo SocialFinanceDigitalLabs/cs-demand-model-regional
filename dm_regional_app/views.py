@@ -54,8 +54,8 @@ from ssda903.reader import read_data, read_local_data
 def home(request):
     try:
         most_recent_datasource = DataSource.objects.latest("uploaded")
-        start_date = most_recent_datasource.start_date.date()
-        end_date = most_recent_datasource.end_date.date()
+        start_date = most_recent_datasource.data_start_date.date()
+        end_date = most_recent_datasource.data_end_date.date()
 
     except DataSource.DoesNotExist:
         start_date = None
@@ -868,8 +868,8 @@ def adjusted(request):
             )
             predict_form = PredictFilter(
                 initial=session_scenario.prediction_parameters,
-                start_date=datacontainer.start_date,
-                end_date=datacontainer.end_date,
+                reference_date_min=datacontainer.data_start_date,
+                reference_date_max=datacontainer.data_end_date,
             )
             if historic_form.is_valid():
                 session_scenario.historic_filters = historic_form.cleaned_data
@@ -883,8 +883,8 @@ def adjusted(request):
         if "reference_start_date" in request.POST:
             predict_form = PredictFilter(
                 request.POST,
-                start_date=datacontainer.start_date,
-                end_date=datacontainer.end_date,
+                reference_data_min=datacontainer.data_start_date,
+                reference_date_max=datacontainer.data_end_date,
             )
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
@@ -912,8 +912,8 @@ def adjusted(request):
         # initialize form with default dates
         predict_form = PredictFilter(
             initial=session_scenario.prediction_parameters,
-            start_date=datacontainer.start_date,
-            end_date=datacontainer.end_date,
+            reference_date_min=datacontainer.data_start_date,
+            reference_date_max=datacontainer.data_end_date,
         )
 
     if historic_data.empty:
@@ -1008,8 +1008,8 @@ def prediction(request):
             )
             predict_form = PredictFilter(
                 initial=session_scenario.prediction_parameters,
-                start_date=datacontainer.start_date,
-                end_date=datacontainer.end_date,
+                reference_date_min=datacontainer.data_start_date,
+                reference_data_max=datacontainer.data_end_date,
             )
             if historic_form.is_valid():
                 session_scenario.historic_filters = historic_form.cleaned_data
@@ -1022,8 +1022,8 @@ def prediction(request):
         if "reference_start_date" in request.POST:
             predict_form = PredictFilter(
                 request.POST,
-                start_date=datacontainer.start_date,
-                end_date=datacontainer.end_date,
+                reference_date_min=datacontainer.data_start_date,
+                reference_date_max=datacontainer.data_end_date,
             )
             historic_form = HistoricDataFilter(
                 initial=session_scenario.historic_filters,
@@ -1051,8 +1051,8 @@ def prediction(request):
         # initialize form with default dates
         predict_form = PredictFilter(
             initial=session_scenario.prediction_parameters,
-            start_date=datacontainer.start_date,
-            end_date=datacontainer.end_date,
+            reference_date_min=datacontainer.data_start_date,
+            reference_date_max=datacontainer.data_end_date,
         )
 
     if historic_data.empty:
@@ -1197,8 +1197,8 @@ def validate_with_prediction(files):
         datacontainer = read_local_data(files)
         predict(
             data=datacontainer.enriched_view,
-            reference_start_date=datacontainer.start_date,
-            reference_end_date=datacontainer.end_date,
+            reference_start_date=datacontainer.data_start_date,
+            reference_end_date=datacontainer.data_end_date,
         )
     except ValueError:
         return None, "At least one file is invalid."
@@ -1225,8 +1225,8 @@ def upload_data_source(request):
             if datacontainer:
                 DataSource.objects.create(
                     uploaded_by=request.user,
-                    start_date=datacontainer.start_date,
-                    end_date=datacontainer.end_date,
+                    data_start_date=datacontainer.data_start_date,
+                    data_end_date=datacontainer.data_end_date,
                 )
                 for filename, file in request.FILES.items():
                     full_path = Path(settings.DATA_SOURCE, f"{filename}.csv")

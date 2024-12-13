@@ -24,7 +24,7 @@ class PopulationStats:
         return self.__df
 
     @property
-    def stock(self):
+    def stock(self, data_end_date: date, data_start_date: date):
         """
         Calculates the daily transitions for each age bin and placement type by
         finding all the transitions (start or end of episode), summing to get total populations for each
@@ -60,8 +60,16 @@ class PopulationStats:
 
         pops = pops.unstack(level=1)
 
+        # Ensure the last date of the return is present
+        if data_end_date > pops.index.max():
+            # Add the row to the end of the dataframe with this date
+            pops.loc[data_end_date] = None
+
         # Resample to daily counts and forward-fill in missing days
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
+
+        # Truncate the dataset to cut out dates earlier than the start date and later than the end date
+        pops = pops.truncate(before=data_start_date, after=data_end_date)
 
         return pops
 
@@ -79,7 +87,7 @@ class PopulationStats:
         return stock
 
     @property
-    def transitions(self):
+    def transitions(self, data_end_date: date, data_start_date: date):
         """
         Returns the number of transitions per day for each model state for the total time period in the input data
         Transitions include exits from care e.g. 5-10 Residential -> Not in care
@@ -95,16 +103,24 @@ class PopulationStats:
             axis=1,
         )
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
-        transitions = (
-            transitions.unstack(level=["start_bin", "end_bin"])
-            .fillna(0)
-            .asfreq("D", fill_value=0)
-        )
+        transitions = transitions.unstack(level=["start_bin", "end_bin"])
+
+        # Ensure the last date of the return is present
+        if data_end_date > transitions.index.max():
+            # Add the row to the end of the dataframe with this date
+            transitions.loc[data_end_date] = None
+
+        transitions = transitions.fillna(0).asfreq("D", fill_value=0)
+
+        # Truncate the dataset to cut out dates earlier than the start date and later than the end date
+        transitions = transitions.truncate(before=data_start_date, after=data_end_date)
 
         return transitions
 
     @lru_cache(maxsize=5)
-    def raw_transition_rates(self, start_date: date, end_date: date):
+    def raw_transition_rates(
+        self, reference_start_date: date, reference_end_date: date
+    ):
         """
         Calculates transition rates for each transition using:
         - stock
@@ -112,9 +128,13 @@ class PopulationStats:
         - reference dates
         """
         # Ensure we can calculate the transition rates by aligning the dataframes
-        stock = self.stock.truncate(before=start_date, after=end_date)
+        stock = self.stock.truncate(
+            before=reference_start_date, after=reference_end_date
+        )
         stock.columns.name = "start_bin"
-        transitions = self.transitions.truncate(before=start_date, after=end_date)
+        transitions = self.transitions.truncate(
+            before=reference_start_date, after=reference_end_date
+        )
 
         # Calculate the transition rates
         stock, transitions = stock.align(transitions)
@@ -194,12 +214,14 @@ class PopulationStats:
         return proportion_series, proportion_population
 
     @lru_cache(maxsize=5)
-    def daily_entrants(self, start_date: date, end_date: date) -> pd.Series:
+    def daily_entrants(
+        self, reference_start_date: date, reference_end_date: date
+    ) -> pd.Series:
         """
         Returns the daily probability of entrants for each model state
         """
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
+        start_date = pd.to_datetime(reference_start_date)
+        end_date = pd.to_datetime(reference_end_date)
 
         df = self.df
 
@@ -231,19 +253,3 @@ class PopulationStats:
         df = df.set_index(["from", "to"])
 
         return df.daily_entry_probability
-
-    def to_excel(self, output_file: str, start_date: date, end_date: date):
-        """
-        Produces xlsx file showing set of model outputs/inputs:
-        - stock at prediction end
-        - transition rates
-        - entry rates
-        """
-        with pd.ExcelWriter(output_file) as writer:
-            self.stock_at(end_date).to_excel(writer, sheet_name="population")
-            self.raw_transition_rates(start_date, end_date).to_excel(
-                writer, sheet_name="transition_rates"
-            )
-            self.daily_entrants(start_date, end_date).to_excel(
-                writer, sheet_name="daily_entrants"
-            )

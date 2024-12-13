@@ -33,8 +33,8 @@ class PredictFilter(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        reference_date_min = kwargs.pop("start_date", None)
-        reference_date_max = kwargs.pop("end_date", None)
+        reference_date_min = kwargs.pop("reference_date_min", None)
+        reference_date_max = kwargs.pop("reference_date_max", None)
 
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
