@@ -1,0 +1,85 @@
+{% load static sekizai_tags %}
+
+<!-- Modal -->
+<div class="modal fade" id="rateModal" tabindex="-1" aria-labelledby="rateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="rateModalLabel">Adjusting the forecast</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    The tool creates a simplified model of the future demand for placements based on the transfer, entry, and exit rates of children 
+                    between, and in and out of care placements. 
+                </p>
+                <p>
+                    Your base forecast has now been created from rates of change seen in your set reference period and population, but you can 
+                    continue to adjust these on this page.
+                </p>
+                <p>
+                    In this step, you can also manually adjust the flow rates of young people entering care, exiting care and between placement types.
+                </p>
+                <br>
+                <h5>Why would I want to change the flow rate?</h5>
+
+                <p>Adjusting the flow rates allows you to compare the difference between the base scenario and your adjusted version and experiment. 
+                    You can take account of contextual factors to help make better assumptions based on changes coming in the future. 
+                    This helps the tool apply reality to the forecast.
+                    For example:
+                <ul>
+                    <li>You may be aware of a step-down programme to get more young people from fostering into residential;</li>
+                    <li>You may know about a new policy to increase kinship placements; or,</li>
+                    <li>You may simply want to hypothesise what the demand could be if things escalate faster than we might expect as more young people move into care.</li>
+                </ul></p>
+                <br>
+                <h5>
+                    Find out more
+                </h5>
+                <!-- TODO update video with instructional vid - currently placeholder -->
+
+                <div class="video-container">
+                    <iframe 
+                        src="https://www.youtube.com/embed/tgbNymZ7vqY" 
+                        frameborder="0" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+
+                {% if show_rate_adjustment_instructions %}
+                <br>
+                <form id="modalForm" method="POST">
+                    {% csrf_token %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="dontShowAgain" name="dont_show_again" >
+                        <label class="form-check-label" for="dontShowAgain">
+                            Don't show me this again
+                        </label>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="savePreference" {% if not show_rate_adjustment_instructions %}data-bs-dismiss="modal"{% endif %}>
+                    {% if show_rate_adjustment_instructions %}Save{% else %}Close{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% addtoblock "js" %}
+<!-- Custom Script for Modal -->
+   <script>
+
+    document.addEventListener("DOMContentLoaded", function() {
+        initModal(
+            "rateModal",                // Modal ID
+            "{{ csrf_token }}",               // CSRF token
+            {{ show_rate_adjustment_instructions|yesno:"true,false" }},  // Logic to show/hide modal
+            "showModalButton",
+            "{% url 'update_modal_preference' %}"
+        );
+    });
+    </script>
+{% endaddtoblock "js" %}

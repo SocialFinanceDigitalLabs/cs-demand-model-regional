@@ -40,7 +40,7 @@
 
 <div class="d-flex bd-highlight mb-3">
     <div class="p-2 bd-highlight"><a class="btn btn-warning" href="{% url 'clear_rates' %}?next_url_name={{rate_change_origin_page}}">Clear all rate adjustments</a></div>
-    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name={{rate_change_origin_page}}">
+    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{{rate_change_origin_page}}">
         {% if rate_change_origin_page == '/costs' %}
             Return to projecting spend
         {% elif rate_change_origin_page == '/adjusted' %}
