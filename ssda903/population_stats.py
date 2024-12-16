@@ -16,15 +16,17 @@ class PopulationStats:
     - entry rates: the rate of entry per day for each model state for a defined reference period
     """
 
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, data_start_date: date, data_end_date: date):
         self.__df = df
+        self.data_start_date = data_start_date
+        self.data_end_date = data_end_date
 
     @property
     def df(self):
         return self.__df
 
     @property
-    def stock(self, data_end_date: date, data_start_date: date):
+    def stock(self):
         """
         Calculates the daily transitions for each age bin and placement type by
         finding all the transitions (start or end of episode), summing to get total populations for each
@@ -61,15 +63,15 @@ class PopulationStats:
         pops = pops.unstack(level=1)
 
         # Ensure the last date of the return is present
-        if data_end_date > pops.index.max():
+        if self.data_end_date > pops.index.max():
             # Add the row to the end of the dataframe with this date
-            pops.loc[data_end_date] = None
+            pops.loc[self.data_end_date] = None
 
         # Resample to daily counts and forward-fill in missing days
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
         # Truncate the dataset to cut out dates earlier than the start date and later than the end date
-        pops = pops.truncate(before=data_start_date, after=data_end_date)
+        pops = pops.truncate(before=self.data_start_date, after=self.data_end_date)
 
         return pops
 
@@ -87,7 +89,7 @@ class PopulationStats:
         return stock
 
     @property
-    def transitions(self, data_end_date: date, data_start_date: date):
+    def transitions(self):
         """
         Returns the number of transitions per day for each model state for the total time period in the input data
         Transitions include exits from care e.g. 5-10 Residential -> Not in care
@@ -106,14 +108,16 @@ class PopulationStats:
         transitions = transitions.unstack(level=["start_bin", "end_bin"])
 
         # Ensure the last date of the return is present
-        if data_end_date > transitions.index.max():
+        if self.data_end_date > transitions.index.max():
             # Add the row to the end of the dataframe with this date
-            transitions.loc[data_end_date] = None
+            transitions.loc[self.data_end_date] = None
 
         transitions = transitions.fillna(0).asfreq("D", fill_value=0)
 
         # Truncate the dataset to cut out dates earlier than the start date and later than the end date
-        transitions = transitions.truncate(before=data_start_date, after=data_end_date)
+        transitions = transitions.truncate(
+            before=self.data_start_date, after=self.data_end_date
+        )
 
         return transitions
 

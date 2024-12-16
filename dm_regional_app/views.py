@@ -99,15 +99,19 @@ def costs(request):
 
     historic_filters = session_scenario.historic_filters
 
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
+
     # Call predict function
     prediction = predict(
-        data=historic_data,
+        stats=stats,
         **session_scenario.prediction_parameters,
         rate_adjustment=session_scenario.adjusted_rates,
         number_adjustment=session_scenario.adjusted_numbers,
     )
-
-    stats = PopulationStats(historic_data)
 
     (
         historic_placement_proportions,
@@ -126,9 +130,7 @@ def costs(request):
         historic_population, session_scenario.adjusted_costs
     )
 
-    base_prediction = predict(
-        data=historic_data, **session_scenario.prediction_parameters
-    )
+    base_prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     base_costs = convert_population_to_cost(
         base_prediction,
@@ -304,10 +306,14 @@ def placement_proportions(request):
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
-    # Call predict function
-    prediction = predict(data=historic_data, **session_scenario.prediction_parameters)
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
 
-    stats = PopulationStats(historic_data)
+    # Call predict function
+    prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     (
         historic_placement_proportions,
@@ -392,10 +398,14 @@ def weekly_costs(request):
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
-    # Call predict function
-    prediction = predict(data=historic_data, **session_scenario.prediction_parameters)
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
 
-    stats = PopulationStats(historic_data)
+    # Call predict function
+    prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     placement_proportions, historic_population = stats.placement_proportions(
         **session_scenario.prediction_parameters
@@ -525,8 +535,14 @@ def entry_rates(request):
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
+
     # Call predict function
-    prediction = predict(data=historic_data, **session_scenario.prediction_parameters)
+    prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     entry_rates = entry_rate_table(prediction.entry_rates)
 
@@ -551,10 +567,14 @@ def entry_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
-            stats = PopulationStats(historic_data)
+            stats = PopulationStats(
+                df=historic_data,
+                data_start_date=datacontainer.data_start_date,
+                data_end_date=datacontainer.data_end_date,
+            )
 
             adjusted_prediction = predict(
-                data=historic_data,
+                stats=stats,
                 **session_scenario.prediction_parameters,
                 rate_adjustment=session_scenario.adjusted_rates,
                 number_adjustment=session_scenario.adjusted_numbers,
@@ -635,8 +655,14 @@ def exit_rates(request):
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
+
     # Call predict function
-    prediction = predict(data=historic_data, **session_scenario.prediction_parameters)
+    prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     exit_rates = exit_rate_table(prediction.transition_rates)
 
@@ -661,10 +687,14 @@ def exit_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
-            stats = PopulationStats(historic_data)
+            stats = PopulationStats(
+                df=historic_data,
+                data_start_date=datacontainer.data_start_date,
+                data_end_date=datacontainer.data_end_date,
+            )
 
             adjusted_prediction = predict(
-                data=historic_data,
+                stats=stats,
                 **session_scenario.prediction_parameters,
                 rate_adjustment=session_scenario.adjusted_rates,
                 number_adjustment=session_scenario.adjusted_numbers,
@@ -746,8 +776,14 @@ def transition_rates(request):
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
+
     # Call predict function
-    prediction = predict(data=historic_data, **session_scenario.prediction_parameters)
+    prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     transition_rates = transition_rate_table(prediction.transition_rates)
 
@@ -772,10 +808,14 @@ def transition_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
-            stats = PopulationStats(historic_data)
+            stats = PopulationStats(
+                df=historic_data,
+                data_start_date=datacontainer.data_start_date,
+                data_end_date=datacontainer.data_end_date,
+            )
 
             adjusted_prediction = predict(
-                data=historic_data,
+                stats=stats,
                 **session_scenario.prediction_parameters,
                 rate_adjustment=session_scenario.adjusted_rates,
                 number_adjustment=session_scenario.adjusted_numbers,
@@ -930,20 +970,28 @@ def adjusted(request):
     else:
         empty_dataframe = False
 
-        stats = PopulationStats(historic_data)
+        stats = PopulationStats(
+            df=historic_data,
+            data_start_date=datacontainer.data_start_date,
+            data_end_date=datacontainer.data_end_date,
+        )
 
         original_prediction = predict(
-            data=historic_data, **session_scenario.prediction_parameters
+            stats=stats, **session_scenario.prediction_parameters
         )
 
         if (
             session_scenario.adjusted_numbers is not None
             or session_scenario.adjusted_rates is not None
         ):
-            stats = PopulationStats(historic_data)
+            stats = PopulationStats(
+                df=historic_data,
+                data_start_date=datacontainer.data_start_date,
+                data_end_date=datacontainer.data_end_date,
+            )
 
             adjusted_prediction = predict(
-                data=historic_data,
+                stats=stats,
                 **session_scenario.prediction_parameters,
                 rate_adjustment=session_scenario.adjusted_rates,
                 number_adjustment=session_scenario.adjusted_numbers,
@@ -1063,12 +1111,14 @@ def prediction(request):
     else:
         empty_dataframe = False
 
-        stats = PopulationStats(historic_data)
+        stats = PopulationStats(
+            df=historic_data,
+            data_start_date=datacontainer.data_start_date,
+            data_end_date=datacontainer.data_end_date,
+        )
 
         # Call predict function with default dates
-        prediction = predict(
-            data=historic_data, **session_scenario.prediction_parameters
-        )
+        prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
         # build chart
         chart = prediction_chart(
@@ -1134,12 +1184,14 @@ def historic_data(request):
         data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label
     ]["CHILD"].nunique()
 
-    stats = PopulationStats(data)
+    stats = PopulationStats(
+        df=data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
 
     chart = historic_chart(stats)
-    plmt_starts_chart = placement_starts_chart(
-        stats, datacontainer.data_start_date, datacontainer.data_end_date
-    )
+    plmt_starts_chart = placement_starts_chart(stats)
 
     return render(
         request,
@@ -1198,8 +1250,13 @@ def validate_with_prediction(files):
     """Validate files creating a prediction."""
     try:
         datacontainer = read_local_data(files)
+        stats = PopulationStats(
+            df=datacontainer.enriched_view,
+            data_start_date=datacontainer.data_start_date,
+            data_end_date=datacontainer.data_end_date,
+        )
         predict(
-            data=datacontainer.enriched_view,
+            stats=stats,
             reference_start_date=datacontainer.data_start_date,
             reference_end_date=datacontainer.data_end_date,
         )
