@@ -22,6 +22,7 @@ from dm_regional_app.charts import (
     exit_rate_table,
     historic_chart,
     placement_proportion_table,
+    placement_starts_chart,
     prediction_chart,
     summary_tables,
     transition_rate_changes,
@@ -1112,14 +1113,12 @@ def historic_data(request):
             session_scenario.save()
 
             # update reference start and end
-
             data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
         else:
             data = datacontainer.enriched_view
-    else:
-        # read data
-        datacontainer = read_data(source=settings.DATA_SOURCE)
+            data = apply_filters(data, session_scenario.historic_filters)
 
+    else:
         # initialize form with default dates
         form = HistoricDataFilter(
             initial=session_scenario.historic_filters,
@@ -1138,6 +1137,9 @@ def historic_data(request):
     stats = PopulationStats(data)
 
     chart = historic_chart(stats)
+    plmt_starts_chart = placement_starts_chart(
+        stats, datacontainer.start_date, datacontainer.end_date
+    )
 
     return render(
         request,
@@ -1146,7 +1148,8 @@ def historic_data(request):
             "form": form,
             "entry_into_care_count": entry_into_care_count,
             "exiting_care_count": exiting_care_count,
-            "chart": chart,
+            "historic_chart": chart,
+            "placement_starts_chart": plmt_starts_chart,
             "show_filtering_instructions": show_filtering_instructions,
         },
     )
