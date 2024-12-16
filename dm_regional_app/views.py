@@ -1138,7 +1138,7 @@ def historic_data(request):
 
     chart = historic_chart(stats)
     plmt_starts_chart = placement_starts_chart(
-        stats, datacontainer.start_date, datacontainer.end_date
+        stats, datacontainer.data_start_date, datacontainer.data_end_date
     )
 
     return render(

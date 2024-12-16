@@ -290,13 +290,15 @@ def historic_chart(data: PopulationStats) -> str:
     return fig_html
 
 
-def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str):
+def placement_starts_chart(
+    data: PopulationStats, data_start_date: str, data_end_date: str
+):
     """
     Outputs an html figure of placement counts over time from the stock in population stats
     """
     df_stats_data = data.df.copy()
 
-    start_date, end_date = pd.to_datetime([start_date, end_date])
+    start_date, end_date = pd.to_datetime([data_start_date, data_end_date])
     df_stats_data["DECOM"] = (
         df_stats_data["DECOM"].dt.to_period("M").dt.to_timestamp()
     )  # requ format for plot timestamps (mths)
