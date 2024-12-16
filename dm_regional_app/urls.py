@@ -8,7 +8,6 @@ urlpatterns = [
     path("scenario/<int:pk>", views.scenario_detail, name="scenario_detail"),
     path("scenarios", views.scenarios, name="scenarios"),
     path("historic_data/", views.historic_data, name="historic_data"),
-    path("router_handler", views.router_handler, name="router_handler"),
     path("adjusted", views.adjusted, name="adjusted"),
     path("transition_rates", views.transition_rates, name="transition_rates"),
     path("exit_rates", views.exit_rates, name="exit_rates"),
@@ -29,5 +28,9 @@ urlpatterns = [
         name="clear_proportions",
     ),
     path("upload_data/", views.upload_data_source, name="upload_data"),
-
+    path(
+        "update_modal_preference/",
+        views.update_modal_preference,
+        name="update_modal_preference",
+    ),
 ]

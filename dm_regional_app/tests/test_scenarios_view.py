@@ -1,9 +1,15 @@
-from django.test import TestCase
+from django.test import TestCase, modify_settings
 from django.urls import reverse
 
 from dm_regional_app.builder import Builder
 
 
+# Remove the custom middleware that checks for a DataSource as that is not the intention of this test suite
+@modify_settings(
+    MIDDLEWARE={
+        "remove": "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware"
+    }
+)
 class ScenariosTestCase(TestCase):
     builder = Builder()
 

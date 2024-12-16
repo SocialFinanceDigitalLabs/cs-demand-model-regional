@@ -1,10 +1,7 @@
 {% extends "dm_regional_app/base.html" %}
 {% load crispy_forms_tags %}
 
-
-
 {% block content %}
-
 <br>
     <h1>Model Base Forecast</h1>
     <br>
@@ -14,7 +11,11 @@
         <li>When you want your forecast to start</li>
         <li>The population the forecast will include</li>
     </ul></p>
-    <br>
+    <!-- Button to manually show the modal -->
+        <button type="button" class="btn btn-primary" id="showModalButton">
+            Show Filtering Instructions
+        </button>
+    <br><br>
     {% if empty_dataframe is True %}
         <div class="alert alert-warning" role="alert">
             <h2>There are no children in the historic dataset that match this filter selection</h2>
@@ -45,9 +46,13 @@
 </div>
 
 <div class="d-flex bd-highlight mb-3">
-    <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="{% url 'router_handler' %}?next_url_name=historic_data">Back</a></div>
-    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'router_handler' %}?next_url_name=adjusted">Next</a></div>
+    <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="{% url 'historic_data' %}">Back</a></div>
+    <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'adjusted' %}">Next</a></div>
   </div>
 
 {% endif %}
+
+{% endblock content %}
+{% block modals %}
+{% include "dm_regional_app/includes/filtering_modal.html" %}
 {% endblock %}

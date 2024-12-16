@@ -59,7 +59,7 @@ class DataUploadTestCase(TestCase):
             "uasc": SimpleUploadedFile("uasc.csv", b"uasc"),
         }
 
-        # Mock the datacontainer created from the uploaded files
+        # Mock the datacontainer created from the verifying the uploaded files
         datacontainer = MagicMock()
         type(datacontainer).start_date = datetime(2024, 1, 1)
         type(datacontainer).end_date = datetime(2024, 12, 1)
