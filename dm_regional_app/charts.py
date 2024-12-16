@@ -306,12 +306,6 @@ def placement_starts_chart(data: PopulationStats, start_date: str, end_date: str
         (df_stats_data["DECOM"] >= start_date) & (df_stats_data["DECOM"] <= end_date)
     ]
 
-    # filter episodes if child transitioned to older age bucket
-    df_filtered = df_filtered.sort_values(
-        by=["CHILD", "DECOM", "placement_type", "age_bin"],
-        ascending=[True, True, True, True],
-    ).drop_duplicates(subset=["CHILD", "DECOM", "placement_type"], keep="first")
-
     # calculate placement duration (end_age - age)
     df_filtered.loc[:, "placement_duration"] = (
         df_filtered["end_age"] - df_filtered["age"]
