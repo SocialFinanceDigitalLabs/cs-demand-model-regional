@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any, Iterable, Optional, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -31,21 +31,37 @@ class NextPrediction:
     variance: np.ndarray
 
 
-def combine_rates(rate1: pd.Series, rate2: pd.Series) -> pd.Series:
-    """'
-    This has been updated to a multiplication method.
-    Excludes cases where rate1 is missing.
+def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd.Series:
     """
-    # Align the series with a left join to retain all indices from rate1
-    rate1, rate2 = rate1.align(rate2, join="left", fill_value=1)
+    Combines original_rate series and rate_adjustment DataFrame, which has both 'multiply_value' and 'add_value' columns.
+    - Multiplies original_rate with 'multiply_value' where provided.
+    - Adds 'add_value' to original_rate where provided.
+    - Ensures the result of addition is not less than 0.
+    - Excludes cases where original_rate is missing.
+    """
+    # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rates
+    original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
 
-    # Create a mask to identify where rate1 is not missing
-    mask = ~rate1.isna()
+    # Fill missing values: multiply_value with 1 (neutral for multiplication), add_value with 0 (neutral for addition)
+    rate_adjustment["multiply_value"].fillna(1, inplace=True)
+    rate_adjustment["add_value"].fillna(0, inplace=True)
 
-    # Apply the mask to exclude undesired cases
-    rates = (rate1 * rate2)[mask]
-    rates.index.names = ["from", "to"]
-    return rates
+    # Multiply original_rate by 'multiply_value' where it exists
+    multiply_result = original_rate * rate_adjustment["multiply_value"]
+
+    # Add 'add_value' to original_rate where it exists, ensuring the result is not less than 0
+    add_result = original_rate + rate_adjustment["add_value"]
+    add_result = add_result.clip(lower=0)  # Ensure no negative values
+
+    # Choose between the multiplication and the addition result
+    # If 'multiply_value' is not 1, use multiplication result; otherwise, use add result
+    final_result = multiply_result.where(
+        rate_adjustment["multiply_value"] != 1, add_result
+    )
+
+    final_result.index.names = ["from", "to"]
+
+    return final_result
 
 
 class MultinomialPredictor(BaseModelPredictor):
@@ -55,8 +71,8 @@ class MultinomialPredictor(BaseModelPredictor):
         transition_rates: pd.Series,
         transition_numbers: Optional[pd.Series] = None,
         start_date: date = date.today(),
-        rate_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
-        number_adjustment: Union[pd.Series, Iterable[pd.Series]] = None,
+        rate_adjustment: Optional[pd.DataFrame] = None,
+        number_adjustment: Optional[pd.DataFrame] = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -64,7 +80,7 @@ class MultinomialPredictor(BaseModelPredictor):
         # initialize rates
         transition_rates.index.names = ["from", "to"]
         if rate_adjustment is not None:
-            if isinstance(rate_adjustment, pd.Series):
+            if isinstance(rate_adjustment, pd.DataFrame):
                 rate_adjustment = [rate_adjustment]
             for adjustment in rate_adjustment:
                 adjustment = adjustment.copy()
@@ -81,7 +97,7 @@ class MultinomialPredictor(BaseModelPredictor):
             transition_numbers.index.names = ["from", "to"]
 
             if number_adjustment is not None:
-                if isinstance(number_adjustment, pd.Series):
+                if isinstance(number_adjustment, pd.DataFrame):
                     number_adjustment = [number_adjustment]
                 for adjustment in number_adjustment:
                     adjustment = adjustment.copy()
