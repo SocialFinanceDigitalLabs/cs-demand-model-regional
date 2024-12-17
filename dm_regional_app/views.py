@@ -1171,8 +1171,9 @@ def historic_data(request):
             # update reference start and end
             data = apply_filters(datacontainer.enriched_view, form.cleaned_data)
         else:
-            data = datacontainer.enriched_view
-            data = apply_filters(data, session_scenario.historic_filters)
+            data = apply_filters(
+                datacontainer.enriched_view, session_scenario.historic_filters
+            )
 
     else:
         # initialize form with default dates
@@ -1184,11 +1185,13 @@ def historic_data(request):
         data = apply_filters(datacontainer.enriched_view, form.initial)
 
     entry_into_care_count = data.loc[
-        data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label
-    ]["CHILD"].nunique()
+        (data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label)
+        & (data.DECOM >= pd.to_datetime(datacontainer.data_start_date))
+    ]["CHILD"].count()
     exiting_care_count = data.loc[
-        data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label
-    ]["CHILD"].nunique()
+        (data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label)
+        & (data.DEC <= pd.to_datetime(datacontainer.data_end_date))
+    ]["CHILD"].count()
 
     stats = PopulationStats(
         df=data,
