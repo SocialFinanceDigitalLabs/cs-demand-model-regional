@@ -18,8 +18,8 @@ class PopulationStats:
 
     def __init__(self, df: pd.DataFrame, data_start_date: date, data_end_date: date):
         self.__df = df
-        self.data_start_date = data_start_date
-        self.data_end_date = data_end_date
+        self.data_start_date = pd.to_datetime(data_start_date)
+        self.data_end_date = pd.to_datetime(data_end_date)
 
     @property
     def df(self):
