@@ -130,6 +130,12 @@ def costs(request):
         historic_population, session_scenario.adjusted_costs
     )
 
+    stats = PopulationStats(
+        df=historic_data,
+        data_start_date=datacontainer.data_start_date,
+        data_end_date=datacontainer.data_end_date,
+    )
+
     base_prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     base_costs = convert_population_to_cost(
