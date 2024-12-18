@@ -61,8 +61,8 @@ class DataUploadTestCase(TestCase):
 
         # Mock the datacontainer created from the verifying the uploaded files
         datacontainer = MagicMock()
-        type(datacontainer).start_date = datetime(2024, 1, 1)
-        type(datacontainer).end_date = datetime(2024, 12, 1)
+        type(datacontainer).data_start_date = datetime(2024, 1, 1)
+        type(datacontainer).data_end_date = datetime(2024, 12, 1)
         prediction.return_value = datacontainer, None
 
         with mock.patch("django.core.files.storage.FileSystemStorage") as mock_storage:

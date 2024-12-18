@@ -33,8 +33,8 @@ class SessionScenarioMiddleware:
 
             data = DataSource.objects.latest("uploaded")
             prediction_parameters = {
-                "reference_start_date": data.start_date,
-                "reference_end_date": data.end_date,
+                "reference_start_date": data.data_start_date,
+                "reference_end_date": data.data_end_date,
                 "prediction_start_date": None,
                 "prediction_end_date": None,
             }
