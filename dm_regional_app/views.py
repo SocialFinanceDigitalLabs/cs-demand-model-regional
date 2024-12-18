@@ -930,7 +930,7 @@ def adjusted(request):
         if "reference_start_date" in request.POST:
             predict_form = PredictFilter(
                 request.POST,
-                reference_data_min=datacontainer.data_start_date,
+                reference_date_min=datacontainer.data_start_date,
                 reference_date_max=datacontainer.data_end_date,
             )
             historic_form = HistoricDataFilter(
@@ -1064,7 +1064,7 @@ def prediction(request):
             predict_form = PredictFilter(
                 initial=session_scenario.prediction_parameters,
                 reference_date_min=datacontainer.data_start_date,
-                reference_data_max=datacontainer.data_end_date,
+                reference_date_max=datacontainer.data_end_date,
             )
             if historic_form.is_valid():
                 session_scenario.historic_filters = historic_form.cleaned_data
