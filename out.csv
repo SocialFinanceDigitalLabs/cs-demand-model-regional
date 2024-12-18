@@ -1,0 +1,118 @@
+start_bin,end_bin,transition_rate
+10 to 16 - Fostering,10 to 16 - Fostering,0.0012824282253781011
+10 to 16 - Fostering,10 to 16 - Not in care,0.0007607490225500864
+10 to 16 - Fostering,10 to 16 - Other,0.00019528409588230467
+10 to 16 - Fostering,10 to 16 - Residential,0.0002434287609611368
+10 to 16 - Fostering,10 to 16 - Supported,2.5821378035302988e-06
+10 to 16 - Fostering,16 to 18+ - Fostering,0.00037245173994002217
+10 to 16 - Other,10 to 16 - Fostering,0.0014357683897521238
+10 to 16 - Other,10 to 16 - Not in care,0.0005511659583258349
+10 to 16 - Other,10 to 16 - Other,0.00019940119803008285
+10 to 16 - Other,10 to 16 - Residential,0.0002322167965274844
+10 to 16 - Other,16 to 18+ - Other,0.00032172145754584563
+10 to 16 - Residential,10 to 16 - Fostering,0.0015595387245694395
+10 to 16 - Residential,10 to 16 - Not in care,0.0006344401839699845
+10 to 16 - Residential,10 to 16 - Other,0.00011031492121528685
+10 to 16 - Residential,10 to 16 - Residential,0.0001760942645276719
+10 to 16 - Residential,16 to 18+ - Residential,0.0003978242590655077
+10 to 16 - Supported,16 to 18+ - Supported,0.0004570383912248629
+16 to 18+ - Fostering,16 to 18+ - Fostering,0.00019631580587115038
+16 to 18+ - Fostering,16 to 18+ - Not in care,0.0018569490116436996
+16 to 18+ - Fostering,16 to 18+ - Other,0.0002803345183272947
+16 to 18+ - Fostering,16 to 18+ - Residential,0.0001421108676096356
+16 to 18+ - Fostering,16 to 18+ - Supported,0.0011147200387780665
+16 to 18+ - Other,16 to 18+ - Fostering,0.0004746899036607607
+16 to 18+ - Other,16 to 18+ - Not in care,0.002108411415120965
+16 to 18+ - Other,16 to 18+ - Other,0.0004104704038836741
+16 to 18+ - Other,16 to 18+ - Residential,0.00010801435270873312
+16 to 18+ - Other,16 to 18+ - Supported,0.0007358944630425434
+16 to 18+ - Residential,16 to 18+ - Fostering,6.529119874640897e-05
+16 to 18+ - Residential,16 to 18+ - Not in care,0.0017605046284205333
+16 to 18+ - Residential,16 to 18+ - Other,0.0001414642639505528
+16 to 18+ - Residential,16 to 18+ - Residential,0.00011425959780621572
+16 to 18+ - Residential,16 to 18+ - Supported,0.0011982748614375672
+16 to 18+ - Supported,16 to 18+ - Fostering,0.0004580806991187724
+16 to 18+ - Supported,16 to 18+ - Not in care,0.0017428510137074528
+16 to 18+ - Supported,16 to 18+ - Other,0.0003651598501539847
+16 to 18+ - Supported,16 to 18+ - Residential,9.950671165995863e-05
+16 to 18+ - Supported,16 to 18+ - Supported,0.001072336147899439
+5 to 10 - Fostering,10 to 16 - Fostering,0.0024868036702598933
+5 to 10 - Fostering,5 to 10 - Fostering,0.0007596436909687665
+5 to 10 - Fostering,5 to 10 - Not in care,0.00031610902628371535
+5 to 10 - Fostering,5 to 10 - Other,4.988798602863566e-05
+5 to 10 - Fostering,5 to 10 - Residential,0.00015648372070466013
+5 to 10 - Other,10 to 16 - Other,0.0013655093636812101
+5 to 10 - Other,5 to 10 - Fostering,0.0005047093369762475
+5 to 10 - Other,5 to 10 - Not in care,0.00031738777168393255
+5 to 10 - Other,5 to 10 - Residential,0.0004570383912248629
+5 to 10 - Residential,10 to 16 - Residential,0.0010611963194230103
+5 to 10 - Residential,5 to 10 - Fostering,0.001294789280392571
+5 to 10 - Residential,5 to 10 - Not in care,0.0003223752938103943
+5 to 10 - Residential,5 to 10 - Other,0.00017444468998399528
+5 to 10 - Residential,5 to 10 - Residential,0.0006124398149078223
+5 to 10 - Fostering,10 to 16 - Not in care,0.0
+5 to 10 - Fostering,10 to 16 - Residential,0.0
+5 to 10 - Fostering,5 to 10 - None,0.0
+5 to 10 - Fostering,10 to 16 - None,0.0
+5 to 10 - Fostering,10 to 16 - Other,0.0
+5 to 10 - Fostering,5 to 10 - Supported,0.0
+5 to 10 - Fostering,10 to 16 - Supported,0.0
+10 to 16 - Fostering,16 to 18+ - Not in care,0.0
+10 to 16 - Fostering,16 to 18+ - Residential,0.0
+10 to 16 - Fostering,10 to 16 - None,0.0
+10 to 16 - Fostering,16 to 18+ - None,0.0
+10 to 16 - Fostering,16 to 18+ - Other,0.0
+10 to 16 - Fostering,16 to 18+ - Supported,0.0
+16 to 18+ - Fostering,16 to 18+ - None,0.0
+5 to 10 - Residential,10 to 16 - Not in care,0.0
+5 to 10 - Residential,10 to 16 - Fostering,0.0
+5 to 10 - Residential,5 to 10 - None,0.0
+5 to 10 - Residential,10 to 16 - None,0.0
+5 to 10 - Residential,10 to 16 - Other,0.0
+5 to 10 - Residential,5 to 10 - Supported,0.0
+5 to 10 - Residential,10 to 16 - Supported,0.0
+10 to 16 - Residential,16 to 18+ - Not in care,0.0
+10 to 16 - Residential,16 to 18+ - Fostering,0.0
+10 to 16 - Residential,10 to 16 - None,0.0
+10 to 16 - Residential,16 to 18+ - None,0.0
+10 to 16 - Residential,16 to 18+ - Other,0.0
+10 to 16 - Residential,10 to 16 - Supported,0.0
+10 to 16 - Residential,16 to 18+ - Supported,0.0
+16 to 18+ - Residential,16 to 18+ - None,0.0
+5 to 10 - Supported,5 to 10 - Not in care,0.0
+5 to 10 - Supported,10 to 16 - Not in care,0.0
+5 to 10 - Supported,5 to 10 - Fostering,0.0
+5 to 10 - Supported,10 to 16 - Fostering,0.0
+5 to 10 - Supported,5 to 10 - Residential,0.0
+5 to 10 - Supported,10 to 16 - Residential,0.0
+5 to 10 - Supported,5 to 10 - None,0.0
+5 to 10 - Supported,10 to 16 - None,0.0
+5 to 10 - Supported,5 to 10 - Other,0.0
+5 to 10 - Supported,10 to 16 - Other,0.0
+5 to 10 - Supported,10 to 16 - Supported,0.0
+10 to 16 - Supported,10 to 16 - Not in care,0.0
+10 to 16 - Supported,16 to 18+ - Not in care,0.0
+10 to 16 - Supported,10 to 16 - Fostering,0.0
+10 to 16 - Supported,16 to 18+ - Fostering,0.0
+10 to 16 - Supported,10 to 16 - Residential,0.0
+10 to 16 - Supported,16 to 18+ - Residential,0.0
+10 to 16 - Supported,10 to 16 - None,0.0
+10 to 16 - Supported,16 to 18+ - None,0.0
+10 to 16 - Supported,10 to 16 - Other,0.0
+10 to 16 - Supported,16 to 18+ - Other,0.0
+16 to 18+ - Supported,16 to 18+ - None,0.0
+5 to 10 - Other,10 to 16 - Not in care,0.0
+5 to 10 - Other,10 to 16 - Fostering,0.0
+5 to 10 - Other,10 to 16 - Residential,0.0
+5 to 10 - Other,5 to 10 - None,0.0
+5 to 10 - Other,10 to 16 - None,0.0
+5 to 10 - Other,5 to 10 - Supported,0.0
+5 to 10 - Other,10 to 16 - Supported,0.0
+10 to 16 - Other,16 to 18+ - Not in care,0.0
+10 to 16 - Other,16 to 18+ - Fostering,0.0
+10 to 16 - Other,16 to 18+ - Residential,0.0
+10 to 16 - Other,10 to 16 - None,0.0
+10 to 16 - Other,16 to 18+ - None,0.0
+10 to 16 - Other,10 to 16 - Supported,0.0
+10 to 16 - Other,16 to 18+ - Supported,0.0
+16 to 18+ - Other,16 to 18+ - None,0.0

@@ -187,7 +187,7 @@ class PopulationStats:
         # Use the mean rates
         transition_rates = transition_rates.mean(axis=0)
         transition_rates.name = "transition_rate"
-        transition_rates.to_csv("out.csv")
+
         return transition_rates
 
     @property
