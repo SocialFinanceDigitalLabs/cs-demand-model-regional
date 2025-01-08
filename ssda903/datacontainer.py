@@ -325,6 +325,7 @@ class DemandModellingDataContainer:
                         old_row["REASON_PLACE_CHANGE"] = ""
                         old_row["end_age"] = age_bound
                         new_row["DECOM"] = row["DOB"] + pd.DateOffset(years=age_bound)
+                        new_row["RNE"] = "A"  # A for age
                         new_row["age"] = age_bound
                         expanded_df.append(old_row)
                         expanded_df.append(new_row)

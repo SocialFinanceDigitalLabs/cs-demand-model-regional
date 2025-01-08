@@ -295,16 +295,19 @@ def placement_starts_chart(data: PopulationStats) -> str:
     Outputs an html figure of placement counts over time from the stock in population stats
     """
     df_stats_data = data.df.copy()
-
     start_date, end_date = pd.to_datetime([data.data_start_date, data.data_end_date])
-    df_stats_data["DECOM"] = (
-        df_stats_data["DECOM"].dt.to_period("M").dt.to_timestamp()
-    )  # requ format for plot timestamps (mths)
 
-    # filter time-frame to passed/form dates
+    # filter dataset to:
+    # - data start and end dates
+    # - remove episodes that are just due to age transitions
     df_filtered = df_stats_data[
-        (df_stats_data["DECOM"] >= start_date) & (df_stats_data["DECOM"] <= end_date)
+        (df_stats_data["DECOM"] >= start_date)
+        & (df_stats_data["DECOM"] <= end_date)
+        & (df_stats_data["RNE"] != "A")
     ]
+
+    # Change DECOMs to beginning of each month to facilitate graph showing events by month
+    df_filtered["DECOM"] = df_filtered["DECOM"].dt.to_period("M").dt.to_timestamp()
 
     # calculate placement duration (end_age - age)
     df_filtered.loc[:, "placement_duration"] = (
