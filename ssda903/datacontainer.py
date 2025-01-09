@@ -236,7 +236,12 @@ class DemandModellingDataContainer:
         return combined
 
     @cached_property
-    def start_date(self) -> date:
+    def data_start_date(self) -> date:
+        """
+        Returns the first date of the first SSDA903 return uploaded
+        This will always be 1st April
+        Note that this will not be the earliest date shown in DECOM, as a child's entry to care may have been prior to the start of the earliest return
+        """
         # Find the minimum value in the 'DEC' column
         min_dec = self.combined_data["DEC"].min()
 
@@ -246,14 +251,19 @@ class DemandModellingDataContainer:
 
         # Determine the start_date based on the month of min_dec
         if 4 <= min_dec_month <= 12:  # April to December
-            start_date = date(min_dec_year, 4, 1)
+            data_start_date = date(min_dec_year, 4, 1)
         else:  # January to March
-            start_date = date(min_dec_year - 1, 4, 1)
+            data_start_date = date(min_dec_year - 1, 4, 1)
 
-        return start_date
+        return data_start_date
 
     @cached_property
-    def end_date(self) -> date:
+    def data_end_date(self) -> date:
+        """
+        Returns the last date of the last SSDA903 return uploaded
+        This will always be 31st March
+        Note that this may not be the last date shown in the data, as no entry/transition/exit from care may have occurred on this day
+        """
         max_dec_decom = self.combined_data[["DECOM", "DEC"]].max().max().date()
 
         # Extract the month and year from the max_dec_decom date
@@ -262,11 +272,11 @@ class DemandModellingDataContainer:
 
         # Determine the end_date based on the month of max_dec_decom
         if 4 <= max_dec_decom_month <= 12:  # April to December
-            end_date = date(max_dec_decom_year + 1, 3, 31)
+            data_end_date = date(max_dec_decom_year + 1, 3, 31)
         else:  # January to March
-            end_date = date(max_dec_decom_year, 3, 31)
+            data_end_date = date(max_dec_decom_year, 3, 31)
 
-        return end_date
+        return data_end_date
 
     @cached_property
     def unique_las(self) -> pd.Series:
@@ -315,6 +325,7 @@ class DemandModellingDataContainer:
                         old_row["REASON_PLACE_CHANGE"] = ""
                         old_row["end_age"] = age_bound
                         new_row["DECOM"] = row["DOB"] + pd.DateOffset(years=age_bound)
+                        new_row["RNE"] = "A"  # A for age
                         new_row["age"] = age_bound
                         expanded_df.append(old_row)
                         expanded_df.append(new_row)

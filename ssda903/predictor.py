@@ -9,7 +9,7 @@ from ssda903.multinomial import MultinomialPredictor, Prediction
 
 
 def predict(
-    data: pd.DataFrame,
+    stats: PopulationStats,
     reference_start_date: date,
     reference_end_date: date,
     prediction_start_date: Optional[date] = None,
@@ -20,7 +20,6 @@ def predict(
     """
     Analyses source between start and end, and then predicts the population at prediction_date.
     """
-    stats = PopulationStats(data)
     if prediction_start_date is None:
         prediction_start_date = reference_end_date
     if prediction_end_date is None:

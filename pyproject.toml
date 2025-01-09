@@ -5,6 +5,7 @@ description = ""
 authors = ["kws", "franciscobmacedo", "amynickolls", "MichaelHanksSF"]
 readme = "README.md"
 packages = []
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"

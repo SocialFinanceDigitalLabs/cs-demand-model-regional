@@ -71,6 +71,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
     "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware",
 ]
 
