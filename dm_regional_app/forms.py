@@ -21,7 +21,6 @@ class PredictFilter(forms.Form):
         required=True,
     )
     prediction_start_date = forms.DateField(
-        widget=DatePickerInput(),
         label="Prediction Start Date",
         required=False,
         help_text="Select the future date-range you want to apply your forecast to",
@@ -57,6 +56,10 @@ class PredictFilter(forms.Form):
         )
 
         self.fields["reference_end_date"].widget = DatePickerInput(
+            options={"minDate": reference_date_min, "maxDate": reference_date_max}
+        )
+
+        self.fields["prediction_start_date"].widget = DatePickerInput(
             options={"minDate": reference_date_min, "maxDate": reference_date_max}
         )
 
