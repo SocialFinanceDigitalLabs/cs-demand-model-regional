@@ -426,15 +426,18 @@ class DynamicRateForm(forms.Form):
             }
         )
 
-        # Convert the transition column to a MultiIndex if it contains tuples
-        if all(isinstance(idx, tuple) for idx in data["transition"]):
-            # Convert the "transition" column to a MultiIndex
-            data.set_index(pd.MultiIndex.from_tuples(data["transition"]), inplace=True)
-            data.drop(
-                columns=["transition"], inplace=True
-            )  # Drop the column after conversion
-        else:
-            # Otherwise, set transition column as index
-            data.set_index(["transition"], inplace=True)
+        if not data.empty:
+            # Convert the transition column to a MultiIndex if it contains tuples
+            if all(isinstance(idx, tuple) for idx in data["transition"]):
+                # Convert the "transition" column to a MultiIndex
+                data.set_index(
+                    pd.MultiIndex.from_tuples(data["transition"]), inplace=True
+                )
+                data.drop(
+                    columns=["transition"], inplace=True
+                )  # Drop the column after conversion
+            else:
+                # Otherwise, set transition column as index
+                data.set_index(["transition"], inplace=True)
 
         return data
