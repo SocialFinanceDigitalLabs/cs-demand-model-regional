@@ -5,10 +5,11 @@ description = ""
 authors = ["kws", "franciscobmacedo", "amynickolls", "MichaelHanksSF"]
 readme = "README.md"
 packages = []
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
-Django = "^4.2.10"
+Django = "^4.2.14"
 demand-model = "^0.2.0"
 plotly = "^5.18.0"
 django-crispy-forms = "^2.1"
@@ -26,6 +27,7 @@ django-sekizai = "^4.1.0"
 gunicorn = "^23.0.0"
 django-allauth = {extras = ["socialaccount"], version = "^64.2.1"}
 django-storages = {extras = ["s3"], version = "^1.14.4"}
+sentry-sdk = "^2.17.0"
 
 
 

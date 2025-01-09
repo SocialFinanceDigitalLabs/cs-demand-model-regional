@@ -1,0 +1,60 @@
+{% load static sekizai_tags %}
+
+<!-- Modal -->
+<div class="modal fade" id="filteringModal" tabindex="-1" aria-labelledby="filteringModalLabel" aria-hidden="true">
+<div class="modal-dialog modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title" id="filteringModalLabel">Understanding filtering</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <p>
+                Filter the data to see the pattern of children in care over time across dimensions such as:
+                <ul>
+                    <li>Local Authority</li>
+                    <li>Ethnicity</li>
+                    <li>Sex</li>
+                    <li>Unaccompanied asylum seeker children (UASC)</li>
+                </ul>
+                You may want to filter to focus in on a certain population or child characteristic. 
+                For example, you may have a large UASC population and want to create a separate dashboard and model just for that or focus in on sub-regions.
+            </p>
+            <p>
+                The tool will retain any filters or adjustments you make as you go through the tool. You can always continue to filter or change your view as you progress through the tool.
+            </p>
+            {% if show_filtering_instructions %}
+            <form id="modalForm" method="POST">
+                {% csrf_token %}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="dontShowAgain" name="dont_show_again" >
+                    <label class="form-check-label" for="dontShowAgain">
+                        Don't show me this again
+                    </label>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="savePreference" {% if not show_filtering_instructions %}data-bs-dismiss="modal"{% endif %}>
+                {% if show_filtering_instructions %}Save{% else %}Close{% endif %}
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+
+{% addtoblock "js" %}
+<!-- Custom Script for Modal -->
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        initModal(
+            "filteringModal",                // Modal ID
+            "{{ csrf_token }}",               // CSRF token
+            {{ show_filtering_instructions|yesno:"true,false" }},  // Logic to show/hide modal
+            "showModalButton",
+            "{% url 'update_modal_preference' %}"
+        );
+    });
+    </script>
+{% endaddtoblock "js" %}

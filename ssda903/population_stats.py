@@ -4,12 +4,23 @@ from itertools import product
 
 import pandas as pd
 
-from ssda903.config import AgeBrackets, Costs, PlacementCategories
+from ssda903.config import Costs, PlacementCategories
 
 
 class PopulationStats:
-    def __init__(self, df: pd.DataFrame):
+    """
+    Transforms an episode-level table from datacontainer into a series of tables showing the following:
+    - stock: child populations by model state by day for the total time period
+    - transitions: state transitions by day e.g. 10-15 Fostering->16-18 Fostering for the total time period
+    - raw transition rates: a rate for each state transition for a defined reference period
+    - placement proportions: the proportion of placements within a placement category (as defined by PlacementCategories enum) belonging to more granular placement types for a defined reference period
+    - entry rates: the rate of entry per day for each model state for a defined reference period
+    """
+
+    def __init__(self, df: pd.DataFrame, data_start_date: date, data_end_date: date):
         self.__df = df
+        self.data_start_date = pd.to_datetime(data_start_date)
+        self.data_end_date = pd.to_datetime(data_end_date)
 
     @property
     def df(self):
@@ -52,25 +63,39 @@ class PopulationStats:
 
         pops = pops.unstack(level=1)
 
+        # Ensure the last date of the return is present
+        if self.data_end_date > pops.index.max():
+            # Add the row to the end of the dataframe with this date
+            pops.loc[self.data_end_date] = None
+
         # Resample to daily counts and forward-fill in missing days
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
-        # Add the missing age bins and fill with zeros
+        # Truncate the dataset to cut out dates earlier than the start date and later than the end date
+        pops = pops.truncate(before=self.data_start_date, after=self.data_end_date)
 
         return pops
 
     @lru_cache(maxsize=5)
-    def stock_at(self, start_date) -> pd.Series:
-        start_date = pd.to_datetime(start_date)
+    def stock_at(self, date) -> pd.Series:
+        """
+        Returns the stock on a given date
+        """
+        date = pd.to_datetime(date)
 
-        index = self.stock.index.get_indexer([start_date], method="nearest")
+        index = self.stock.index.get_indexer([date], method="nearest")
 
         stock = self.stock.iloc[index[0]].T
-        stock.name = start_date
+        stock.name = date
         return stock
 
     @property
     def transitions(self):
+        """
+        Returns the number of transitions per day for each model state for the total time period in the input data
+        Transitions include exits from care e.g. 5-10 Residential -> Not in care
+        Transitions do not include entrants to care
+        """
         transitions = self.df.copy()
         transitions["start_bin"] = transitions.apply(
             lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
@@ -81,10 +106,18 @@ class PopulationStats:
             axis=1,
         )
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
-        transitions = (
-            transitions.unstack(level=["start_bin", "end_bin"])
-            .fillna(0)
-            .asfreq("D", fill_value=0)
+        transitions = transitions.unstack(level=["start_bin", "end_bin"])
+
+        # Ensure the last date of the return is present
+        if self.data_end_date > transitions.index.max():
+            # Add the row to the end of the dataframe with this date
+            transitions.loc[self.data_end_date] = None
+
+        transitions = transitions.fillna(0).asfreq("D", fill_value=0)
+
+        # Truncate the dataset to cut out dates earlier than the start date and later than the end date
+        transitions = transitions.truncate(
+            before=self.data_start_date, after=self.data_end_date
         )
 
         return transitions
@@ -161,7 +194,9 @@ class PopulationStats:
         return possible_transitions
 
     @lru_cache(maxsize=5)
-    def raw_transition_rates(self, start_date: date, end_date: date):
+    def raw_transition_rates(
+        self, reference_start_date: date, reference_end_date: date
+    ):
         all_possible_transitions = self.transition_combinations
 
         df = pd.DataFrame(columns=all_possible_transitions)
@@ -170,11 +205,21 @@ class PopulationStats:
             df.columns, names=["start_bin", "end_bin"]
         )
 
+        """
+        Calculates transition rates for each transition using:
+        - stock
+        - transitions
+        - reference dates
+        """
         # Ensure we can calculate the transition rates by aligning the dataframes
-        stock = self.stock.truncate(before=start_date, after=end_date)
+        stock = self.stock.truncate(
+            before=reference_start_date, after=reference_end_date
+        )
 
         stock.columns.name = "start_bin"
-        transitions = self.transitions.truncate(before=start_date, after=end_date)
+        transitions = self.transitions.truncate(
+            before=reference_start_date, after=reference_end_date
+        )
 
         # Calculate the transition rates
         stock, transitions = stock.align(transitions)
@@ -190,35 +235,14 @@ class PopulationStats:
 
         return transition_rates
 
-    @property
-    def ageing_out(self) -> pd.Series:
-        """
-        Returns the probability of ageing out from one bin to the other.
-        """
-        ageing_out = []
-        for age_group in AgeBrackets:
-            for pt in PlacementCategories:
-                next_name = (
-                    (age_group.next.value.label, pt.value.label)
-                    if age_group.next
-                    else tuple()
-                )
-                ageing_out.append(
-                    {
-                        "from": (age_group.value.label, pt.value.label),
-                        "to": next_name,
-                        "rate": age_group.value.daily_probability,
-                    }
-                )
-
-        df = pd.DataFrame(ageing_out)
-        df.set_index(["from", "to"], inplace=True)
-        return df.rate
-
     @lru_cache(maxsize=5)
     def placement_proportions(
         self, reference_start_date: date, reference_end_date: date, **kwargs
     ):
+        """
+        Calculates the proportion of placements in each placement category that were from a more granular set of placements for the historic data over a defined reference period
+        - placement categories from PlacementCategories enum
+        """
         start_date = pd.to_datetime(reference_start_date)
         end_date = pd.to_datetime(reference_end_date)
 
@@ -278,12 +302,14 @@ class PopulationStats:
         return proportion_series, proportion_population
 
     @lru_cache(maxsize=5)
-    def daily_entrants(self, start_date: date, end_date: date) -> pd.Series:
+    def daily_entrants(
+        self, reference_start_date: date, reference_end_date: date
+    ) -> pd.Series:
         """
-        Returns the number of entrants and the daily_probability of entrants for each age bracket and placement type.
+        Returns the daily probability of entrants for each model state
         """
-        start_date = pd.to_datetime(start_date)
-        end_date = pd.to_datetime(end_date)
+        start_date = pd.to_datetime(reference_start_date)
+        end_date = pd.to_datetime(reference_end_date)
 
         df = self.df
 
@@ -315,13 +341,3 @@ class PopulationStats:
         df = df.set_index(["from", "to"])
 
         return df.daily_entry_probability
-
-    def to_excel(self, output_file: str, start_date: date, end_date: date):
-        with pd.ExcelWriter(output_file) as writer:
-            self.stock_at(end_date).to_excel(writer, sheet_name="population")
-            self.raw_transition_rates(start_date, end_date).to_excel(
-                writer, sheet_name="transition_rates"
-            )
-            self.daily_entrants(start_date, end_date).to_excel(
-                writer, sheet_name="daily_entrants"
-            )

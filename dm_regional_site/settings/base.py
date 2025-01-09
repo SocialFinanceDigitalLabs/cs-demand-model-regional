@@ -71,6 +71,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
+    "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware",
 ]
 
 MICROSOFT_CLIENT_ID = config("MICROSOFT_CLIENT_ID", default="")
@@ -96,7 +98,13 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_SESSION_REMEMBER = False
-ACCOUNT_FORMS = {"login": "accounts.forms.CustomLoginForm"}
+ACCOUNT_FORMS = {
+    "login": "accounts.forms.CustomLoginForm",
+    "change_password": "accounts.forms.CustomChangePasswordForm",
+}
+SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
 
 ROOT_URLCONF = "dm_regional_site.urls"
 X_FRAME_OPTIONS = "SAMEORIGIN"

@@ -1,5 +1,6 @@
+from datetime import datetime
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -57,7 +58,13 @@ class DataUploadTestCase(TestCase):
             "header": SimpleUploadedFile("header.csv", b"header"),
             "uasc": SimpleUploadedFile("uasc.csv", b"uasc"),
         }
-        prediction.return_value = True, None
+
+        # Mock the datacontainer created from the verifying the uploaded files
+        datacontainer = MagicMock()
+        type(datacontainer).data_start_date = datetime(2024, 1, 1)
+        type(datacontainer).data_end_date = datetime(2024, 12, 1)
+        prediction.return_value = datacontainer, None
+
         with mock.patch("django.core.files.storage.FileSystemStorage") as mock_storage:
             self.client.post(reverse("upload_data"), files)
             self.assertEqual(DataSource.objects.count(), 1)
@@ -70,6 +77,6 @@ class DataUploadTestCase(TestCase):
             "header": SimpleUploadedFile("header.csv", b"header"),
             "uasc": SimpleUploadedFile("uasc.csv", b"uasc"),
         }
-        prediction.return_value = False, None
+        prediction.return_value = None, None
         self.client.post(reverse("upload_data"), files)
         self.assertEqual(DataSource.objects.count(), 0)
