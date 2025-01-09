@@ -169,7 +169,7 @@ class DynamicForm(forms.Form):
             value = cleaned_data.get(field_name)
             if value is not None and value < 0:
                 negative_numbers.append(field_name)
-                self.add_error(field_name, "Negative numbers are not allowed!")
+                self.add_error(field_name, "Negative numbers are not allowed")
 
         if negative_numbers:
             raise forms.ValidationError(
@@ -320,3 +320,124 @@ class DataSourceUploadForm(forms.Form):
             )
         ],
     )
+
+
+class DynamicRateForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        self.dataframe = kwargs.pop("dataframe", None)
+        initial_data = kwargs.pop("initial_data", pd.DataFrame)
+
+        super(DynamicRateForm, self).__init__(*args, **kwargs)
+        self.initialize_fields(initial_data)
+
+    def initialize_fields(self, initial_data):
+        """
+        Dynamically create two fields for each option: one for multiplication and one for addition.
+        """
+        for index in self.dataframe.index:
+            multiply_field_name = f"multiply_{index}"
+            add_field_name = f"add_{index}"
+
+            # Set initial values if available, otherwise set as None
+            if initial_data is not None:
+                try:
+                    initial_multiply = initial_data.loc[index, "multiply_value"]
+                except (KeyError, IndexError, ValueError):
+                    initial_multiply = None
+
+                try:
+                    initial_add = initial_data.loc[index, "add_value"]
+                except (KeyError, IndexError, ValueError):
+                    initial_add = None
+
+            else:
+                initial_multiply = None
+                initial_add = None
+
+            # Create form fields for each option
+            self.fields[multiply_field_name] = forms.FloatField(
+                required=False,
+                initial=initial_multiply,
+                widget=forms.NumberInput(attrs={"placeholder": "Multiply Rate"}),
+            )
+            self.fields[add_field_name] = forms.FloatField(
+                required=False,
+                initial=initial_add,
+                widget=forms.NumberInput(attrs={"placeholder": "Add to Rate"}),
+            )
+
+    def clean(self):
+        """
+        Validate form data and ensure:
+        Only a multiply or an add value exists for each rate
+        No negative values are entered in multiply fields
+        """
+        cleaned_data = super().clean()
+
+        for index in self.dataframe.index:
+            multiply_field_name = f"multiply_{index}"
+            add_field_name = f"add_{index}"
+
+            multiply_value = cleaned_data.get(multiply_field_name)
+            add_value = cleaned_data.get(add_field_name)
+
+            # Validation logic: Ensure only one field is filled or none
+            if multiply_value is not None and add_value is not None:
+                self.add_error(
+                    multiply_field_name, "You cannot fill both multiply and add fields."
+                )
+                self.add_error(
+                    add_field_name, "You cannot fill both multiply and add fields."
+                )
+
+            # Validation logic: multiply value can't contain negative numbers
+            if multiply_value is not None and multiply_value < 0:
+                self.add_error(
+                    multiply_field_name,
+                    "You cannot multiply a rate by a negative value",
+                )
+
+        return cleaned_data
+
+    def save(self):
+        """
+        Output a DataFrame with the inputs for multiplication and addition fields.
+        """
+        transitions = []
+        multiply_values = []
+        add_values = []
+
+        # Loop through the form fields and collect the input values
+        for index in self.dataframe.index:
+            multiply_value = self.cleaned_data.get(f"multiply_{index}", None)
+            add_value = self.cleaned_data.get(f"add_{index}", None)
+
+            if multiply_value is not None or add_value is not None:
+                transitions.append(index)
+                multiply_values.append(multiply_value)
+                add_values.append(add_value)
+
+        # Create a DataFrame with the collected input values
+        data = pd.DataFrame(
+            {
+                "transition": transitions,
+                "multiply_value": multiply_values,
+                "add_value": add_values,
+            }
+        )
+
+        if not data.empty:
+            # Convert the transition column to a MultiIndex if it contains tuples
+            if all(isinstance(idx, tuple) for idx in data["transition"]):
+                # Convert the "transition" column to a MultiIndex
+                data.set_index(
+                    pd.MultiIndex.from_tuples(data["transition"]), inplace=True
+                )
+                data.drop(
+                    columns=["transition"], inplace=True
+                )  # Drop the column after conversion
+            else:
+                # Otherwise, set transition column as index
+                data.set_index(["transition"], inplace=True)
+
+        return data

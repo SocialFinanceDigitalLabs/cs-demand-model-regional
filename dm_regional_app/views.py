@@ -34,6 +34,7 @@ from dm_regional_app.filters import SavedScenarioFilter
 from dm_regional_app.forms import (
     DataSourceUploadForm,
     DynamicForm,
+    DynamicRateForm,
     HistoricDataFilter,
     InflationForm,
     PredictFilter,
@@ -41,7 +42,12 @@ from dm_regional_app.forms import (
 )
 from dm_regional_app.models import DataSource, Profile, SavedScenario, SessionScenario
 from dm_regional_app.tables import SavedScenarioTable
-from dm_regional_app.utils import apply_filters, number_format, save_data_if_not_empty
+from dm_regional_app.utils import (
+    apply_filters,
+    combine_form_data_with_existing_rates,
+    number_format,
+    save_data_if_not_empty,
+)
 from ssda903.config import PlacementCategories
 from ssda903.costs import (
     convert_historic_population_to_cost,
@@ -84,7 +90,7 @@ def costs(request):
         form = InflationForm(request.POST)
         if form.is_valid():
             session_scenario.inflation_parameters = form.cleaned_data
-            session_scenario.save()
+            session_scenario.save(update_fields=["inflation_parameters"])
 
     else:
         inflation_parameters = session_scenario.inflation_parameters.copy()
@@ -291,13 +297,14 @@ def save_scenario(request):
 
 @login_required
 def clear_proportion_adjustments(request):
-    # get next url page
-    next_url_name = request.GET.get("next_url_name")
-    pk = request.session["session_scenario_id"]
-    session_scenario = get_object_or_404(SessionScenario, pk=pk)
-    session_scenario.adjusted_proportions = None
-    session_scenario.save()
-    messages.success(request, "Proportion adjustments cleared.")
+    if "session_scenario_id" in request.session:
+        # get next url page
+        next_url_name = request.GET.get("next_url_name")
+        pk = request.session["session_scenario_id"]
+        session_scenario = get_object_or_404(SessionScenario, pk=pk)
+        session_scenario.adjusted_proportions = None
+        session_scenario.save(update_fields=["adjusted_proportions"])
+        messages.success(request, "Proportion adjustments cleared.")
     return redirect(next_url_name)
 
 
@@ -350,13 +357,13 @@ def placement_proportions(request):
                 new_numbers = data.combine_first(proportion_adjustments)
 
                 session_scenario.adjusted_proportions = new_numbers
-                session_scenario.save()
+                session_scenario.save(update_fields=["adjusted_proportions"])
 
             else:
                 # Check that the dataframe or series saved in the form is not empty, then save
                 if isinstance(data, (pd.DataFrame, pd.Series)) and not data.empty:
                     session_scenario.adjusted_proportions = data
-                    session_scenario.save()
+                    session_scenario.save(update_fields=["adjusted_proportions"])
 
             return redirect("costs")
 
@@ -366,16 +373,18 @@ def placement_proportions(request):
                 dataframe=costs.proportions,
                 initial_data=session_scenario.adjusted_proportions,
             )
-            messages.warning(request, "Form not saved, positive numbers only")
-
-            return render(
-                request,
-                "dm_regional_app/views/placement_proportions.html",
-                {
-                    "form": form,
-                    "placement_types": proportions,
-                },
+            messages.warning(
+                request, "Form not saved, check fields for validation errors"
             )
+
+        return render(
+            request,
+            "dm_regional_app/views/placement_proportions.html",
+            {
+                "form": form,
+                "placement_types": proportions,
+            },
+        )
 
     else:
         form = DynamicForm(
@@ -443,7 +452,7 @@ def weekly_costs(request):
                 new_numbers = data.combine_first(cost_adjustments)
 
                 session_scenario.adjusted_costs = new_numbers
-                session_scenario.save()
+                session_scenario.save(update_fields=["adjusted_costs"])
 
             else:
                 # Check that the dataframe or series saved in the form is not empty, then save
@@ -452,7 +461,9 @@ def weekly_costs(request):
             return redirect("costs")
 
         else:
-            messages.warning(request, "Form not saved, positive numbers only")
+            messages.warning(
+                request, "Form not saved, check fields for validation errors"
+            )
             return render(
                 request,
                 "dm_regional_app/views/weekly_costs.html",
@@ -523,7 +534,7 @@ def clear_rate_adjustments(request):
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
     session_scenario.adjusted_rates = None
     session_scenario.adjusted_numbers = None
-    session_scenario.save()
+    session_scenario.save(update_fields=["adjusted_rates", "adjusted_numbers"])
     messages.success(request, "Rate adjustments cleared.")
     return redirect(next_url_name)
 
@@ -553,7 +564,7 @@ def entry_rates(request):
     entry_rates = entry_rate_table(prediction.entry_rates)
 
     if request.method == "POST":
-        form = DynamicForm(
+        form = DynamicRateForm(
             request.POST,
             dataframe=prediction.entry_rates,
             initial_data=session_scenario.adjusted_numbers,
@@ -562,54 +573,58 @@ def entry_rates(request):
             data = form.save()
 
             if session_scenario.adjusted_numbers is not None:
-                # if previous rate adjustments have been made, update old series with new adjustments
-                rate_adjustments = session_scenario.adjusted_numbers
-                new_numbers = data.combine_first(rate_adjustments)
+                saved_number_adjustments = session_scenario.adjusted_numbers
+
+                new_numbers = combine_form_data_with_existing_rates(
+                    data, saved_number_adjustments
+                )
 
                 session_scenario.adjusted_numbers = new_numbers
-                session_scenario.save()
+                session_scenario.save(update_fields=["adjusted_numbers"])
 
             else:
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
-            stats = PopulationStats(
-                df=historic_data,
-                data_start_date=datacontainer.data_start_date,
-                data_end_date=datacontainer.data_end_date,
-            )
+                stats = PopulationStats(
+                    df=historic_data,
+                    data_start_date=datacontainer.data_start_date,
+                    data_end_date=datacontainer.data_end_date,
+                )
 
-            adjusted_prediction = predict(
-                stats=stats,
-                **session_scenario.prediction_parameters,
-                rate_adjustment=session_scenario.adjusted_rates,
-                number_adjustment=session_scenario.adjusted_numbers,
-            )
+                adjusted_prediction = predict(
+                    stats=stats,
+                    **session_scenario.prediction_parameters,
+                    rate_adjustment=session_scenario.adjusted_rates,
+                    number_adjustment=session_scenario.adjusted_numbers,
+                )
 
-            # build chart
-            chart = compare_forecast(
-                stats,
-                prediction,
-                adjusted_prediction,
-                **session_scenario.prediction_parameters,
-            )
+                # build chart
+                chart = compare_forecast(
+                    stats,
+                    prediction,
+                    adjusted_prediction,
+                    **session_scenario.prediction_parameters,
+                )
 
-            is_post = True
+                is_post = True
 
-            return render(
-                request,
-                "dm_regional_app/views/entry_rates.html",
-                {
-                    "entry_rate_table": entry_rates,
-                    "form": form,
-                    "chart": chart,
-                    "is_post": is_post,
-                    "rate_change_origin_page": rate_change_origin_page,
-                },
-            )
+                return render(
+                    request,
+                    "dm_regional_app/views/entry_rates.html",
+                    {
+                        "entry_rate_table": entry_rates,
+                        "form": form,
+                        "chart": chart,
+                        "is_post": is_post,
+                        "rate_change_origin_page": rate_change_origin_page,
+                    },
+                )
         else:
-            messages.warning(request, "Form not saved, positive numbers only")
-            form = DynamicForm(
+            messages.warning(
+                request, "Form not saved, check fields for validation errors"
+            )
+            form = DynamicRateForm(
                 request.POST,
                 initial_data=session_scenario.adjusted_numbers,
                 dataframe=prediction.entry_rates,
@@ -629,7 +644,7 @@ def entry_rates(request):
             )
 
     else:
-        form = DynamicForm(
+        form = DynamicRateForm(
             initial_data=session_scenario.adjusted_numbers,
             dataframe=prediction.entry_rates,
         )
@@ -673,7 +688,7 @@ def exit_rates(request):
     exit_rates = exit_rate_table(prediction.transition_rates)
 
     if request.method == "POST":
-        form = DynamicForm(
+        form = DynamicRateForm(
             request.POST,
             dataframe=prediction.transition_rates,
             initial_data=session_scenario.adjusted_rates,
@@ -682,12 +697,15 @@ def exit_rates(request):
             data = form.save()
 
             if session_scenario.adjusted_rates is not None:
-                # if previous rate adjustments have been made, update old series with new adjustments
-                rate_adjustments = session_scenario.adjusted_rates
-                new_rates = data.combine_first(rate_adjustments)
+                # if previous rate adjustments have been made, update old dataframe with new adjustments
+                saved_rate_adjustments = session_scenario.adjusted_rates
+
+                new_rates = combine_form_data_with_existing_rates(
+                    data, saved_rate_adjustments
+                )
 
                 session_scenario.adjusted_rates = new_rates
-                session_scenario.save()
+                session_scenario.save(update_fields=["adjusted_rates"])
 
             else:
                 # Check that the dataframe or series saved in the form is not empty, then save
@@ -729,12 +747,14 @@ def exit_rates(request):
             )
 
         else:
-            form = DynamicForm(
+            form = DynamicRateForm(
                 request.POST,
                 initial_data=session_scenario.adjusted_rates,
                 dataframe=prediction.transition_rates,
             )
-            messages.warning(request, "Form not saved, positive numbers only")
+            messages.warning(
+                request, "Form not saved, check fields for validation errors"
+            )
 
             is_post = False
 
@@ -750,7 +770,7 @@ def exit_rates(request):
         )
 
     else:
-        form = DynamicForm(
+        form = DynamicRateForm(
             initial_data=session_scenario.adjusted_rates,
             dataframe=prediction.transition_rates,
         )
@@ -794,7 +814,7 @@ def transition_rates(request):
     transition_rates = transition_rate_table(prediction.transition_rates)
 
     if request.method == "POST":
-        form = DynamicForm(
+        form = DynamicRateForm(
             request.POST,
             dataframe=prediction.transition_rates,
             initial_data=session_scenario.adjusted_rates,
@@ -803,12 +823,13 @@ def transition_rates(request):
             data = form.save()
 
             if session_scenario.adjusted_rates is not None:
-                # if previous rate adjustments have been made, update old series with new adjustments
-                rate_adjustments = session_scenario.adjusted_rates
-                new_rates = data.combine_first(rate_adjustments)
+                saved_rate_adjustments = session_scenario.adjusted_rates
 
+                new_rates = combine_form_data_with_existing_rates(
+                    data, saved_rate_adjustments
+                )
                 session_scenario.adjusted_rates = new_rates
-                session_scenario.save()
+                session_scenario.save(update_fields=["adjusted_rates"])
 
             else:
                 # Check that the dataframe or series saved in the form is not empty, then save
@@ -850,14 +871,16 @@ def transition_rates(request):
             )
 
         else:
-            form = DynamicForm(
+            form = DynamicRateForm(
                 request.POST,
                 initial_data=session_scenario.adjusted_rates,
                 dataframe=prediction.transition_rates,
             )
 
             is_post = False
-            messages.warning(request, "Form not saved, positive numbers only")
+            messages.warning(
+                request, "Form not saved, check fields for validation errors"
+            )
 
         return render(
             request,
@@ -871,7 +894,7 @@ def transition_rates(request):
         )
 
     else:
-        form = DynamicForm(
+        form = DynamicRateForm(
             initial_data=session_scenario.adjusted_rates,
             dataframe=prediction.transition_rates,
         )
@@ -920,7 +943,7 @@ def adjusted(request):
             )
             if historic_form.is_valid():
                 session_scenario.historic_filters = historic_form.cleaned_data
-                session_scenario.save()
+                session_scenario.save(update_fields=["historic_filters"])
 
                 historic_data = apply_filters(
                     datacontainer.enriched_view, historic_form.cleaned_data
@@ -944,7 +967,7 @@ def adjusted(request):
             )
             if predict_form.is_valid():
                 session_scenario.prediction_parameters = predict_form.cleaned_data
-                session_scenario.save()
+                session_scenario.save(update_fields=["prediction_parameters"])
 
     else:
         historic_form = HistoricDataFilter(
@@ -1068,7 +1091,7 @@ def prediction(request):
             )
             if historic_form.is_valid():
                 session_scenario.historic_filters = historic_form.cleaned_data
-                session_scenario.save()
+                session_scenario.save(update_fields=["historic_filters"])
 
                 historic_data = apply_filters(
                     datacontainer.enriched_view, historic_form.cleaned_data
@@ -1091,7 +1114,7 @@ def prediction(request):
             )
             if predict_form.is_valid():
                 session_scenario.prediction_parameters = predict_form.cleaned_data
-                session_scenario.save()
+                session_scenario.save(update_fields=["prediction_parameters"])
 
     else:
         historic_form = HistoricDataFilter(
@@ -1166,7 +1189,7 @@ def historic_data(request):
         if form.is_valid():
             # save cleaned data to session scenarios historic filters
             session_scenario.historic_filters = form.cleaned_data
-            session_scenario.save()
+            session_scenario.save(update_fields=["historic_filters"])
 
             # update reference start and end
             data = apply_filters(datacontainer.enriched_view, form.cleaned_data)

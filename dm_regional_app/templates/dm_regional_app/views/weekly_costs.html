@@ -20,7 +20,7 @@
             <table id="transition-rate" class="table table-hover">
                 <form method="post">
                 {% csrf_token %}
-                {% convert_data_frame_to_html_table_plus_form placement_types form "Weekly cost" %}
+                {% convert_df_plus_dynamicform_to_html_table placement_types form "Weekly cost" %}
                 <tr>
                 <td colspan="1">
                     <div class="p-2 bd-highlight"><a class="btn btn-secondary" href="costs">Back</a></div>
