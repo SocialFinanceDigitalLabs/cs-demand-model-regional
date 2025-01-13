@@ -586,40 +586,40 @@ def entry_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
-                stats = PopulationStats(
-                    df=historic_data,
-                    data_start_date=datacontainer.data_start_date,
-                    data_end_date=datacontainer.data_end_date,
-                )
+            stats = PopulationStats(
+                df=historic_data,
+                data_start_date=datacontainer.data_start_date,
+                data_end_date=datacontainer.data_end_date,
+            )
 
-                adjusted_prediction = predict(
-                    stats=stats,
-                    **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates,
-                    number_adjustment=session_scenario.adjusted_numbers,
-                )
+            adjusted_prediction = predict(
+                stats=stats,
+                **session_scenario.prediction_parameters,
+                rate_adjustment=session_scenario.adjusted_rates,
+                number_adjustment=session_scenario.adjusted_numbers,
+            )
 
-                # build chart
-                chart = compare_forecast(
-                    stats,
-                    prediction,
-                    adjusted_prediction,
-                    **session_scenario.prediction_parameters,
-                )
+            # build chart
+            chart = compare_forecast(
+                stats,
+                prediction,
+                adjusted_prediction,
+                **session_scenario.prediction_parameters,
+            )
 
-                is_post = True
+            is_post = True
 
-                return render(
-                    request,
-                    "dm_regional_app/views/entry_rates.html",
-                    {
-                        "entry_rate_table": entry_rates,
-                        "form": form,
-                        "chart": chart,
-                        "is_post": is_post,
-                        "rate_change_origin_page": rate_change_origin_page,
-                    },
-                )
+            return render(
+                request,
+                "dm_regional_app/views/entry_rates.html",
+                {
+                    "entry_rate_table": entry_rates,
+                    "form": form,
+                    "chart": chart,
+                    "is_post": is_post,
+                    "rate_change_origin_page": rate_change_origin_page,
+                },
+            )
         else:
             messages.warning(
                 request, "Form not saved, check fields for validation errors"
