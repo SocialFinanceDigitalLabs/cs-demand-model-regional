@@ -20,6 +20,7 @@
           {% include 'dm_regional_app/includes/navbar-item.html' with url='prediction' name='Start Modelling' url_names="['prediction']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='adjusted' name='Adjust Forecast' url_names="['adjusted']" %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='costs' name='Projecting Spend' url_names="['costs']" %}
+          {% include 'dm_regional_app/includes/navbar-item.html' with url='faq' name='FAQ' url_names="['faq']" %}
           {% get_social_accounts user as accounts %}
           {% if user.is_staff and accounts %}
                 {% include 'dm_regional_app/includes/navbar-item.html' with url='upload_data' name='Data Source Upload' url_names="['upload_data']" %}

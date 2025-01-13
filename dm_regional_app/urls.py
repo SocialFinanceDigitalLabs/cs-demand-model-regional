@@ -33,4 +33,9 @@ urlpatterns = [
         views.update_modal_preference,
         name="update_modal_preference",
     ),
+    path(
+        "faq/",
+        views.faq,
+        name="faq",
+    ),
 ]

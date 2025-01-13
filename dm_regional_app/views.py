@@ -1359,3 +1359,12 @@ def update_modal_preference(request):
             return JsonResponse(
                 {"error": "Invalid request - unknown modal type."}, status=400
             )
+
+
+@login_required
+def faq(request):
+    return render(
+        request,
+        "dm_regional_app/views/faq.html",
+        {},
+    )
