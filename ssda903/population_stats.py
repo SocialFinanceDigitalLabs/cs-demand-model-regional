@@ -1,5 +1,6 @@
 from datetime import date
 from functools import lru_cache
+from itertools import product
 
 import pandas as pd
 
@@ -121,6 +122,76 @@ class PopulationStats:
 
         return transitions
 
+    @property
+    def unique_transitions(self):
+        """
+        Finds all possible transitions between placement types in the data for each age bin
+        Ensures all placements have a transition to "Not in care"
+        Returns an empty multiindex dataframe with all possible transitions
+        """
+        transitions = self.df.copy()
+
+        # Get unique `age_bin` and `placement_type` combinations
+        unique_combinations = transitions[
+            ["age_bin", "placement_type"]
+        ].drop_duplicates()
+
+        # Get unique end `age_bin` and `placement_type` combinations
+        unique_end_combinations = transitions[
+            ["end_age_bin", "placement_type_after"]
+        ].drop_duplicates()
+        unique_end_combinations.columns = ["age_bin", "placement_type"]
+
+        # Concatenate the unique combinations
+        unique_combinations = pd.concat(
+            [unique_combinations, unique_end_combinations]
+        ).drop_duplicates()
+
+        # Ensure every age bin has an exit, aka "not in care" placement type
+        not_in_care_bins = pd.DataFrame(
+            [
+                {
+                    "age_bin": age_bin,
+                    "placement_type": PlacementCategories.NOT_IN_CARE.value.label,
+                }
+                for age_bin in unique_combinations["age_bin"].unique()
+            ]
+        )
+        unique_combinations = pd.concat(
+            [unique_combinations, pd.DataFrame(not_in_care_bins)]
+        ).drop_duplicates()
+
+        # Group by `age_bin` and generate transitions for each group
+        unique_transitions = []
+        for age_bin, group in unique_combinations.groupby("age_bin"):
+            # Get all `placement_type` combinations for this age_bin
+            placement_types = group["placement_type"].unique()
+            if (
+                len(placement_types) > 1
+            ):  # Only generate transitions if more than one type exists
+                unique_transitions.extend(
+                    product(
+                        [
+                            f"{age_bin} - {placement.capitalize()}"
+                            for placement in placement_types
+                        ],
+                        repeat=2,
+                    )
+                )
+
+        unique_transitions = pd.MultiIndex.from_tuples(
+            unique_transitions, names=["start_bin", "end_bin"]
+        )
+
+        # filter out transitions that contain "Not in care" as a starting placement type
+        unique_transitions = unique_transitions[
+            ~unique_transitions.get_level_values("start_bin")
+            .str.lower()
+            .str.contains("not", na=False)
+        ]
+
+        return unique_transitions
+
     @lru_cache(maxsize=5)
     def raw_transition_rates(
         self, reference_start_date: date, reference_end_date: date
@@ -147,6 +218,11 @@ class PopulationStats:
 
         # Use the mean rates
         transition_rates = transition_rates.mean(axis=0)
+
+        unique_transitions = self.unique_transitions
+        all_transitions = unique_transitions.union(transition_rates.index)
+        transition_rates = transition_rates.reindex(all_transitions, fill_value=0)
+
         transition_rates.name = "transition_rate"
 
         return transition_rates
