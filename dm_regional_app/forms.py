@@ -329,6 +329,7 @@ class DynamicRateForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.dataframe = kwargs.pop("dataframe", None)
         initial_data = kwargs.pop("initial_data", pd.DataFrame)
+        print(self.dataframe)
 
         super(DynamicRateForm, self).__init__(*args, **kwargs)
         self.initialize_fields(initial_data)
@@ -384,6 +385,8 @@ class DynamicRateForm(forms.Form):
             multiply_value = cleaned_data.get(multiply_field_name)
             add_value = cleaned_data.get(add_field_name)
 
+            original_rate = self.dataframe.loc[index]
+
             # Validation logic: Ensure only one field is filled or none
             if multiply_value is not None and add_value is not None:
                 self.add_error(
@@ -398,6 +401,13 @@ class DynamicRateForm(forms.Form):
                 self.add_error(
                     multiply_field_name,
                     "You cannot multiply a rate by a negative value",
+                )
+
+            # Validation logic: if original rate is 0, multiply value not allowed
+            if original_rate == 0 and multiply_value is not None:
+                self.add_error(
+                    multiply_field_name,
+                    "You cannot multiply a rate if the original rate is 0",
                 )
 
         return cleaned_data
