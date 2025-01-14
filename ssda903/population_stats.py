@@ -136,17 +136,6 @@ class PopulationStats:
             ["age_bin", "placement_type"]
         ].drop_duplicates()
 
-        # Get unique end `age_bin` and `placement_type` combinations
-        unique_end_combinations = transitions[
-            ["end_age_bin", "placement_type_after"]
-        ].drop_duplicates()
-        unique_end_combinations.columns = ["age_bin", "placement_type"]
-
-        # Concatenate the unique combinations
-        unique_combinations = pd.concat(
-            [unique_combinations, unique_end_combinations]
-        ).drop_duplicates()
-
         # Ensure every age bin has an exit, aka "not in care" placement type
         not_in_care_bins = pd.DataFrame(
             [
