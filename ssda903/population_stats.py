@@ -143,7 +143,6 @@ class PopulationStats:
         # Calculate the transition rates
         stock, transitions = stock.align(transitions)
         transition_rates = transitions / stock.shift(1).fillna(method="bfill")
-        transition_rates = transition_rates.fillna(0)
 
         # Use the mean rates
         transition_rates = transition_rates.mean(axis=0)
