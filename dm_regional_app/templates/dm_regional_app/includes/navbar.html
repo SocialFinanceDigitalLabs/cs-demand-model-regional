@@ -24,6 +24,7 @@
           {% get_social_accounts user as accounts %}
           {% if user.is_staff and accounts %}
                 {% include 'dm_regional_app/includes/navbar-item.html' with url='upload_data' name='Data Source Upload' url_names="['upload_data']" %}
+                {% include 'dm_regional_app/includes/navbar-item.html' with url='admin:index' name='Admin' %}
           {% endif %}
         {% else %}
           {% include 'dm_regional_app/includes/navbar-item.html' with url='home' name='Home' url_names="['home']" %}
