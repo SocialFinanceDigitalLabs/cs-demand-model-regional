@@ -1,6 +1,8 @@
+import atexit
 import json
 from pathlib import Path
 
+import line_profiler
 import pandas as pd
 from django.conf import settings
 from django.contrib import messages
@@ -56,6 +58,9 @@ from ssda903.costs import (
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data, read_local_data
+
+profile = line_profiler.LineProfiler()
+atexit.register(profile.print_stats)
 
 
 def home(request):
@@ -1067,17 +1072,26 @@ def adjusted(request):
 
 
 @login_required
+# @profile
 def prediction(request):
+    import time
+
+    start_time = time.time()
     pk = request.session["session_scenario_id"]
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
     # read data
     datacontainer = read_data(source=settings.DATA_SOURCE)
+    read_data_time = time.time()
+    print(f"read data = {read_data_time - start_time}")
 
     show_filtering_instructions = Profile.objects.get(
         user=request.user
     ).show_filtering_instructions
+    get_filtering_time = time.time()
+    print(f"filtering = {get_filtering_time - read_data_time}")
 
     if request.method == "POST":
+        print("it's a post")
         if "uasc" in request.POST:
             historic_form = HistoricDataFilter(
                 request.POST,
@@ -1115,13 +1129,17 @@ def prediction(request):
             if predict_form.is_valid():
                 session_scenario.prediction_parameters = predict_form.cleaned_data
                 session_scenario.save(update_fields=["prediction_parameters"])
-
+        post_filters_time = time.time()
+        print(f"post filters = {post_filters_time - get_filtering_time}")
     else:
+        print("it's not a post")
         historic_form = HistoricDataFilter(
             initial=session_scenario.historic_filters,
             la=datacontainer.unique_las,
             ethnicity=datacontainer.unique_ethnicity,
         )
+        historic_form_time = time.time()
+        print(f"historic form = {historic_form_time - get_filtering_time}")
         historic_data = apply_filters(
             datacontainer.enriched_view, historic_form.initial
         )
@@ -1132,6 +1150,8 @@ def prediction(request):
             reference_date_min=datacontainer.data_start_date,
             reference_date_max=datacontainer.data_end_date,
         )
+        post_filters_time = time.time()
+        print(f"post filters = {post_filters_time - get_filtering_time}")
 
     if historic_data.empty:
         empty_dataframe = True
@@ -1145,14 +1165,17 @@ def prediction(request):
             data_start_date=datacontainer.data_start_date,
             data_end_date=datacontainer.data_end_date,
         )
-
+        pre_predict_time = time.time()
         # Call predict function with default dates
         prediction = predict(stats=stats, **session_scenario.prediction_parameters)
-
+        predict_time = time.time()
         # build chart
         chart = prediction_chart(
             stats, prediction, **session_scenario.prediction_parameters
         )
+        chart_time = time.time()
+        print(f"predict time = {predict_time - pre_predict_time}")
+        print(f"chart time = {chart_time - predict_time}")
 
     return render(
         request,

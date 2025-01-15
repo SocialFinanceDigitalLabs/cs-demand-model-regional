@@ -1,9 +1,11 @@
+import atexit
 import dataclasses
 import logging
 from datetime import date
 from functools import cached_property
 from typing import Optional
 
+import line_profiler
 import numpy as np
 import pandas as pd
 
@@ -18,6 +20,9 @@ from ssda903.data.ssda903 import SSDA903TableType
 from ssda903.datastore import DataFile, DataStore, TableType
 
 log = logging.getLogger(__name__)
+
+profile = line_profiler.LineProfiler()
+atexit.register(profile.print_stats)
 
 
 class DemandModellingDataContainer:
@@ -124,6 +129,7 @@ class DemandModellingDataContainer:
         return merged
 
     @cached_property
+    @profile
     def combined_data(self) -> pd.DataFrame:
         """
         Returns the combined view consisting of Episodes and Headers. Runs some sanity checks
@@ -212,6 +218,7 @@ class DemandModellingDataContainer:
         return combined
 
     @cached_property
+    @profile
     def enriched_view(self) -> pd.DataFrame:
         """
         Adds several additional columns to the combined view to support the model calculations.
