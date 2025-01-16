@@ -20,8 +20,6 @@ def predict(
     """
     Analyses source between start and end, and then predicts the population at prediction_date.
     """
-    if prediction_start_date is None:
-        prediction_start_date = reference_end_date
     if prediction_end_date is None:
         prediction_end_date = prediction_start_date + relativedelta(months=24)
     print(

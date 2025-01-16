@@ -35,7 +35,7 @@ class SessionScenarioMiddleware:
             prediction_parameters = {
                 "reference_start_date": data.data_start_date,
                 "reference_end_date": data.data_end_date,
-                "prediction_start_date": None,
+                "prediction_start_date": data.data_end_date,
                 "prediction_end_date": None,
             }
             historic_stock = {
