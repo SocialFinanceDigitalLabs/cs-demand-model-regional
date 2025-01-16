@@ -644,9 +644,9 @@ def transition_rate_changes(base, adjusted):
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
 
-    df = df[df["base"] != df["adjusted"]]
-
     df = transition_rate_table(df)
+
+    df = df[df["base"] != df["adjusted"]]
 
     if df.empty:
         return None
@@ -667,9 +667,9 @@ def exit_rate_changes(base, adjusted):
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
 
-    df = df[df["base"] != df["adjusted"]]
-
     df = exit_rate_table(df)
+
+    df = df[df["base"] != df["adjusted"]]
 
     if df.empty:
         return None
@@ -690,9 +690,9 @@ def entry_rate_changes(base, adjusted):
     """
     df = pd.concat([base.rename("base"), adjusted.rename("adjusted")], axis=1)
 
-    df = df[df["base"] != df["adjusted"]]
-
     df = entry_rate_table(df)
+
+    df = df[df["base"] != df["adjusted"]]
 
     if df.empty:
         return None
