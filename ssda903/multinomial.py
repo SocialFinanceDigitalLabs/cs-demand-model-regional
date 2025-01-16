@@ -136,10 +136,13 @@ class MultinomialPredictor(BaseModelPredictor):
     def date(self) -> date:
         return self._start_date
 
-    def next(self, population: np.ndarray, step_days: int = 1) -> NextPrediction:
+    def next(
+        self, population: np.ndarray, variance: float, step_days: int = 1
+    ) -> NextPrediction:
         assert step_days > 0, "'step_days' must be greater than 0"
         for _ in range(step_days):
-            variance = (
+            # Cumulative variance propagation to reflect uncertainty growing linearly with time
+            variance = variance + (
                 np.dot(
                     np.multiply(self.matrix.values, 1 - self.matrix.values), population
                 )
@@ -164,11 +167,13 @@ class MultinomialPredictor(BaseModelPredictor):
         variances = []
         index = []
         population = self.initial_population.values
+        variance = 0
         for i in iterator:
-            prediction = predictor.next(population, step_days=step_days)
+            prediction = predictor.next(population, variance, step_days=step_days)
             population = prediction.population
             predictions.append(population)
-            variances.append(prediction.variance)
+            variance = prediction.variance
+            variances.append(variance)
 
             date = self.date + timedelta(days=(i + 1) * step_days)
             index.append(date)
