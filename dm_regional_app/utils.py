@@ -252,7 +252,7 @@ def care_type_organiser(df: pd.DataFrame, data_type: str, input_col: str) -> dic
 
 def apply_variances(forecast_by_type: dict, ci_by_type: dict) -> dict:
     """
-    Takes a dictionary of forecast populations and a dictionary of variances (really 1 standard deviation), both split by the same categories defined by an enum e.g. placement type
+    Takes a dictionary of forecast populations and a dictionary of variances, both split by the same categories defined by an enum e.g. placement type
     Outputs two new series in the variances dictionary, one each for upper/lower CI
     Upper and lower CI uses 2 x standard deviation - would be good to parameterise this in future!
     """
