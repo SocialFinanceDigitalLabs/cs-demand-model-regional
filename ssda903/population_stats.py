@@ -173,13 +173,25 @@ class PopulationStats:
         )
 
         # filter out transitions that contain "Not in care" as a starting placement type
+        unique_numbers = unique_transitions[
+            unique_transitions.get_level_values("start_bin")
+            .str.lower()
+            .str.contains("not", na=False)
+        ]
+        unique_numbers = unique_numbers.get_level_values(1)
+        # Convert to MultiIndex with an empty first level
+        unique_numbers = pd.MultiIndex.from_tuples(
+            [((), val) for val in unique_numbers], names=["from", "to"]
+        )
+
+        # filter out transitions that contain "Not in care" as a starting placement type
         unique_transitions = unique_transitions[
             ~unique_transitions.get_level_values("start_bin")
             .str.lower()
             .str.contains("not", na=False)
         ]
 
-        return unique_transitions
+        return unique_transitions, unique_numbers
 
     @lru_cache(maxsize=5)
     def raw_transition_rates(
@@ -208,7 +220,7 @@ class PopulationStats:
         # Use the mean rates
         transition_rates = transition_rates.mean(axis=0)
 
-        unique_transitions = self.unique_transitions
+        unique_transitions, unique_numbers = self.unique_transitions
         all_transitions = unique_transitions.union(transition_rates.index)
         transition_rates = transition_rates.reindex(all_transitions, fill_value=0)
 
@@ -292,7 +304,7 @@ class PopulationStats:
         start_date = pd.to_datetime(reference_start_date)
         end_date = pd.to_datetime(reference_end_date)
 
-        df = self.df
+        df = self.df.copy()
 
         # Only look at episodes starting in analysis period
         df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()
@@ -320,5 +332,9 @@ class PopulationStats:
         df["from"] = df.period_duration.apply(lambda x: tuple())
 
         df = df.set_index(["from", "to"])
+
+        unique_transitions, unique_numbers = self.unique_transitions
+        all_transitions = unique_numbers.union(df.index)
+        df = df.reindex(all_transitions, fill_value=0)
 
         return df.daily_entry_probability
