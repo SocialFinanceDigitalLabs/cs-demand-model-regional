@@ -327,7 +327,7 @@ class DataSourceUploadForm(forms.Form):
 
 class DynamicRateForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.dataframe = kwargs.pop("dataframe", None)
+        self.series = kwargs.pop("series", None)
         initial_data = kwargs.pop("initial_data", pd.DataFrame)
 
         super(DynamicRateForm, self).__init__(*args, **kwargs)
@@ -337,7 +337,7 @@ class DynamicRateForm(forms.Form):
         """
         Dynamically create two fields for each option: one for multiplication and one for addition.
         """
-        for index in self.dataframe.index:
+        for index in self.series.index:
             multiply_field_name = f"multiply_{index}"
             add_field_name = f"add_{index}"
 
@@ -374,15 +374,18 @@ class DynamicRateForm(forms.Form):
         Validate form data and ensure:
         Only a multiply or an add value exists for each rate
         No negative values are entered in multiply fields
+        Restrictions on multiplying 0 rates
         """
         cleaned_data = super().clean()
 
-        for index in self.dataframe.index:
+        for index in self.series.index:
             multiply_field_name = f"multiply_{index}"
             add_field_name = f"add_{index}"
 
             multiply_value = cleaned_data.get(multiply_field_name)
             add_value = cleaned_data.get(add_field_name)
+
+            original_rate = self.series.loc[index]
 
             # Validation logic: Ensure only one field is filled or none
             if multiply_value is not None and add_value is not None:
@@ -400,6 +403,13 @@ class DynamicRateForm(forms.Form):
                     "You cannot multiply a rate by a negative value",
                 )
 
+            # Validation logic: if original rate is 0, multiply value not allowed
+            if original_rate == 0 and multiply_value is not None:
+                self.add_error(
+                    multiply_field_name,
+                    "You cannot multiply a rate if the original rate is 0",
+                )
+
         return cleaned_data
 
     def save(self):
@@ -411,7 +421,7 @@ class DynamicRateForm(forms.Form):
         add_values = []
 
         # Loop through the form fields and collect the input values
-        for index in self.dataframe.index:
+        for index in self.series.index:
             multiply_value = self.cleaned_data.get(f"multiply_{index}", None)
             add_value = self.cleaned_data.get(f"add_{index}", None)
 

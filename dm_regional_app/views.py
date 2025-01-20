@@ -566,7 +566,7 @@ def entry_rates(request):
     if request.method == "POST":
         form = DynamicRateForm(
             request.POST,
-            dataframe=prediction.entry_rates,
+            series=prediction.entry_rates,
             initial_data=session_scenario.adjusted_numbers,
         )
         if form.is_valid():
@@ -586,40 +586,40 @@ def entry_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
-                stats = PopulationStats(
-                    df=historic_data,
-                    data_start_date=datacontainer.data_start_date,
-                    data_end_date=datacontainer.data_end_date,
-                )
+            stats = PopulationStats(
+                df=historic_data,
+                data_start_date=datacontainer.data_start_date,
+                data_end_date=datacontainer.data_end_date,
+            )
 
-                adjusted_prediction = predict(
-                    stats=stats,
-                    **session_scenario.prediction_parameters,
-                    rate_adjustment=session_scenario.adjusted_rates,
-                    number_adjustment=session_scenario.adjusted_numbers,
-                )
+            adjusted_prediction = predict(
+                stats=stats,
+                **session_scenario.prediction_parameters,
+                rate_adjustment=session_scenario.adjusted_rates,
+                number_adjustment=session_scenario.adjusted_numbers,
+            )
 
-                # build chart
-                chart = compare_forecast(
-                    stats,
-                    prediction,
-                    adjusted_prediction,
-                    **session_scenario.prediction_parameters,
-                )
+            # build chart
+            chart = compare_forecast(
+                stats,
+                prediction,
+                adjusted_prediction,
+                **session_scenario.prediction_parameters,
+            )
 
-                is_post = True
+            is_post = True
 
-                return render(
-                    request,
-                    "dm_regional_app/views/entry_rates.html",
-                    {
-                        "entry_rate_table": entry_rates,
-                        "form": form,
-                        "chart": chart,
-                        "is_post": is_post,
-                        "rate_change_origin_page": rate_change_origin_page,
-                    },
-                )
+            return render(
+                request,
+                "dm_regional_app/views/entry_rates.html",
+                {
+                    "entry_rate_table": entry_rates,
+                    "form": form,
+                    "chart": chart,
+                    "is_post": is_post,
+                    "rate_change_origin_page": rate_change_origin_page,
+                },
+            )
         else:
             messages.warning(
                 request, "Form not saved, check fields for validation errors"
@@ -627,7 +627,7 @@ def entry_rates(request):
             form = DynamicRateForm(
                 request.POST,
                 initial_data=session_scenario.adjusted_numbers,
-                dataframe=prediction.entry_rates,
+                series=prediction.entry_rates,
             )
 
             is_post = False
@@ -646,7 +646,7 @@ def entry_rates(request):
     else:
         form = DynamicRateForm(
             initial_data=session_scenario.adjusted_numbers,
-            dataframe=prediction.entry_rates,
+            series=prediction.entry_rates,
         )
 
         is_post = False
@@ -690,7 +690,7 @@ def exit_rates(request):
     if request.method == "POST":
         form = DynamicRateForm(
             request.POST,
-            dataframe=prediction.transition_rates,
+            series=prediction.transition_rates,
             initial_data=session_scenario.adjusted_rates,
         )
         if form.is_valid():
@@ -750,7 +750,7 @@ def exit_rates(request):
             form = DynamicRateForm(
                 request.POST,
                 initial_data=session_scenario.adjusted_rates,
-                dataframe=prediction.transition_rates,
+                series=prediction.transition_rates,
             )
             messages.warning(
                 request, "Form not saved, check fields for validation errors"
@@ -772,7 +772,7 @@ def exit_rates(request):
     else:
         form = DynamicRateForm(
             initial_data=session_scenario.adjusted_rates,
-            dataframe=prediction.transition_rates,
+            series=prediction.transition_rates,
         )
 
         is_post = False
@@ -816,7 +816,7 @@ def transition_rates(request):
     if request.method == "POST":
         form = DynamicRateForm(
             request.POST,
-            dataframe=prediction.transition_rates,
+            series=prediction.transition_rates,
             initial_data=session_scenario.adjusted_rates,
         )
         if form.is_valid():
@@ -874,7 +874,7 @@ def transition_rates(request):
             form = DynamicRateForm(
                 request.POST,
                 initial_data=session_scenario.adjusted_rates,
-                dataframe=prediction.transition_rates,
+                series=prediction.transition_rates,
             )
 
             is_post = False
@@ -896,7 +896,7 @@ def transition_rates(request):
     else:
         form = DynamicRateForm(
             initial_data=session_scenario.adjusted_rates,
-            dataframe=prediction.transition_rates,
+            series=prediction.transition_rates,
         )
 
         is_post = False

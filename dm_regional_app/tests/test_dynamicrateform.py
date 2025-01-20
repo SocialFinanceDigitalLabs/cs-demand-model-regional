@@ -9,9 +9,13 @@ class DynamicRateFormTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Setup initial dataframe and initial data
-        cls.dataframe = pd.DataFrame(
-            {"from": ["A", "B", "C"], "to": ["X", "Y", "Z"], "rate": [1.5, 2.0, 3.0]}
-        ).set_index(["from", "to"])
+        cls.series = (
+            pd.DataFrame(
+                {"from": ["A", "B", "C"], "to": ["X", "Y", "Z"], "rate": [1.5, 2.0, 0]}
+            )
+            .set_index(["from", "to"])
+            .squeeze()
+        )
 
         # Initial data containing values for multiply and add
         cls.initial_data = pd.DataFrame(
@@ -21,7 +25,7 @@ class DynamicRateFormTest(TestCase):
 
     def test_initialize_fields_with_initial_data(self):
         # Test form initialization with initial values
-        form = DynamicRateForm(dataframe=self.dataframe, initial_data=self.initial_data)
+        form = DynamicRateForm(series=self.series, initial_data=self.initial_data)
 
         # Check that the initial values are set correctly
         self.assertEqual(form.fields["multiply_('A', 'X')"].initial, 1.2)
@@ -40,7 +44,7 @@ class DynamicRateFormTest(TestCase):
         }
 
         form = DynamicRateForm(
-            form_data, dataframe=self.dataframe, initial_data=self.initial_data
+            form_data, series=self.series, initial_data=self.initial_data
         )
 
         # Check if the form is valid
@@ -64,7 +68,7 @@ class DynamicRateFormTest(TestCase):
         }
 
         form = DynamicRateForm(
-            data=form_data, dataframe=self.dataframe, initial_data=self.initial_data
+            data=form_data, series=self.series, initial_data=self.initial_data
         )
 
         # Check if the form is invalid due to both multiply and add fields being filled
@@ -86,7 +90,7 @@ class DynamicRateFormTest(TestCase):
         }
 
         form = DynamicRateForm(
-            data=form_data, dataframe=self.dataframe, initial_data=self.initial_data
+            data=form_data, series=self.series, initial_data=self.initial_data
         )
 
         # Check if the form is invalid due to negative multiply numbers
@@ -94,6 +98,27 @@ class DynamicRateFormTest(TestCase):
 
         # Ensure that the error messages reflect the correct fields
         self.assertIn("multiply_('A', 'X')", form.errors)
+
+    def test_form_submission_with_multiply_0_rate(self):
+        # Test form submission with invalid data (multiply 0 rate)
+        form_data = {
+            "multiply_('A', 'X')": "",
+            "add_('A', 'X')": "",
+            "multiply_('B', 'Y')": "",
+            "add_('B', 'Y')": "",
+            "multiply_('C', 'Z')": 2,
+            "add_('C', 'Z')": "",
+        }
+
+        form = DynamicRateForm(
+            data=form_data, series=self.series, initial_data=self.initial_data
+        )
+
+        # Check if the form is invalid due to negative multiply numbers
+        self.assertFalse(form.is_valid())
+
+        # Ensure that the error messages reflect the correct fields
+        self.assertIn("multiply_('C', 'Z')", form.errors)
 
     def test_save_function(self):
         # Test the save function to ensure it returns a DataFrame
@@ -107,7 +132,7 @@ class DynamicRateFormTest(TestCase):
         }
 
         form = DynamicRateForm(
-            data=form_data, dataframe=self.dataframe, initial_data=self.initial_data
+            data=form_data, series=self.series, initial_data=self.initial_data
         )
         self.assertTrue(form.is_valid())  # Ensure form is valid before saving
 
