@@ -172,7 +172,7 @@ class PopulationStats:
             unique_transitions, names=["start_bin", "end_bin"]
         )
 
-        # filter out transitions that contain "Not in care" as a starting placement type
+        # retain only transitions that contain "Not in care" as a starting placement type
         unique_numbers = unique_transitions[
             unique_transitions.get_level_values("start_bin")
             .str.lower()
