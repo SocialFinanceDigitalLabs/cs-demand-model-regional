@@ -79,6 +79,7 @@ class PlacementCategories(Enum):
         label="Supported",
         placement_types=(
             "H5",
+            "K3",
             "P2",
         ),
         index=2,
