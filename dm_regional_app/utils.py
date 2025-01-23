@@ -3,6 +3,7 @@ import json
 from datetime import date, datetime
 
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 
 from ssda903.config import PlacementCategories
@@ -253,17 +254,20 @@ def apply_variances(forecast_by_type: dict, ci_by_type: dict) -> dict:
     """
     Takes a dictionary of forecast populations and a dictionary of variances, both split by the same categories defined by an enum e.g. placement type
     Outputs two new series in the variances dictionary, one each for upper/lower CI
+    Upper and lower CI uses 2 x standard deviation - would be good to parameterise this in future!
     """
     care_types = [e.value.label for e in PlacementCategories]
     care_types.append("Total")
     care_types.remove("Not in care")
 
     for care_type in care_types:
+        # square root of variance gives standard deviation
+        # currently multiplying by 2 (should really parameterise this)
         ci_by_type[care_type]["upper"] = (
-            forecast_by_type[care_type]["pop_size"] + ci_by_type[care_type]["variance"]
+            forecast_by_type[care_type]["pop_size"] + 2 * np.sqrt(ci_by_type[care_type]["variance"])
         )
         ci_by_type[care_type]["lower"] = (
-            forecast_by_type[care_type]["pop_size"] - ci_by_type[care_type]["variance"]
+            forecast_by_type[care_type]["pop_size"] - 2 * np.sqrt(ci_by_type[care_type]["variance"])
         )
 
     return ci_by_type
