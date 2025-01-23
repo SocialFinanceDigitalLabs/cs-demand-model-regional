@@ -261,6 +261,8 @@ def apply_variances(forecast_by_type: dict, ci_by_type: dict) -> dict:
     care_types.remove("Not in care")
 
     for care_type in care_types:
+        # square root of variance gives standard deviation
+        # currently multiplying by 2 (should really parameterise this)
         ci_by_type[care_type]["upper"] = (
             forecast_by_type[care_type]["pop_size"] + 2 * np.sqrt(ci_by_type[care_type]["variance"])
         )
