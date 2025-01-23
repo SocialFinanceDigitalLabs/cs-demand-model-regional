@@ -77,6 +77,7 @@ MIDDLEWARE = [
 
 MICROSOFT_CLIENT_ID = config("MICROSOFT_CLIENT_ID", default="")
 MICROSOFT_CLIENT_SECRET = config("MICROSOFT_CLIENT_SECRET", default="")
+MICROSOFT_TENANT_ID = config("MICROSOFT_TENANT_ID", default="")
 SOCIALACCOUNT_PROVIDERS = {
     "microsoft": {
         "APPS": [
@@ -84,7 +85,7 @@ SOCIALACCOUNT_PROVIDERS = {
                 "client_id": MICROSOFT_CLIENT_ID,
                 "secret": MICROSOFT_CLIENT_SECRET,
                 "settings": {
-                    "tenant": "organizations",
+                    "tenant": MICROSOFT_TENANT_ID,
                     # Optional: override URLs (use base URLs without path)
                     "login_url": "https://login.microsoftonline.com",
                 },
