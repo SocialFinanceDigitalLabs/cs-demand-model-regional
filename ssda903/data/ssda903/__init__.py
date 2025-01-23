@@ -19,11 +19,13 @@ class Episodes:
         "REASON_PLACE_CHANGE",
         "HOME_POST",
         "PL_POST",
+        "LA",
+        "YEAR"
     ]
 
 
 class Header:
-    fields = ["CHILD", "SEX", "DOB", "ETHNIC", "UPN", "MOTHER", "MC_DOB"]
+    fields = ["CHILD", "SEX", "DOB", "ETHNIC", "UPN", "MOTHER", "MC_DOB", "YEAR"]
 
 
 class Reviews:
@@ -56,7 +58,7 @@ class PreviousPermanence:
 
 
 class UASC:
-    fields = ["CHILD", "SEX", "DOB", "DUC"]
+    fields = ["CHILD", "SEX", "DOB", "DUC", "YEAR"]
 
 
 class Missing:
