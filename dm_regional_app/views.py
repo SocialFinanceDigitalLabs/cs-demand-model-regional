@@ -1291,6 +1291,7 @@ def validate_with_prediction(files):
             stats=stats,
             reference_start_date=datacontainer.data_start_date,
             reference_end_date=datacontainer.data_end_date,
+            prediction_start_date=datacontainer.data_end_date,
         )
     except ValueError:
         return None, "At least one file is invalid."

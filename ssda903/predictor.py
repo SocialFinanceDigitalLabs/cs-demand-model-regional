@@ -12,16 +12,14 @@ def predict(
     stats: PopulationStats,
     reference_start_date: date,
     reference_end_date: date,
-    prediction_start_date: Optional[date] = None,
+    prediction_start_date: date,
     prediction_end_date: Optional[date] = None,
     rate_adjustment: Optional[pd.DataFrame] = None,
     number_adjustment: Optional[pd.DataFrame] = None,
 ) -> Prediction:
     """
-    Analyses source between start and end, and then predicts the population at prediction_date.
+    Analyses source between start and end, and then predict from the population at prediction_start_date.
     """
-    if prediction_start_date is None:
-        prediction_start_date = reference_end_date
     if prediction_end_date is None:
         prediction_end_date = prediction_start_date + relativedelta(months=24)
     print(
