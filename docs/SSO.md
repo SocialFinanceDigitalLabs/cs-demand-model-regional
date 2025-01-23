@@ -14,5 +14,9 @@ and ensure the Attributes and Claims are listed as below
 ![img_1.png](images/img_1.png)
 6. Navigate to API permissions and set the permissions as shown
 ![img_2.png](images/img_2.png)
-7. Store the application ID (found in App Registration -> Properties) and secret value as the environment 
-variables `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET` respectively
+7. Set environment variables as such:
+```shell
+MICROSOFT_TENANT_ID = the directory (tenant) ID (found in App Registration -> Properties)
+MICROSOFT_CLIENT_ID = the application ID (found in App Registration -> Properties)
+MICROSOFT_CLIENT_SECRET = the secret value from step 5
+```
