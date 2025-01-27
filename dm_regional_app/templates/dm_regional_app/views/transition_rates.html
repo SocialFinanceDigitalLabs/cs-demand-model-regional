@@ -8,10 +8,22 @@
 <br>
     <h1>Adjust transition rates</h1>
     <br>
-    <p>You may want to edit the number of children per year entering a placement type to give a more accurate
-        picture of future forecasting or simply to explore what changes you may expect to see. <br><br>
+    <p>
+        You may want to edit the number of children per year entering a placement type to give a more accurate
+        picture of future forecasting or simply to explore what changes you may expect to see. 
+    </p>
+    <p>
         Rates are applied to the daily population of children. For example, a rate of 0.5 from Fostering to Residential means
-        that each day, 50% of children in Fostering will move to Residential.<br>
+        that each day, 50% of children in Fostering will move to Residential.
+    </p>
+    <p>
+        Adjustments are always applied to the initial base rate produced by the model parameters you selected, they do not replace them. 
+    </p>
+    <p>
+        If changes you make to rates results in a placement type having rates that sum to more than 1, the model will adjust the rates to sum to 1. 
+        For example, if you set the rate for children in leaving 5-10 Fostering to 0.5 and the rate for children moving from 5-10 Fostering to 
+        Residential to 0.6, the model will scale these down (to 0.45 and 0.55 respectively) and set any other rates for that placement 
+        (e.g. 5-10 Fostering to Other) to 0. You can view the results of your rate adjustments on <a href="{% url 'adjusted' %}">Adjust Forecast</a>.
     </p>
         <div class="table-responsive">
             <table id="transition-rate" class="table table-hover">
