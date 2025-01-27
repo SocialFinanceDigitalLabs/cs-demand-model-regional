@@ -410,6 +410,13 @@ class DynamicRateForm(forms.Form):
                     "You cannot multiply a rate if the original rate is 0",
                 )
 
+            # Validation logic: add value can't be more than 1
+            if add_value is not None and add_value > 1:
+                self.add_error(
+                    add_field_name,
+                    "You cannot add more than 1 to a rate",
+                )
+
         return cleaned_data
 
     def save(self):
