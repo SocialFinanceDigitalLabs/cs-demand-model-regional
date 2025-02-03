@@ -235,8 +235,11 @@ class PopulationStats:
         Calculates the proportion of placements in each placement category that were from a more granular set of placements for the historic data over a defined reference period
         - placement categories from PlacementCategories enum
         """
-        start_date = pd.to_datetime(reference_start_date)
-        end_date = pd.to_datetime(reference_end_date)
+        data_start_date = self.data_start_date
+        data_end_date = self.data_end_date
+
+        prop_start_date = pd.to_datetime(reference_start_date)
+        prop_end_date = pd.to_datetime(reference_end_date)
 
         df = self.df.copy()
 
@@ -271,10 +274,9 @@ class PopulationStats:
         # Resample to daily counts and forward-fill in missing days
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
-        proportion_population = pops.truncate(before=start_date, after=end_date)
-
-        total_pops = pops.sum()
-
+        # Calculate the proportions in each detailed bin
+        proportion_population = pops.truncate(before=prop_start_date, after=prop_end_date)
+        total_pops = proportion_population.sum()
         proportion_series = pd.Series(dtype="float64")
 
         for category in PlacementCategories:
@@ -291,7 +293,10 @@ class PopulationStats:
             # add normalised population to proportion series
             proportion_series = pd.concat([proportion_series, placement_series])
 
-        return proportion_series, proportion_population
+        # Truncate main population_series to the datacontainer start and end date
+        historic_population = pops.truncate(before=data_start_date, after=data_end_date)
+
+        return proportion_series, historic_population
 
     @lru_cache(maxsize=5)
     def daily_entrants(
