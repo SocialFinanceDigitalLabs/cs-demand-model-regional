@@ -309,6 +309,7 @@ class PopulationStats:
         end_date = pd.to_datetime(reference_end_date)
 
         df = self.df.copy()
+        print(df)
 
         # Only look at episodes starting in analysis period
         df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()

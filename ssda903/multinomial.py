@@ -31,13 +31,44 @@ class NextPrediction:
     variance: np.ndarray
 
 
-def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd.Series:
+def normalize_rates(group, is_adjusted):
+    """
+    Normalizes rates to ensure that the sum of rates for each 'from' state is 1.
+    Ensures that rate adjustments are prioritized over the original rates.
+    """
+    total = group.sum()
+    if total > 1:
+        # Separate adjusted and original rates
+        adjusted = group[is_adjusted.loc[group.index]]
+        original = group[~is_adjusted.loc[group.index]]
+
+        adjusted_sum = adjusted.sum()
+        if adjusted_sum >= 1:
+            # Scale down adjusted rates to sum to 1, set original rates to 0
+            scaling_factor = 1 / adjusted_sum
+            adjusted = adjusted * scaling_factor
+            original[:] = 0
+        else:
+            # Scale down adjusted rates and distribute remaining capacity to original rates
+            adjusted = adjusted
+            remaining_capacity = 1 - adjusted.sum()
+            if not original.empty:
+                original = original * (remaining_capacity / original.sum())
+        # Combine adjusted and original back together
+        group = pd.concat([adjusted, original]).sort_index()
+    return group
+
+
+def combine_rates(
+    original_rate: pd.Series, rate_adjustment: pd.DataFrame, numbers=False
+) -> pd.Series:
     """
     Combines original_rate series and rate_adjustment DataFrame, which has both 'multiply_value' and 'add_value' columns.
     - Multiplies original_rate with 'multiply_value' where provided.
     - Adds 'add_value' to original_rate where provided.
     - Ensures the result of addition is not less than 0.
     - Excludes cases where original_rate is missing.
+    - If 'numbers' remains at False, normalizes rates to ensure that the sum of rates for each 'from' state is 1.
     """
     # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rates
     original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
@@ -58,6 +89,17 @@ def combine_rates(original_rate: pd.Series, rate_adjustment: pd.DataFrame) -> pd
     final_result = multiply_result.where(
         rate_adjustment["multiply_value"] != 1, add_result
     )
+
+    # Create a flag to identify adjusted rates
+    is_adjusted = (rate_adjustment["multiply_value"] != 1) | (
+        rate_adjustment["add_value"] != 0
+    )
+
+    # Normalise rates that are not numbers (do not normalise entry rates as these can sum to more than 1)
+    if not numbers:
+        final_result = final_result.groupby(level="from", group_keys=False).apply(
+            normalize_rates, is_adjusted
+        )
 
     final_result.index.names = ["from", "to"]
 
@@ -105,7 +147,9 @@ class MultinomialPredictor(BaseModelPredictor):
                         [[()], adjustment.index], names=["from", "to"]
                     )
                     adjustment.index = new_index
-                    transition_numbers = combine_rates(transition_numbers, adjustment)
+                    transition_numbers = combine_rates(
+                        transition_numbers, adjustment, numbers=True
+                    )
 
             transition_numbers.index = transition_numbers.index.get_level_values("to")
             self._transition_numbers = fill_missing_states(
