@@ -1,3 +1,4 @@
+from allauth.mfa.models import Authenticator
 from django.test import TestCase, modify_settings
 from django.urls import reverse
 
@@ -7,10 +8,10 @@ from dm_regional_app.builder import Builder
 # Remove the custom middleware that doesn't apply to this test suite
 @modify_settings(
     MIDDLEWARE={
-        "remove": "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware"
+        "remove": "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
     }
 )
-class ChangePasswordTestCase(TestCase):
+class RequireMFATestCase(TestCase):
     builder = Builder()
 
     def setUp(self):
@@ -19,22 +20,18 @@ class ChangePasswordTestCase(TestCase):
         )
         self.client.login(username="testuser", password="testpassword")
 
-    def test_redirect_new_user(self):
+    def test_redirect_user_with_no_mfa(self):
         response = self.client.get(reverse("home"))
-        self.assertRedirects(response, reverse("account_change_password"))
+        self.assertRedirects(response, reverse("mfa_index"))
 
-    def test_remove_password_update_flag(self):
-        data = {
-            "oldpassword": "testpassword",
-            "password1": "astrongerpassword",
-            "password2": "astrongerpassword",
-        }
-        response = self.client.post(reverse("account_change_password"), data)
-        self.assertRedirects(response, reverse("home"))
-        self.user.refresh_from_db()
-        self.assertFalse(self.user.force_password_update)
+    def test_no_redirect_after_mfa_activated(self):
+        Authenticator.objects.create(
+            user=self.user, type=Authenticator.Type.TOTP, data={"name": "Test passkey"}
+        )
+        response = self.client.get(reverse("home"))
+        self.assertEqual(response.status_code, 200)
 
-    def test_socialaccount_no_password_change(self):
+    def test_socialaccount_no_mfa(self):
         # Mock SSO login - this is set on new SSO user creation
         self.user.set_unusable_password()
         self.user.save()

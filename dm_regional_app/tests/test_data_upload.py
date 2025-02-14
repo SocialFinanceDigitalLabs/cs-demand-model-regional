@@ -3,7 +3,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, modify_settings
 from django.urls import reverse
 
 from dm_regional_app.builder import Builder
@@ -11,6 +11,12 @@ from dm_regional_app.forms import DataSourceUploadForm
 from dm_regional_app.models import DataSource
 
 
+# Remove the custom middleware that doesn't apply to this test suite
+@modify_settings(
+    MIDDLEWARE={
+        "remove": "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware"
+    }
+)
 class DataUploadTestCase(TestCase):
     builder = Builder()
 
