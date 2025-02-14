@@ -1,0 +1,10 @@
+{% extends "dm_regional_app/base.html" %}
+{% load allauth %}
+{% load i18n %}
+
+{% block content %}
+    <h2>Confirm Access</h2>
+    <p>Please reauthenticate to safeguard your account.</p>
+    {% block reauthenticate_content %}{% endblock %}
+
+{% endblock content %}

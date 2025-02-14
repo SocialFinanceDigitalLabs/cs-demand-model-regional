@@ -1,0 +1,11 @@
+{% extends "account/base_reauthenticate.html" %}
+{% load crispy_forms_tags %}
+{% block reauthenticate_content %}
+    <form method="post" action="{% url 'account_reauthenticate' %}">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <div class="center-align">
+            <button type="submit" class="btn btn-primary">Confirm</button>
+        </div>
+    </form>
+{% endblock %}
