@@ -16,10 +16,11 @@
                 <p>You can store this secret and use it to reinstall your authenticator app at a later time.</p>
             </label>
         </div>
-        {{ form|crispy }}
+        <div class="col-sm-6">
+            {{ form|crispy }}
+        </div>
         <div class="center-align">
-        <button type="submit" class="btn btn-primary">Activate</button>
+            <button type="submit" class="btn btn-primary">Activate</button>
         </div>
     </form>
-
 {% endblock %}
