@@ -1,0 +1,16 @@
+{% extends "dm_regional_app/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <h2>Two-Factor Authentication</h2>
+    <p>Your account is protected by two-factor authentication. Please enter an authenticator code:</p>
+    <div class="col-sm-3">
+        <form method="post" action="{% url 'mfa_authenticate' %}">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="center-align">
+              <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </form>
+    </div>
+{% endblock content %}

@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     # Social Providers
     "allauth.socialaccount.providers.microsoft",
+    # MFA
+    "allauth.mfa",
 ]
 
 MIDDLEWARE = [
@@ -72,6 +74,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
+    "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware",
     "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware",
 ]
 
@@ -105,6 +108,7 @@ ACCOUNT_FORMS = {
 }
 SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
 ACCOUNT_EMAIL_VERIFICATION = "none"
+MFA_SUPPORTED_TYPES = ["totp"]
 
 
 ROOT_URLCONF = "dm_regional_site.urls"

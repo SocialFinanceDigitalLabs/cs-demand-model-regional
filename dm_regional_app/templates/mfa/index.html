@@ -1,0 +1,16 @@
+{% extends "dm_regional_app/base.html" %}
+{% block content %}
+
+    <h2>Two-Factor Authentication</h2>
+    <div>
+        {% if authenticators.totp %}
+            Authentication using an authenticator app is active.
+        {% else %}
+            An authenticator app is not active.
+            <div class="mt-3">
+                <a class="btn btn-primary" href="{% url 'mfa_activate_totp' %}">Activate</a>
+            </div>
+        {% endif %}
+    </div>
+
+{% endblock %}
