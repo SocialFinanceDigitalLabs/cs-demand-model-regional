@@ -1,9 +1,9 @@
 import dataclasses
 import logging
 from datetime import date
+from dateutil.relativedelta import relativedelta
 from functools import cached_property
 from typing import Optional
-
 import numpy as np
 import pandas as pd
 
@@ -223,7 +223,6 @@ class DemandModellingDataContainer:
         combined = self.combined_data
         combined = self._add_ages(combined)
         combined = self._add_age_change_eps(combined)
-        combined = self._add_age_bins(combined)
         combined = self._add_placement_category(combined)
         combined = self._add_related_placement_type(
             combined, 1, "placement_type_before"
@@ -297,65 +296,89 @@ class DemandModellingDataContainer:
     def _add_ages(self, combined: pd.DataFrame) -> pd.DataFrame:
         """
         Calculates the age of the child at the start and end of the episode and adds them as columns
-
+        Age at end of episode is calculated regardless of whether the episode has ended
         WARNING: This method modifies the dataframe in place.
         """
+        end_date = np.datetime64(self.data_end_date)
         combined["age"] = (combined["DECOM"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
-        combined["end_age"] = (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
+        combined["end_age"] = np.where(
+            combined["DEC"].isna(),
+            (end_date - combined["DOB"]).dt.days / YEAR_IN_DAYS,
+            (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
+        )
         return combined
 
     def _add_age_change_eps(self, combined: pd.DataFrame) -> pd.DataFrame:
         """
         Creates new rows for episodes where a child has crossed an age bin boundary
-
+        Modifies rows to account for changes to start and end dates due to new rows
+        Allocates age_bins for start and end of episodes
         WARNING: This method modifies the dataframe in place.
         """
-        df_copy = combined
 
-        for bracket in AgeBrackets:
-            if bracket.value.end:
-                age_bound = bracket.value.end
-                expanded_df = []
-                for index, row in df_copy.iterrows():
-                    if row["age"] < age_bound and age_bound <= row["end_age"]:
-                        old_row = row.copy()
-                        new_row = row.copy()
-                        old_row["DEC"] = row["DOB"] + pd.DateOffset(years=age_bound)
-                        old_row["REC"] = "Age"
-                        old_row["REASON_PLACE_CHANGE"] = ""
-                        old_row["end_age"] = age_bound
-                        new_row["DECOM"] = row["DOB"] + pd.DateOffset(years=age_bound)
-                        new_row["RNE"] = "A"  # A for age
-                        new_row["age"] = age_bound
-                        expanded_df.append(old_row)
-                        expanded_df.append(new_row)
-                    else:
-                        expanded_df.append(row)
-                df_copy = pd.DataFrame(expanded_df)
+        def get_age_bracket_attribute(age, attribute):
+            '''
+            Returns an attribute from the AgeBrackets enum based on an age
+            '''
+            try:
+                age_bracket = AgeBrackets.bracket_for_age(age)
+                return getattr(age_bracket, attribute, None)
+            except ValueError:
+                return None
 
-        combined = df_copy
+        age_df = combined.copy()
+
+        # Get bracket start value for the age bracket each episode starts in
+        age_df["start_bracket"] = age_df["age"].apply(lambda x: get_age_bracket_attribute(x, "start"))
+        # Get all age boundaries crossed by each episode
+        age_bounds = np.array(sorted([b.value.end for b in AgeBrackets if b.value.end]))
+        mask = (age_bounds[None, :] > age_df["age"].values[:, None]) & (age_bounds[None, :] <= age_df["end_age"].values[:, None])
+        age_df["age_brackets"] = [age_bounds[m].tolist() for m in mask]
+        # Combine start brackets and boundaries into a single list to give all relevant start brackets for the episode
+        age_df["age_brackets"] = age_df["start_bracket"].map(lambda x: [x]) + age_df["age_brackets"]
+
+        # Expand each row into one row for each bracket
+        age_df = age_df.explode("age_brackets", ignore_index=True)
+        # Add end value for age bracket of each row
+        age_df["end_bracket"] = age_df["age_brackets"].apply(lambda x: get_age_bracket_attribute(x, "end"))
+
+        # Update episode start information for relevant episodes
+        age_condition = age_df["age_brackets"] > age_df["age"]
+
+        age_df.loc[age_condition, "DECOM"] = age_df.loc[age_condition].apply(
+            lambda row: row["DOB"] + relativedelta(years=int(row["age_brackets"])),
+            axis=1
+        )
+        age_df.loc[age_condition, "RNE"] = "A"
+        age_df.loc[age_condition, "age"] = age_df.loc[age_condition, "age_brackets"]
+
+        age_df.loc[age_condition, "DECOM"] = age_df.loc[age_condition].apply(
+            lambda row: row["DOB"] + relativedelta(years=int(row["age_brackets"])),
+            axis=1
+        )
+
+        # Update episode end information for relevant episodes
+        # Set DEC and end_age to the first day and age of the next age bracket so that end_age_bin will pick up the next age_bin
+        end_age_condition = age_df["end_bracket"] < age_df["end_age"]
+
+        age_df.loc[end_age_condition, "DEC"] = age_df.loc[end_age_condition].apply(
+            lambda row: row["DOB"] + relativedelta(years=int(row["end_bracket"])),
+            axis=1
+        )
+        age_df.loc[end_age_condition, "REC"] = "Age"
+        age_df.loc[end_age_condition, "REASON_PLACE_CHANGE"] = ""
+        age_df.loc[end_age_condition, "end_age"] = age_df.loc[end_age_condition,"end_bracket"]
+
+        # Add age bin to the episodes
+        age_df["age_bin"] = age_df["age"].apply(lambda x: get_age_bracket_attribute(x, "label"))
+        age_df["end_age_bin"] = age_df["end_age"].apply(lambda x: get_age_bracket_attribute(x, "label"))
+
+        combined = age_df
 
         log.debug(
             "%s records after adding episodes based on age transitions.",
             combined.shape,
         )
-        return combined
-
-    def _add_age_bins(self, combined: pd.DataFrame) -> pd.DataFrame:
-        """
-        Adds age bins for the child at the start and end of the episode and adds them as columns
-
-        WARNING: This method modifies the dataframe in place.
-        """
-
-        def get_age_bracket_label(age):
-            age_bracket = AgeBrackets.bracket_for_age(age)
-            if age_bracket is not None:
-                return age_bracket.label
-            return None
-
-        combined["age_bin"] = combined["age"].apply(get_age_bracket_label)
-        combined["end_age_bin"] = combined["end_age"].apply(get_age_bracket_label)
         return combined
 
     def _add_related_placement_type(
