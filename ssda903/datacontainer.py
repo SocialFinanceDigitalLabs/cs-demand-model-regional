@@ -299,11 +299,11 @@ class DemandModellingDataContainer:
         Age at end of episode is calculated regardless of whether the episode has ended
         WARNING: This method modifies the dataframe in place.
         """
-        end_date = np.datetime64(self.data_end_date)
+        data_end_date = np.datetime64(self.data_end_date)
         combined["age"] = (combined["DECOM"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
         combined["end_age"] = np.where(
             combined["DEC"].isna(),
-            (end_date - combined["DOB"]).dt.days / YEAR_IN_DAYS,
+            (data_end_date - combined["DOB"]).dt.days / YEAR_IN_DAYS,
             (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
         )
         return combined
@@ -316,20 +316,35 @@ class DemandModellingDataContainer:
         WARNING: This method modifies the dataframe in place.
         """
 
-        def get_age_bracket_attribute(age, attribute):
-            '''
-            Returns an attribute from the AgeBrackets enum based on an age
-            '''
-            try:
-                age_bracket = AgeBrackets.bracket_for_age(age)
-                return getattr(age_bracket, attribute, None)
-            except ValueError:
-                return None
-
         age_df = combined.copy()
 
+        # Convert the AgeBrackets enum into a dataframe for more efficient access
+        age_brackets_df = AgeBrackets.to_dataframe()
+        age_bins = sorted(set(age_brackets_df["start"].to_list() + age_brackets_df["end"].to_list()))
+
+        def get_age_bracket_attribute(df: pd.DataFrame, age_col: str, age_bins: str, return_col: str, attribute: str) -> pd.DataFrame:
+            '''
+            Returns an attribute relating to an age bracket based on an age column in a df
+
+            Args:
+                df (pd.DataFrame): Dataframe containing an age column (or an integer that stands in for age)
+                age_col (str): The age column used to return the correct AgeBracket
+                age_bins (str): The set of age_bins in AgeBrackets
+                return_col (str): The name of the column to be created
+                attribute (str): The attribute of the Enum to be returned e.g "start"
+
+            Returns:
+                pd.DataFrame: The original df with the mapped attribute as a new column
+            '''
+            # Assign the index of the age_brackets_df relevant to each row
+            df["bracket_index"] = pd.cut(df[age_col], bins=age_bins, labels=age_brackets_df.index, right=False)
+            # Map the attribute to the index
+            df[return_col] = age_brackets_df.loc[df["bracket_index"], attribute].values
+            
+            return df.drop(columns=["bracket_index"])
+
         # Get bracket start value for the age bracket each episode starts in
-        age_df["start_bracket"] = age_df["age"].apply(lambda x: get_age_bracket_attribute(x, "start"))
+        age_df = get_age_bracket_attribute(df=age_df, age_col="age", age_bins=age_bins, return_col="start_bracket", attribute="start")
         # Get all age boundaries crossed by each episode
         age_bounds = np.array(sorted([b.value.end for b in AgeBrackets if b.value.end]))
         mask = (age_bounds[None, :] > age_df["age"].values[:, None]) & (age_bounds[None, :] <= age_df["end_age"].values[:, None])
@@ -340,22 +355,18 @@ class DemandModellingDataContainer:
         # Expand each row into one row for each bracket
         age_df = age_df.explode("age_brackets", ignore_index=True)
         # Add end value for age bracket of each row
-        age_df["end_bracket"] = age_df["age_brackets"].apply(lambda x: get_age_bracket_attribute(x, "end"))
+        age_df = get_age_bracket_attribute(df=age_df, age_col="age_brackets", age_bins=age_bins, return_col="end_bracket", attribute="end")
 
         # Update episode start information for relevant episodes
+        # RNE = Reason for new episode
         age_condition = age_df["age_brackets"] > age_df["age"]
 
         age_df.loc[age_condition, "DECOM"] = age_df.loc[age_condition].apply(
             lambda row: row["DOB"] + relativedelta(years=int(row["age_brackets"])),
             axis=1
         )
-        age_df.loc[age_condition, "RNE"] = "A"
+        age_df.loc[age_condition, "RNE"] = "Age"
         age_df.loc[age_condition, "age"] = age_df.loc[age_condition, "age_brackets"]
-
-        age_df.loc[age_condition, "DECOM"] = age_df.loc[age_condition].apply(
-            lambda row: row["DOB"] + relativedelta(years=int(row["age_brackets"])),
-            axis=1
-        )
 
         # Update episode end information for relevant episodes
         # Set DEC and end_age to the first day and age of the next age bracket so that end_age_bin will pick up the next age_bin
@@ -370,9 +381,9 @@ class DemandModellingDataContainer:
         age_df.loc[end_age_condition, "end_age"] = age_df.loc[end_age_condition,"end_bracket"]
 
         # Add age bin to the episodes
-        age_df["age_bin"] = age_df["age"].apply(lambda x: get_age_bracket_attribute(x, "label"))
-        age_df["end_age_bin"] = age_df["end_age"].apply(lambda x: get_age_bracket_attribute(x, "label"))
-
+        age_df = get_age_bracket_attribute(df=age_df, age_col="age", age_bins=age_bins, return_col="age_bin", attribute="label")
+        age_df = get_age_bracket_attribute(df=age_df, age_col="end_age", age_bins=age_bins, return_col="end_age_bin", attribute="label")
+    
         combined = age_df
 
         log.debug(

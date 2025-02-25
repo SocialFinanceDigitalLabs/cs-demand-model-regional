@@ -303,7 +303,7 @@ def placement_starts_chart(data: PopulationStats) -> str:
     df_filtered = df_stats_data[
         (df_stats_data["DECOM"] >= start_date)
         & (df_stats_data["DECOM"] <= end_date)
-        & (df_stats_data["RNE"] != "A")
+        & (df_stats_data["RNE"] != "Age")
     ]
 
     # Change DECOMs to beginning of each month to facilitate graph showing events by month
