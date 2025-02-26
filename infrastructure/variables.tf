@@ -1,6 +1,5 @@
 variable "environment" {
   description = "The environment of the application"
-  default     = "staging"
 }
 
 variable "app" {

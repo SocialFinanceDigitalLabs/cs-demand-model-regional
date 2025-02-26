@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket = "demand-model-terraform-state"
-    key    = "state"
-    region = "eu-west-2"
-    dynamodb_table = "demand-model-terraform-state-dynamodb"
+    bucket = ""
+    key    = ""
+    region = ""
+    dynamodb_table = ""
   }
   required_providers {
     aws = {
