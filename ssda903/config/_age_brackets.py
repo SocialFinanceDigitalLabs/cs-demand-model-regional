@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +114,13 @@ class AgeBrackets(Enum):
             if bracket.value.start <= age < bracket.value.end:
                 return bracket.value
         return None
+    
+    @classmethod
+    def to_dataframe(cls):
+        '''
+        Convert the Enum into a DataFrame
+        '''
+        return pd.DataFrame([
+            {"start": bracket.value.start, "end": bracket.value.end, "label": bracket.value.label, "index": bracket.value.index}
+            for bracket in cls
+        ]).sort_values("start").reset_index(drop=True)
