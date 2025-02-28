@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket = "demand-model-terraform-state"
-    key    = "state"
-    region = "eu-west-2"
-    dynamodb_table = "demand-model-terraform-state-dynamodb"
+    bucket = ""
+    key    = ""
+    region = ""
+    dynamodb_table = ""
   }
   required_providers {
     aws = {
@@ -85,14 +85,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "bucket_lifecycle" {
 }
 
 resource "aws_backup_vault" "backup_vault" {
-  name        = "backup_vault"
+  name        = "${var.app}-${var.environment}-backup-vault"
 }
 
 resource "aws_backup_plan" "bucket_backup" {
-  name = "bucket_backup_plan"
+  name = "${var.app}-${var.environment}-backup-plan"
 
   rule {
-    rule_name         = "bucket_backup_rule"
+    rule_name         = "${var.app}-${var.environment}-backup-rule"
     target_vault_name = aws_backup_vault.backup_vault.name
     schedule          = "cron(0 0 * * ? *)"
 
@@ -100,6 +100,39 @@ resource "aws_backup_plan" "bucket_backup" {
       delete_after = 14
     }
   }
+}
+
+data "aws_iam_policy_document" "assume_role_backup" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["backup.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "backup_user" {
+  name               = "${var.app}-${var.environment}-backup-user"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_backup.json
+}
+
+resource "aws_iam_role_policy_attachment" "backup_role_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
+  role       = aws_iam_role.backup_user.name
+}
+
+resource "aws_backup_selection" "backup_selection" {
+  iam_role_arn = aws_iam_role.backup_user.arn
+  name         = "${var.app}-${var.environment}-backup-selection"
+  plan_id      = aws_backup_plan.bucket_backup.id
+
+  resources = [
+    aws_s3_bucket.bucket.arn
+  ]
 }
 
 resource "aws_iam_user" "bucket_user" {
