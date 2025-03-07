@@ -4,10 +4,13 @@ from django.urls import reverse
 from dm_regional_app.builder import Builder
 
 
-# Remove the custom middleware that checks for a DataSource as that is not the intention of this test suite
+# Remove the custom middleware that doesn't apply to this test suite
 @modify_settings(
     MIDDLEWARE={
-        "remove": "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware"
+        "remove": [
+            "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware",
+            "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware",
+        ]
     }
 )
 class ScenarioDetailViewTestCase(TestCase):
