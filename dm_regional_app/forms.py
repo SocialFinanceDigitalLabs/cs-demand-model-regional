@@ -50,7 +50,7 @@ class PredictFilter(forms.Form):
                         """<label for="prediction_end_date" class="form-label">
                             Prediction End Date
                             <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="right"
-                                title="As you extend your reference into the future, please be aware that the accuracy of the forecast may diminish. Long-term forecasts are subject to increased uncertainty, and caution is advised when creating forecasts for distant time periods."></i>
+                                title="As you extend your prediction end date into the future, please be aware that the accuracy of the forecast may diminish. Long-term forecasts are subject to increased uncertainty, and caution is advised when creating forecasts for distant time periods."></i>
                         </label>"""
                     ),
                     "prediction_end_date",
