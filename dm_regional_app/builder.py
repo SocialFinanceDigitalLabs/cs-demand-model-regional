@@ -29,7 +29,7 @@ class Builder:
             first_name=first_name or self.fake.first_name(),
             last_name=last_name or self.fake.last_name(),
             email=email or self.fake.email(),
-            password=DEFAULT_PASSWORD,
+            password=password or DEFAULT_PASSWORD,
             force_password_update=force_password_update,
         )
         if superuser:
