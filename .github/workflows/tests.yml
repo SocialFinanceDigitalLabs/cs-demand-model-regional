@@ -37,5 +37,6 @@ jobs:
       - name: Test
         run: |
           poetry run python manage.py test
+          poetry run pytest ssda903/tests
         env:
           DJANGO_SETTINGS_MODULE: dm_regional_site.settings.github_actions
