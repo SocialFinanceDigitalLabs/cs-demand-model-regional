@@ -1,7 +1,6 @@
 from typing import Optional
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import make_password
 from faker import Faker
 
 from dm_regional_app.models import SavedScenario
@@ -26,18 +25,17 @@ class Builder:
         force_password_update: Optional[bool] = False,
         **kwargs,
     ) -> User:
-        password = make_password(password or DEFAULT_PASSWORD)
         data = dict(
             first_name=first_name or self.fake.first_name(),
             last_name=last_name or self.fake.last_name(),
             email=email or self.fake.email(),
-            password=password,
+            password=DEFAULT_PASSWORD,
             force_password_update=force_password_update,
         )
         if superuser:
             user = User.objects.create_superuser(**data, **kwargs)
         else:
-            user = User.objects.create(**data, **kwargs)
+            user = User.objects.create_user(**data, **kwargs)
         return user
 
     def scenario(
