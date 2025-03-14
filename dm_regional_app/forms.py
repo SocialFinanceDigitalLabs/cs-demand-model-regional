@@ -27,7 +27,7 @@ class PredictFilter(forms.Form):
     )
     prediction_end_date = forms.DateField(
         widget=DatePickerInput(),
-        label="Prediction End Date",
+        label="",
         required=False,
     )
 
@@ -45,7 +45,17 @@ class PredictFilter(forms.Form):
             ),
             Row(
                 Column("prediction_start_date", css_class="form-group col-md-3 mb-0"),
-                Column("prediction_end_date", css_class="form-group col-md-3 mb-0"),
+                Column(
+                    HTML(
+                        """<label for="prediction_end_date" class="form-label">
+                            Prediction End Date
+                            <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="right"
+                                title="As you extend your prediction end date into the future, please be aware that the accuracy of the forecast may diminish. Long-term forecasts are subject to increased uncertainty, and caution is advised when creating forecasts for distant time periods."></i>
+                        </label>"""
+                    ),
+                    "prediction_end_date",
+                    css_class="form-group col-md-3 mb-0",
+                ),
                 css_class="form-row",
             ),
             Submit("submit", "Run model"),
