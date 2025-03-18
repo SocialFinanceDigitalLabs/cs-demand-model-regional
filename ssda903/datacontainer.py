@@ -173,7 +173,10 @@ class DemandModellingDataContainer:
         change_ix = combined["DEC"].isna() | combined["DEC"].gt(decom_next)
         combined.loc[change_ix, "DEC"] = decom_next[change_ix]
 
-        # Mark episodes that represent only a change in legal status or placement status
+        # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
+        # - only a change in legal status ("L")
+        # - or only placement status ("T")
+        # - or both ("U")
         combined["skip_episode"] = (
             (combined["RNE"].isin(["L", "T", "U"]))
             & (combined["CHILD"] == combined["CHILD"].shift(1))
@@ -181,18 +184,19 @@ class DemandModellingDataContainer:
         )
 
         # Identify sequences of redundant episodes
+        # These must be removed, but the information from the last episode in each sequence must be backfilled to the most recent valid episode
         # Note that this method doesn't isolate sequences of redundant episodes only; it actually increases by one whenever skip_episodes False -> True happens
         # To identify a sequence, "skip_episode" and "redundant_group" must both be used
         combined["redundant_group"] = (combined["skip_episode"] & ~combined["skip_episode"].shift(1, fill_value=False)).cumsum()
 
-        # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in group to all in group
+        # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
         combined.loc[combined["skip_episode"]] = (
             combined.loc[combined["skip_episode"]]
             .groupby(combined["redundant_group"])
             .transform("last")
         )
 
-        # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE to kept
+        # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
         mask = (combined["skip_episode"] == False) & (combined["skip_episode"].shift(-1) == True)
         mask_replace = (combined["skip_episode"] == True) & (combined["skip_episode"].shift(1) == False)
         combined.loc[mask, ["DEC", "REC", "REASON_PLACE_CHANGE"]] = combined.loc[mask_replace][["DEC", "REC", "REASON_PLACE_CHANGE"]].values
