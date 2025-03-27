@@ -173,37 +173,37 @@ class DemandModellingDataContainer:
         change_ix = combined["DEC"].isna() | combined["DEC"].gt(decom_next)
         combined.loc[change_ix, "DEC"] = decom_next[change_ix]
 
-        # Mark episodes that represent only a change in legal status or placement status
-        combined["Skip_Episode"] = np.where(
+        # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
+        # - only a change in legal status ("L")
+        # - or only placement status ("T")
+        # - or both ("U")
+        combined["skip_episode"] = (
             (combined["RNE"].isin(["L", "T", "U"]))
             & (combined["CHILD"] == combined["CHILD"].shift(1))
-            & (combined["DECOM"] == combined["DEC"].shift(1)),
-            True,
-            False,
+            & (combined["DECOM"] == combined["DEC"].shift(1))
         )
 
-        # Keep episodes with Skip_Episode == FALSE, but maintain continuity in episode close info (DEC, REC, REASON_PLACE_CHANGE) with skipped episodes
-        kept_rows = []
-        skipped_episode = False
-        last_skipped_dec = None
-        last_skipped_rec = None
-        last_skipped_rpc = None
+        # Identify sequences of redundant episodes
+        # These must be removed, but the information from the last episode in each sequence must be backfilled to the most recent valid episode
+        # Note that this method doesn't isolate sequences of redundant episodes only; it actually increases by one whenever skip_episodes False -> True happens
+        # To identify a sequence, "skip_episode" and "redundant_group" must both be used
+        combined["redundant_group"] = (combined["skip_episode"] & ~combined["skip_episode"].shift(1, fill_value=False)).cumsum()
 
-        for index, row in combined.iterrows():
-            if row["Skip_Episode"] == False:
-                if skipped_episode == True:
-                    kept_rows[-1]["DEC"] = last_skipped_dec
-                    kept_rows[-1]["REC"] = last_skipped_rec
-                    kept_rows[-1]["REASON_PLACE_CHANGE"] = last_skipped_rpc
-                    skipped_episode = False
-                kept_rows.append(row)
-            else:
-                skipped_episode = True
-                last_skipped_dec = row["DEC"]
-                last_skipped_rec = row["REC"]
-                last_skipped_rpc = row["REASON_PLACE_CHANGE"]
+        # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
+        combined.loc[combined["skip_episode"]] = (
+            combined.loc[combined["skip_episode"]]
+            .groupby(combined["redundant_group"])
+            .transform("last")
+        )
 
-        combined = pd.DataFrame(kept_rows)
+        # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
+        mask = (combined["skip_episode"] == False) & (combined["skip_episode"].shift(-1) == True)
+        mask_replace = (combined["skip_episode"] == True) & (combined["skip_episode"].shift(1) == False)
+        combined.loc[mask, ["DEC", "REC", "REASON_PLACE_CHANGE"]] = combined.loc[mask_replace][["DEC", "REC", "REASON_PLACE_CHANGE"]].values
+
+        # Drop skip_episodes rows
+        combined = combined.drop(combined[combined["skip_episode"]==True].index)
+
         log.debug(
             "%s records remaining after removing episodes that do not represent new placements.",
             combined.shape,
