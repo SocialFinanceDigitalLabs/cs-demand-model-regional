@@ -11,7 +11,7 @@ class ForceMFAMiddleware:
     """
 
     PATHS_TO_IGNORE = re.compile(
-        r"(/admin.*)|(/accounts/.*)",
+        r"(/accounts/.*)",
         re.IGNORECASE,
     )
 
