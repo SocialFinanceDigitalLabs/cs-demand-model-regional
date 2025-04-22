@@ -41,3 +41,16 @@ class ChangePasswordTestCase(TestCase):
 
         response = self.client.get(reverse("home"))
         self.assertEqual(response.status_code, 200)
+
+    def test_reset_password_update_flag(self):
+        """If a user has their password reset when they were not forced to reset it already
+        then this should set the flag to force them to update their password on next login
+        """
+        data = {
+            "oldpassword": "astrongerpassword",
+            "password1": "anevenstrongerpassword",
+            "password2": "anevenstrongerpassword",
+        }
+        self.client.post(reverse("account_change_password"), data)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.force_password_update)

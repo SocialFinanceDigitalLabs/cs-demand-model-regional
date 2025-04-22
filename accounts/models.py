@@ -49,3 +49,11 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def set_password(self, password):
+        super(CustomUser, self).set_password(password)
+        # If the password is being reset by an admin (and not on first login)
+        # then force the user to reset their password. If users are able to reset
+        # their own passwords, this functionality will need to be changed.
+        if not self.force_password_update:
+            self.force_password_update = True
