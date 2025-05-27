@@ -10,6 +10,7 @@ from dm_regional_app.builder import Builder
         "remove": [
             "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware",
             "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware",
+            "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
         ]
     }
 )

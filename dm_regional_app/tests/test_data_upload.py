@@ -14,7 +14,10 @@ from dm_regional_app.models import DataSource
 # Remove the custom middleware that doesn't apply to this test suite
 @modify_settings(
     MIDDLEWARE={
-        "remove": "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware"
+        "remove": [
+            "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware",
+            "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
+        ]
     }
 )
 class DataUploadTestCase(TestCase):
