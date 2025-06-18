@@ -1,11 +1,12 @@
 import dataclasses
 import logging
 from datetime import date
-from dateutil.relativedelta import relativedelta
 from functools import cached_property
 from typing import Optional
+
 import numpy as np
 import pandas as pd
+from dateutil.relativedelta import relativedelta
 
 from ssda903.config import (
     YEAR_IN_DAYS,
@@ -97,10 +98,10 @@ class DemandModellingDataContainer:
         # Merge header and UASC and keep most recent entry for CHILD
         # TODO: convert to datetimes should be done when the table is first read
         header = self.get_table(SSDA903TableType.HEADER)
-        header["DOB"] = pd.to_datetime(header["DOB"], format="%d/%m/%Y")
+        header["DOB"] = pd.to_datetime(header["DOB"])
 
         uasc = self.get_table(SSDA903TableType.UASC)
-        uasc["DUC"] = pd.to_datetime(uasc["DUC"], format="%d/%m/%Y")
+        uasc["DUC"] = pd.to_datetime(uasc["DUC"])
 
         merged = header.merge(
             uasc[["CHILD", "DUC", "YEAR"]], how="left", on=["CHILD", "YEAR"]
@@ -111,8 +112,8 @@ class DemandModellingDataContainer:
         # Merge into episodes file
         # TODO: convert to datetimes should be done when the table is first read
         episodes = self.get_table(SSDA903TableType.EPISODES)
-        episodes["DECOM"] = pd.to_datetime(episodes["DECOM"], format="%d/%m/%Y")
-        episodes["DEC"] = pd.to_datetime(episodes["DEC"], format="%d/%m/%Y")
+        episodes["DECOM"] = pd.to_datetime(episodes["DECOM"])
+        episodes["DEC"] = pd.to_datetime(episodes["DEC"])
 
         merged = episodes.merge(
             merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
@@ -120,7 +121,6 @@ class DemandModellingDataContainer:
 
         # create UASC flag if DUC
         merged["UASC"] = merged["DUC"].notna()
-
         return merged
 
     @cached_property
@@ -187,7 +187,10 @@ class DemandModellingDataContainer:
         # These must be removed, but the information from the last episode in each sequence must be backfilled to the most recent valid episode
         # Note that this method doesn't isolate sequences of redundant episodes only; it actually increases by one whenever skip_episodes False -> True happens
         # To identify a sequence, "skip_episode" and "redundant_group" must both be used
-        combined["redundant_group"] = (combined["skip_episode"] & ~combined["skip_episode"].shift(1, fill_value=False)).cumsum()
+        combined["redundant_group"] = (
+            combined["skip_episode"]
+            & ~combined["skip_episode"].shift(1, fill_value=False)
+        ).cumsum()
 
         # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
         combined.loc[combined["skip_episode"]] = (
@@ -197,12 +200,18 @@ class DemandModellingDataContainer:
         )
 
         # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
-        mask = (combined["skip_episode"] == False) & (combined["skip_episode"].shift(-1) == True)
-        mask_replace = (combined["skip_episode"] == True) & (combined["skip_episode"].shift(1) == False)
-        combined.loc[mask, ["DEC", "REC", "REASON_PLACE_CHANGE"]] = combined.loc[mask_replace][["DEC", "REC", "REASON_PLACE_CHANGE"]].values
+        mask = (combined["skip_episode"] == False) & (
+            combined["skip_episode"].shift(-1) == True
+        )
+        mask_replace = (combined["skip_episode"] == True) & (
+            combined["skip_episode"].shift(1) == False
+        )
+        combined.loc[mask, ["DEC", "REC", "REASON_PLACE_CHANGE"]] = combined.loc[
+            mask_replace
+        ][["DEC", "REC", "REASON_PLACE_CHANGE"]].values
 
         # Drop skip_episodes rows
-        combined = combined.drop(combined[combined["skip_episode"]==True].index)
+        combined = combined.drop(combined[combined["skip_episode"] == True].index)
 
         log.debug(
             "%s records remaining after removing episodes that do not represent new placements.",
@@ -304,7 +313,7 @@ class DemandModellingDataContainer:
         combined["end_age"] = np.where(
             combined["DEC"].isna(),
             (data_end_date - combined["DOB"]).dt.days / YEAR_IN_DAYS,
-            (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS
+            (combined["DEC"] - combined["DOB"]).dt.days / YEAR_IN_DAYS,
         )
         return combined
 
@@ -320,10 +329,18 @@ class DemandModellingDataContainer:
 
         # Convert the AgeBrackets enum into a dataframe for more efficient access
         age_brackets_df = AgeBrackets.to_dataframe()
-        age_bins = sorted(set(age_brackets_df["start"].to_list() + age_brackets_df["end"].to_list()))
+        age_bins = sorted(
+            set(age_brackets_df["start"].to_list() + age_brackets_df["end"].to_list())
+        )
 
-        def get_age_bracket_attribute(df: pd.DataFrame, age_col: str, age_bins: str, return_col: str, attribute: str) -> pd.DataFrame:
-            '''
+        def get_age_bracket_attribute(
+            df: pd.DataFrame,
+            age_col: str,
+            age_bins: str,
+            return_col: str,
+            attribute: str,
+        ) -> pd.DataFrame:
+            """
             Returns an attribute relating to an age bracket based on an age column in a df
 
             Args:
@@ -335,27 +352,45 @@ class DemandModellingDataContainer:
 
             Returns:
                 pd.DataFrame: The original df with the mapped attribute as a new column
-            '''
+            """
             # Assign the index of the age_brackets_df relevant to each row
-            df["bracket_index"] = pd.cut(df[age_col], bins=age_bins, labels=age_brackets_df.index, right=False)
+            df["bracket_index"] = pd.cut(
+                df[age_col], bins=age_bins, labels=age_brackets_df.index, right=False
+            )
             # Map the attribute to the index
             df[return_col] = age_brackets_df.loc[df["bracket_index"], attribute].values
-            
+
             return df.drop(columns=["bracket_index"])
 
         # Get bracket start value for the age bracket each episode starts in
-        age_df = get_age_bracket_attribute(df=age_df, age_col="age", age_bins=age_bins, return_col="start_bracket", attribute="start")
+        age_df = get_age_bracket_attribute(
+            df=age_df,
+            age_col="age",
+            age_bins=age_bins,
+            return_col="start_bracket",
+            attribute="start",
+        )
         # Get all age boundaries crossed by each episode
         age_bounds = np.array(sorted([b.value.end for b in AgeBrackets if b.value.end]))
-        mask = (age_bounds[None, :] > age_df["age"].values[:, None]) & (age_bounds[None, :] <= age_df["end_age"].values[:, None])
+        mask = (age_bounds[None, :] > age_df["age"].values[:, None]) & (
+            age_bounds[None, :] <= age_df["end_age"].values[:, None]
+        )
         age_df["age_brackets"] = [age_bounds[m].tolist() for m in mask]
         # Combine start brackets and boundaries into a single list to give all relevant start brackets for the episode
-        age_df["age_brackets"] = age_df["start_bracket"].map(lambda x: [x]) + age_df["age_brackets"]
+        age_df["age_brackets"] = (
+            age_df["start_bracket"].map(lambda x: [x]) + age_df["age_brackets"]
+        )
 
         # Expand each row into one row for each bracket
         age_df = age_df.explode("age_brackets", ignore_index=True)
         # Add end value for age bracket of each row
-        age_df = get_age_bracket_attribute(df=age_df, age_col="age_brackets", age_bins=age_bins, return_col="end_bracket", attribute="end")
+        age_df = get_age_bracket_attribute(
+            df=age_df,
+            age_col="age_brackets",
+            age_bins=age_bins,
+            return_col="end_bracket",
+            attribute="end",
+        )
 
         # Update episode start information for relevant episodes
         # RNE = Reason for new episode
@@ -363,7 +398,7 @@ class DemandModellingDataContainer:
 
         age_df.loc[age_condition, "DECOM"] = age_df.loc[age_condition].apply(
             lambda row: row["DOB"] + relativedelta(years=int(row["age_brackets"])),
-            axis=1
+            axis=1,
         )
         age_df.loc[age_condition, "RNE"] = "Age"
         age_df.loc[age_condition, "age"] = age_df.loc[age_condition, "age_brackets"]
@@ -374,16 +409,30 @@ class DemandModellingDataContainer:
 
         age_df.loc[end_age_condition, "DEC"] = age_df.loc[end_age_condition].apply(
             lambda row: row["DOB"] + relativedelta(years=int(row["end_bracket"])),
-            axis=1
+            axis=1,
         )
         age_df.loc[end_age_condition, "REC"] = "Age"
         age_df.loc[end_age_condition, "REASON_PLACE_CHANGE"] = ""
-        age_df.loc[end_age_condition, "end_age"] = age_df.loc[end_age_condition,"end_bracket"]
+        age_df.loc[end_age_condition, "end_age"] = age_df.loc[
+            end_age_condition, "end_bracket"
+        ]
 
         # Add age bin to the episodes
-        age_df = get_age_bracket_attribute(df=age_df, age_col="age", age_bins=age_bins, return_col="age_bin", attribute="label")
-        age_df = get_age_bracket_attribute(df=age_df, age_col="end_age", age_bins=age_bins, return_col="end_age_bin", attribute="label")
-    
+        age_df = get_age_bracket_attribute(
+            df=age_df,
+            age_col="age",
+            age_bins=age_bins,
+            return_col="age_bin",
+            attribute="label",
+        )
+        age_df = get_age_bracket_attribute(
+            df=age_df,
+            age_col="end_age",
+            age_bins=age_bins,
+            return_col="end_age_bin",
+            attribute="label",
+        )
+
         combined = age_df
 
         log.debug(
