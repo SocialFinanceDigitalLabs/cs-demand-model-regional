@@ -8,7 +8,7 @@ from dm_regional_app.models import DataSource, SessionScenario
 
 class SessionScenarioMiddleware:
     PATHS_TO_IGNORE = re.compile(
-        r"(/admin.*)|(/accounts.*)|(/upload_data.*)|(/$)",
+        r"(/admin.*)|(/accounts.*)|(/upload_data.*)|(/faq.*)|(/$)",
         re.IGNORECASE,
     )
 
