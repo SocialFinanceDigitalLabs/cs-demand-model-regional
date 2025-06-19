@@ -433,17 +433,17 @@ def transition_rate_table(data):
     df.set_index(["from", "to"], inplace=True)
 
     # filter out children leaving care and rates for children remaining in the placement
-    df = df[df["To"].apply(lambda x: "Not in care" in x) == False]
+    df = df[~df["To"].str.contains("Not in care", na=False)]
     df = df[df["From"] != df["To"]]
 
     # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
-    # sort_values is not used as it sorts  lexicographically
+    # sort_values is not used as it sorts lexicographically
     df = rate_table_sort(df, "From", transition=True)
-    df["From"] = df["From"].mask(df["From"].duplicated(), "")
 
     # if dataframe has 3 columns, order and rename them and round values
     if df.shape[1] == 3:
         df = df[["From", "To", "rates"]]
+        df["From"] = df["From"].mask(df["From"].duplicated(), "")
         df.columns = ["From", "To", "Base transition rate"]
         df = df.round(4)
 
@@ -464,27 +464,30 @@ def exit_rate_table(data):
     df = df.reset_index()
 
     # keeps only data where children are leaving care
-    df = df[df["to"].apply(lambda x: "Not in care" in x)]
+    df = df[df["to"].str.contains("Not in care", na=False)]
+
+    # sets multiindex
+    df["From"] = df["from"]
+    df.set_index(["from", "to"], inplace=True)
+
+    # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
+    # sort_values is not used as it sorts lexicographically
+    df = rate_table_sort(df, "From")
 
     # creates new columns for age and placement from buckets
     try:
-        df[["Age Group", "Placement"]] = df["from"].str.split(" - ", expand=True)
+        df[["Age Group", "Placement"]] = df["From"].str.split(" - ", expand=True)
     # The above breaks if the data has no children leaving care, so instead we can return
     # an empty dataframe in this instance.
     except:
         df[["Age Group", "Placement"]] = pd.NA
 
-    # sets multiindex
-    df.set_index(["from", "to"], inplace=True)
-
-    # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
-    # sort_values is not used as it sorts  lexicographically
-    df = rate_table_sort(df, "Age Group")
-    df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
+    df = df.drop(columns="From")
 
     # if dataframe has 3 columns, order and rename them and round values
     if df.shape[1] == 3:
         df = df[["Age Group", "Placement", "rates"]]
+        df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
         df.columns = ["Age Group", "Placement", "Base exit rate"]
         df = df.round(4)
 
@@ -505,22 +508,24 @@ def entry_rate_table(data):
     df = df.reset_index().rename(columns={"index": "to"})
 
     # filter out not in care population
-    df = df[df["to"].apply(lambda x: "Not in care" in x) == False]
-
-    # split buckets into age group and placement
-    df[["Age Group", "Placement"]] = df["to"].str.split(" - ", expand=True)
+    df = df[~df["to"].str.contains("Not in care", na=False)]
 
     # set 'to' back to index
+    df["To"] = df["to"]
     df.set_index(["to"], inplace=True)
 
     # sort by age groups and then mask duplicate values to give impression of multiindex when displayed
-    # sort_values is not used as it sorts  lexicographically
-    df = rate_table_sort(df, "Age Group")
-    df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
+    # sort_values is not used as it sorts lexicographically
+    df = rate_table_sort(df, "To")
+
+    # split buckets into age group and placement
+    df[["Age Group", "Placement"]] = df["To"].str.split(" - ", expand=True)
+    df = df.drop(columns="To")
 
     # if dataframe has 3 columns, order and rename them and round values
     if df.shape[1] == 3:
         df = df[["Age Group", "Placement", "rates"]]
+        df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
         df.columns = ["Age Group", "Placement", "Base entry rate"]
         df = df.round(4)
 
@@ -652,6 +657,7 @@ def transition_rate_changes(base, adjusted):
         return None
     else:
         df = df[["From", "To", "base", "adjusted"]]
+        df["From"] = df["From"].mask(df["From"].duplicated(), "")
         df.columns = ["From", "To", "Base transition rate", "Adjusted transition rate"]
         df = df.round(4)
         return df
@@ -675,6 +681,7 @@ def exit_rate_changes(base, adjusted):
         return None
     else:
         df = df[["Age Group", "Placement", "base", "adjusted"]]
+        df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
         df.columns = ["Age Group", "Placement", "Base exit rate", "Adjusted exit rate"]
         df = df.round(4)
         return df
@@ -698,6 +705,7 @@ def entry_rate_changes(base, adjusted):
         return None
     else:
         df = df[["Age Group", "Placement", "base", "adjusted"]]
+        df["Age Group"] = df["Age Group"].mask(df["Age Group"].duplicated(), "")
         df.columns = [
             "Age Group",
             "Placement",

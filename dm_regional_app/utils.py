@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
-from ssda903.config import PlacementCategories
+from ssda903.config import PlacementCategories, AgeBrackets
 
 
 def apply_filters(data: pd.DataFrame, filters: dict):
@@ -182,39 +182,48 @@ def remove_age_transitions(df):
 def rate_table_sort(df, bin_col, transition=False):
     """
     Sorts entry, exit, and transition rate tables by age and placement as
-    a standard sort_values sorts lexicographically, putting 10 befor 5.
+    a standard sort_values sorts lexicographically, putting 10 before 5.
 
     Transition rate tables need to be sorted on 'From' and 'To' in order
     to maintain sorting across tables and columns.
     """
+    # Retrieve an ordered list of the members of each relevant Enum
+    age_list = [a.value.label for a in AgeBrackets._members_by_index()]
+    place_list = [a.value.label for a in PlacementCategories._members_by_index()]
+
     # Making age and placement columns for sorting
-    df["split"] = df[bin_col].str.split(" ")
-    df["first_age"] = df["split"].str[0].astype("int")
-    df["starting_place"] = df["split"].str[-1]
+    df["split"] = df[bin_col].str.split(" - ")
+    df["age_bin"] = df["split"].str[0]
+    df["age_bin"] = pd.Categorical(df["age_bin"], categories=age_list, ordered=True)
+    df["start_place"] = df["split"].str[-1]
+    df["start_place"] = pd.Categorical(df["start_place"], categories=place_list, ordered=True)
 
     # Sorts entry and exit rate tables by age then placement
     if transition == False:
-        df.sort_values(["first_age", "starting_place"], inplace=True)
-        df.drop(columns=["first_age", "starting_place", "split"], inplace=True)
+        df.sort_values(["age_bin", "start_place"], inplace=True)
+        df.drop(columns=["split", "age_bin", "start_place"], inplace=True)
 
     # Sorts transition rate table by age and placement, then age and placement where
     # children end up
     elif transition:
-        df["to_split"] = df["To"].str.split(" ")
-        df["finishing_age"] = df["to_split"].str[0].astype("int")
-        df["finishing_place"] = df["to_split"].str[-1]
+        df["to_split"] = df["To"].str.split(" - ")
+        df["end_age_bin"] = df["to_split"].str[0]
+        df["end_age_bin"] = pd.Categorical(df["end_age_bin"], categories=age_list, ordered=True)
+        df["end_place"] = df["to_split"].str[-1]
+        df["end_place"] = pd.Categorical(df["end_place"], categories=place_list, ordered=True)
+
         df.sort_values(
-            ["first_age", "starting_place", "finishing_age", "finishing_place"],
+            ["age_bin", "start_place", "end_age_bin", "end_place"],
             inplace=True,
         )
         df.drop(
             columns=[
-                "first_age",
-                "starting_place",
                 "split",
-                "finishing_place",
+                "age_bin",
+                "start_place",
                 "to_split",
-                "finishing_age",
+                "end_age_bin",
+                "end_place"
             ],
             inplace=True,
         )
