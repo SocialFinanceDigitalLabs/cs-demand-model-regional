@@ -1328,6 +1328,9 @@ def upload_data_source(request):
                         default_storage.delete(full_path)
                     default_storage.save(full_path, file)
                 messages.success(request, "Data uploaded successfully")
+
+                SessionScenario.objects.all().delete()
+                messages.success(request, "Session scenarios cleared")
             else:
                 messages.error(request, f"Data not uploaded successfully: {msg}")
             return redirect("upload_data")
