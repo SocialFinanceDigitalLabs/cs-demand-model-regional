@@ -71,7 +71,7 @@ class DemandModellingDataContainer:
                 break
 
         if table_type == SSDA903TableType.EPISODES:
-            df["DECOM"] = pd.to_datetime(df["DECOM"], dayfirst=True)
+            df["DECOM"] = pd.to_datetime(df["DECOM"], format="%Y-%m-%d")
 
         return table_type
 
@@ -98,10 +98,10 @@ class DemandModellingDataContainer:
         # Merge header and UASC and keep most recent entry for CHILD
         # TODO: convert to datetimes should be done when the table is first read
         header = self.get_table(SSDA903TableType.HEADER)
-        header["DOB"] = pd.to_datetime(header["DOB"])
+        header["DOB"] = pd.to_datetime(header["DOB"], format="%Y-%m-%d")
 
         uasc = self.get_table(SSDA903TableType.UASC)
-        uasc["DUC"] = pd.to_datetime(uasc["DUC"])
+        uasc["DUC"] = pd.to_datetime(uasc["DUC"], format="%Y-%m-%d")
 
         merged = header.merge(
             uasc[["CHILD", "DUC", "YEAR"]], how="left", on=["CHILD", "YEAR"]
@@ -112,8 +112,8 @@ class DemandModellingDataContainer:
         # Merge into episodes file
         # TODO: convert to datetimes should be done when the table is first read
         episodes = self.get_table(SSDA903TableType.EPISODES)
-        episodes["DECOM"] = pd.to_datetime(episodes["DECOM"])
-        episodes["DEC"] = pd.to_datetime(episodes["DEC"])
+        episodes["DECOM"] = pd.to_datetime(episodes["DECOM"], format="%Y-%m-%d")
+        episodes["DEC"] = pd.to_datetime(episodes["DEC"], format="%Y-%m-%d")
 
         merged = episodes.merge(
             merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
