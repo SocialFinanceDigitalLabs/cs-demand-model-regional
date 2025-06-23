@@ -135,12 +135,27 @@ class DemandModellingDataContainer:
         """
         combined = self.combined_datasets()
 
-        # Just do some basic data validation checks
-        assert not combined["CHILD"].isna().any()
-        assert not combined["DECOM"].isna().any()
+        # Clean up episodes
+        log.debug(
+            "%s records in combined view before cleaning up episodes.",
+            combined.shape,
+        )
 
-        # Then clean up the episodes
-        # First we remove children who have no DOB, as this prevents us from knowing which age bucket to put them in
+        # Remove children with no CHILD (ID) - this is a sanity check, NaN values should not be present due to merging
+        combined.drop(combined[combined.CHILD.isna()].index, inplace=True)
+        log.debug(
+            "%s records remaining after removing children with no CHILD (Child ID).",
+            combined.shape,
+        )
+
+        # Remove children who have no DECOM, as twe won't know when the episode started
+        combined.drop(combined[combined.DECOM.isna()].index, inplace=True)
+        log.debug(
+            "%s records remaining after removing children with no DECOM.",
+            combined.shape,
+        )
+
+        # Remove children with no DOB, as this prevents us from knowing which age bucket to put them in
         combined.drop(combined[combined.DOB.isna()].index, inplace=True)
         log.debug(
             "%s records remaining after removing children with no DOB.",
