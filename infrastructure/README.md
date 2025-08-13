@@ -12,7 +12,7 @@ target AWS account. Then these modules can be applied to different accounts
 by using `-backup-config` flag when running `terraform init`.
 
 ## Prerequisites
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- AWS account and [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli)
 - If using AWS CLI v2, [configure your CLI to use SSO](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html#sso-configure-profile-token-auto-sso):
 
@@ -39,19 +39,23 @@ terraform plan -var-file="variables/staging.tfvars"
 terraform apply -var-file="variables/staging.tfvars"
 ```
 6. Confirm via AWS Console that the resources look as expected
+7. If you need the AWS secret access key to set an environment variable, 
+you can run the following command to retrieve it:
+```bash
+terraform output secret_access_key
+````
 
 ## New Deployment
-// To Do: add link to digi docs account setup once done
-1. Create an AWS account following [these guidelines]() and login via the CLI.
+1. Login via the AWS CLI.
 2. Create an S3 bucket for the terraform state ([recommended instructions](https://spacelift.io/blog/terraform-s3-backend)). 
 The bucket name will need to unique in the entire region - this is the suggested convention:
 `{application}-tfstate-{environment}`
 For instance, the terraform state bucket for this application and client GM would be called
 `demand-model-tfstate-production-gm`
-4. Create a DynamoDB table (from the above instructions).
-5. Add a new `config` file with the appropriate details to `backend_config` folder.
+3. Create a DynamoDB table (from the above instructions).
+4. Add a new `config` file with the appropriate details to `backend_config` folder.
 Add a new `tfvars` file with the appropriate details to `variables` folder.
-6. Initialise terraform 
+5. Initialise terraform 
 ```bash
 terraform init -backend-config="./backend_config/staging.config"
 ```
