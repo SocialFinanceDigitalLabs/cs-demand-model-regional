@@ -135,7 +135,7 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 
 
 AUTHENTICATION_BACKENDS = (
-    "accounts.backends.EmailBackend",
+    "accounts.backends.EmailAuthBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
