@@ -56,3 +56,13 @@ fit together.
      python manage.py createsuperuser
      ```
    - Follow the prompts to set up the superuser account
+
+### Delete Session Scenarios
+
+To manage data transfer between views, users are assigned a session scenario. These scenarios should be deleted regularly,
+perhaps through the Heroku Scheduler.
+To delete session scenarios:
+
+```
+python manage.py erase_session_scenarios
+```
