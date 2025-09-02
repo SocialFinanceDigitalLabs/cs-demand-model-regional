@@ -19,3 +19,7 @@ Has the same permissions and access as Admin Users, plus
 Can view and manage all data within the application
 Can promote other users to Admin or Superuser status
 *We would expect a select number of superusers, who are part of the organisation responsible for the overall management and governance of the application.*
+
+## User Management
+
+Admin users (those that can upload data), should be managed via the SSO provider. We recommend using the SSO provider's user management features to create these users. Upon first sign in to the site via SSO, a Django user account will be automatically created for them. The user can then be added to the admin group within the application.
