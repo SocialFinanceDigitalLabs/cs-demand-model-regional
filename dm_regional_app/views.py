@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -56,6 +57,8 @@ from ssda903.costs import (
 from ssda903.population_stats import PopulationStats
 from ssda903.predictor import predict
 from ssda903.reader import read_data, read_local_data
+
+log = logging.getLogger(__name__)
 
 
 def home(request):
@@ -1293,7 +1296,8 @@ def validate_with_prediction(files):
             reference_end_date=datacontainer.data_end_date,
             prediction_start_date=datacontainer.data_end_date,
         )
-    except ValueError:
+    except ValueError as e:
+        log.error(f"Upload validation failed: {e}")
         return None, "At least one file is invalid."
     else:
         return datacontainer, "Successful prediction created."
