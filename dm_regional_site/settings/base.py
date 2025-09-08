@@ -98,17 +98,21 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SESSION_REMEMBER = False
 ACCOUNT_FORMS = {
     "login": "accounts.forms.CustomLoginForm",
     "change_password": "accounts.forms.CustomChangePasswordForm",
 }
-SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
-ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT = 60 * 10  # 10 minutes
+ACCOUNT_RATE_LIMITS = {"login_failed": "10/m/ip,5/5m/key"}
 MFA_SUPPORTED_TYPES = ["totp"]
+
+SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
 
 
 ROOT_URLCONF = "dm_regional_site.urls"
