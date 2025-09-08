@@ -22,6 +22,7 @@ fit together.
 2. Add resources in the Overview tab -> Configure Add-ons
     - Add the [Heroku Postgres](https://elements.heroku.com/addons/heroku-postgresql) add-on 
     - Add the [Heroku Papertrail](https://elements.heroku.com/addons/papertrail) add-on
+    - Add the [Heroku Twilio SendGrid](https://devcenter.heroku.com/articles/sendgrid) add-on
 3. Configure automatic deployments
    - Connect the Heroku app to this Github repository - you will need admin rights on the repository.
    - Enable automatic deployments from the main branch and tick the "Wait for CI to pass before deploying" option
@@ -47,7 +48,8 @@ fit together.
      - `SENTRY_DSN`: The DSN for the associated Sentry project
      - `SENTRY_ENVIRONMENT`: The environment name for Sentry (e.g., `production-{region}`)
    - Configure SSL -> Automatic Certificate Management (ACM) to provision an SSL certificate for your domain
-   - Domains -> Configure your custom domain and add it to your DNS provider
+   - Domains -> Configure your custom domain and add it to your DNS provider. You will also need to follow the Twilio 
+   SendGrid instructions to verify your domain for sending emails.
 4. Deploy the application
    - Trigger a manual deployment from the Deploy -> Manual deploy.
 5. Create a superuser
