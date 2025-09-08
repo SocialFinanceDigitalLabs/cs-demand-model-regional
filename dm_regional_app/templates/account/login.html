@@ -1,5 +1,5 @@
 {% extends "dm_regional_app/base.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags socialaccount %}
 
 {% block content %}
   <h2>Login</h2>
@@ -12,7 +12,7 @@
         <p>Please login to see this page.</p>
       {% endif %}
     {% endif %}
-    <div class="col-sm-6">
+    <div class="col-sm-6 mb-4">
       <form method="post" action="{% url 'account_login' %}">
         {% csrf_token %}
         {{ form|crispy }}
@@ -23,7 +23,12 @@
       </form>
     </div>
     <p>If you are accessing this site as an admin, please login via SSO:</p>
-    {% if SOCIALACCOUNT_ENABLED %}
-        {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+    {% get_providers as socialaccount_providers %}
+    {% if socialaccount_providers %}
+        <form action="{% provider_login_url 'microsoft' %}" method="post" class="mt-4">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">Login with SSO</button>
+        </form>
+
     {% endif %}
 {% endblock %}
