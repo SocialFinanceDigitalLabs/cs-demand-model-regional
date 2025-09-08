@@ -1,14 +1,14 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from accounts.backends import EmailBackend
+from accounts.backends import EmailAuthBackend
 
 User = get_user_model()
 
 
-class EmailBackendTestCase(TestCase):
+class EmailAuthBackendTestCase(TestCase):
     def setUp(self):
-        self.backend = EmailBackend()
+        self.backend = EmailAuthBackend()
 
     def test_authenticate_with_existing_user(self):
         # Create a user with a known email and password
