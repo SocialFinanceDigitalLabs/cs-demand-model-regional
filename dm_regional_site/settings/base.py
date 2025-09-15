@@ -173,6 +173,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+SESSION_COOKIE_AGE = config("SESSION_COOKIE_AGE", 432000)
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
