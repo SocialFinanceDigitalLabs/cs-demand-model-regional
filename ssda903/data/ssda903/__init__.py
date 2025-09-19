@@ -25,7 +25,7 @@ class Episodes:
 
 
 class Header:
-    fields = ["CHILD", "SEX", "DOB", "ETHNIC", "UPN", "MOTHER", "MC_DOB", "YEAR"]
+    fields = ["CHILD", "SEX", "DOB", "ETHNIC", "YEAR"]
 
 
 class Reviews:
