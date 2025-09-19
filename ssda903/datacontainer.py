@@ -39,7 +39,7 @@ class DemandModellingDataContainer:
 
             # We only care about Header, Episodes and UASC
             # We also only care about fields in these files that are used by the model
-            # See the definitions of the tables if adding functionality using additional fields
+            # See the definitions of the tables if adding functionality using new fields
             if file_info.metadata.table in [
                 SSDA903TableType.HEADER,
                 SSDA903TableType.EPISODES,
