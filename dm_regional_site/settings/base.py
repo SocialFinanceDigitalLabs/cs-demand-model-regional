@@ -105,10 +105,7 @@ ACCOUNT_FORMS = {
     "login": "accounts.forms.CustomLoginForm",
     "change_password": "accounts.forms.CustomChangePasswordForm",
 }
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
-ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT = 60 * 10  # 10 minutes
-ACCOUNT_RATE_LIMITS = {"login_failed": "10/m/ip,5/5m/key"}
+ACCOUNT_EMAIL_VERIFICATION = "none"
 MFA_SUPPORTED_TYPES = ["totp"]
 
 SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
