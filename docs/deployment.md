@@ -22,7 +22,6 @@ fit together.
 2. Add resources in the Overview tab -> Configure Add-ons
     - Add the [Heroku Postgres](https://elements.heroku.com/addons/heroku-postgresql) add-on 
     - Add the [Heroku Papertrail](https://elements.heroku.com/addons/papertrail) add-on
-    - Add the [Heroku Twilio SendGrid](https://devcenter.heroku.com/articles/sendgrid) add-on
 3. Configure automatic deployments
    - Connect the Heroku app to this Github repository - you will need admin rights on the repository.
    - Enable automatic deployments from the main branch and tick the "Wait for CI to pass before deploying" option
@@ -48,9 +47,18 @@ fit together.
      - `SENTRY_DSN`: The DSN for the associated Sentry project
      - `SENTRY_ENVIRONMENT`: The environment name for Sentry (e.g., `production-{region}`)
    - Configure SSL -> Automatic Certificate Management (ACM) to provision an SSL certificate for your domain
-   - Domains -> Configure your custom domain and add it to your DNS provider. You will also need to follow the Twilio 
-   SendGrid instructions to verify your domain for sending emails.
-4. Deploy the application
+   - Domains -> Configure your custom domain and add it to your DNS provider.
+4. Configure an SMTP server for email sending. This can be done using services like SendGrid, Amazon SES, or any SMTP server of your choice.
+The current implementation uses [smtp2go](https://www.smtp2go.com/). Using another method may require further development/configuration.
+If using smtp2go:
+   - Sign up for an account
+   - Follow the steps to verify your sender domain (requires DNS changes)
+   - Add a new SMTP user and note down the username and password
+   - Add the following environment variables to your Heroku app:
+     - `EMAIL_HOST_USER`: The SMTP server username
+     - `EMAIL_HOST_PASSWORD`: The SMTP server password
+     - `DEFAULT_FROM_EMAIL`: The default "from" email address for outgoing emails
+5. Deploy the application
    - Trigger a manual deployment from the Deploy -> Manual deploy.
 5. Create a superuser
    - Run the following command in the Heroku console (or via the CLI) to create a superuser:
