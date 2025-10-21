@@ -98,17 +98,18 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SESSION_REMEMBER = False
 ACCOUNT_FORMS = {
     "login": "accounts.forms.CustomLoginForm",
     "change_password": "accounts.forms.CustomChangePasswordForm",
 }
-SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
 ACCOUNT_EMAIL_VERIFICATION = "none"
 MFA_SUPPORTED_TYPES = ["totp"]
+
+SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
 
 
 ROOT_URLCONF = "dm_regional_site.urls"
@@ -135,7 +136,7 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 
 
 AUTHENTICATION_BACKENDS = (
-    "accounts.backends.EmailBackend",
+    "accounts.backends.EmailAuthBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 )
 
@@ -220,3 +221,11 @@ MESSAGE_TAGS = {
     messages.WARNING: "alert-warning",
     messages.ERROR: "alert-danger",
 }
+
+# Email
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", "no-reply@csdemandmodel.org.uk")
+EMAIL_HOST = config("EMAIL_HOST", "mail.smtp2go.com")
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_PORT = config("EMAIL_PORT", 2525)
+EMAIL_USE_TLS = True
