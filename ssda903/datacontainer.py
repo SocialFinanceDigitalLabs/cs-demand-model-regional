@@ -137,32 +137,34 @@ class DemandModellingDataContainer:
         """
         combined = self.combined_datasets()
 
-        # Clean up episodes
-        log.debug(
-            "%s records in combined view before cleaning up episodes.",
-            combined.shape,
-        )
+        row_count = combined.shape[0]
 
         # Remove children with no CHILD (ID) - this is a sanity check, NaN values should not be present due to merging
         combined.drop(combined[combined.CHILD.isna()].index, inplace=True)
-        log.debug(
-            "%s records remaining after removing children with no CHILD (Child ID).",
-            combined.shape,
-        )
+        if combined.shape[0] < row_count:
+            log.debug(
+                "%s episodes removed as no CHILD (Child ID).",
+                row_count - combined.shape[0],
+            )
+            row_count = combined.shape[0]
 
-        # Remove children who have no DECOM, as twe won't know when the episode started
+        # Remove children who have no DECOM, as we won't know when the episode started
         combined.drop(combined[combined.DECOM.isna()].index, inplace=True)
-        log.debug(
-            "%s records remaining after removing children with no DECOM.",
-            combined.shape,
-        )
+        if combined.shape[0] < row_count:
+            log.debug(
+                "%s episodes removed as episode has no DECOM.",
+                row_count - combined.shape[0],
+            )
+            row_count = combined.shape[0]
 
         # Remove children with no DOB, as this prevents us from knowing which age bucket to put them in
         combined.drop(combined[combined.DOB.isna()].index, inplace=True)
-        log.debug(
-            "%s records remaining after removing children with no DOB.",
-            combined.shape,
-        )
+        if combined.shape[0] < row_count:
+            log.debug(
+                "%s episodes removed as child has no DOB.",
+                row_count - combined.shape[0],
+            )
+            row_count = combined.shape[0]
 
         # We first sort by child, decom and dec, and make sure NAs are first (for dropping duplicates)
         combined.sort_values(
@@ -172,68 +174,38 @@ class DemandModellingDataContainer:
         # If a child has two episodes starting on the same day (usually if NA in one year and then done in next)
         # keep the latest non-NA finish date
         combined.drop_duplicates(["CHILD", "DECOM"], keep="last", inplace=True)
-        log.debug(
-            "%s records remaining after removing episodes that start on the same date.",
-            combined.shape,
-        )
+        if combined.shape[0] < row_count:
+            log.debug(
+                "%s episodes removed after deduplicating on child and DECOM date.",
+                row_count - combined.shape[0],
+            )
+            row_count = combined.shape[0]
 
         # If a child has two episodes with the same end date, keep the longer one.
         # This also works for open episodes - if there are two open, keep the larger one.
         combined.drop_duplicates(["CHILD", "DEC"], keep="first", inplace=True)
-        log.debug(
-            "%s records remaining after removing episodes that end on the same date.",
-            combined.shape,
-        )
+        if combined.shape[0] < row_count:
+            log.debug(
+                "%s episodes removed after deduplicating on child and DEC date.",
+                row_count - combined.shape[0],
+            )
+            row_count = combined.shape[0]
+
+        # Save copy of dataframe before making changes for overlapping episodes
+        before = combined.copy()
 
         # If a child has overlapping episodes, shorten the earlier one
         decom_next = combined.groupby("CHILD")["DECOM"].shift(-1)
         change_ix = combined["DEC"].isna() | combined["DEC"].gt(decom_next)
         combined.loc[change_ix, "DEC"] = decom_next[change_ix]
 
-        # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
-        # - only a change in legal status ("L")
-        # - or only placement status ("T")
-        # - or both ("U")
-        combined["skip_episode"] = (
-            (combined["RNE"].isin(["L", "T", "U"]))
-            & (combined["CHILD"] == combined["CHILD"].shift(1))
-            & (combined["DECOM"] == combined["DEC"].shift(1))
-        )
-
-        # Identify sequences of redundant episodes
-        # These must be removed, but the information from the last episode in each sequence must be backfilled to the most recent valid episode
-        # Note that this method doesn't isolate sequences of redundant episodes only; it actually increases by one whenever skip_episodes False -> True happens
-        # To identify a sequence, "skip_episode" and "redundant_group" must both be used
-        combined["redundant_group"] = (
-            combined["skip_episode"]
-            & ~combined["skip_episode"].shift(1, fill_value=False)
-        ).cumsum()
-
-        # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
-        combined.loc[combined["skip_episode"]] = (
-            combined.loc[combined["skip_episode"]]
-            .groupby(combined["redundant_group"])
-            .transform("last")
-        )
-
-        # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
-        mask = (combined["skip_episode"] == False) & (
-            combined["skip_episode"].shift(-1) == True
-        )
-        mask_replace = (combined["skip_episode"] == True) & (
-            combined["skip_episode"].shift(1) == False
-        )
-        combined.loc[mask, ["DEC", "REC", "REASON_PLACE_CHANGE"]] = combined.loc[
-            mask_replace
-        ][["DEC", "REC", "REASON_PLACE_CHANGE"]].values
-
-        # Drop skip_episodes rows
-        combined = combined.drop(combined[combined["skip_episode"] == True].index)
-
-        log.debug(
-            "%s records remaining after removing episodes that do not represent new placements.",
-            combined.shape,
-        )
+        # Check for changes made for overlapping episodes - filtering out cases where both old DEC and new DEC are NaN
+        change_ix &= ~(before["DEC"].isna() & decom_next.isna())
+        if change_ix.sum() > 0:
+            log.debug(
+                "%s episodes adjusted due to overlapping episodes.",
+                change_ix.sum(),
+            )
 
         return combined
 
@@ -247,6 +219,7 @@ class DemandModellingDataContainer:
 
         """
         combined = self.combined_data
+        combined = self._remove_redundant_episodes(combined)
         combined = self._add_ages(combined)
         combined = self._add_age_change_eps(combined)
         combined = self._add_placement_category(combined)
@@ -452,10 +425,6 @@ class DemandModellingDataContainer:
 
         combined = age_df
 
-        log.debug(
-            "%s records after adding episodes based on age transitions.",
-            combined.shape,
-        )
         return combined
 
     def _add_related_placement_type(
@@ -536,5 +505,54 @@ class DemandModellingDataContainer:
         combined["ethnicity"] = combined["ETHNIC"].map(
             lambda x: EthnicitySubcategory[x].value
         )
+
+        return combined
+
+    def _remove_redundant_episodes(self, combined: pd.DataFrame) -> pd.DataFrame:
+        """
+        Removes redundant episodes that do not represent a new placement.
+
+        WARNING: This method modifies the dataframe in place.
+        """
+
+        # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
+        # - only a change in legal status ("L")
+        # - or only placement status ("T")
+        # - or both ("U")
+        combined["skip_episode"] = (
+            (combined["RNE"].isin(["L", "T", "U"]))
+            & (combined["CHILD"] == combined["CHILD"].shift(1))
+            & (combined["DECOM"] == combined["DEC"].shift(1))
+        )
+
+        # Identify sequences of redundant episodes
+        # These must be removed, but the information from the last episode in each sequence must be backfilled to the most recent valid episode
+        # Note that this method doesn't isolate sequences of redundant episodes only; it actually increases by one whenever skip_episodes False -> True happens
+        # To identify a sequence, "skip_episode" and "redundant_group" must both be used
+        combined["redundant_group"] = (
+            combined["skip_episode"]
+            & ~combined["skip_episode"].shift(1, fill_value=False)
+        ).cumsum()
+
+        # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
+        combined.loc[combined["skip_episode"]] = (
+            combined.loc[combined["skip_episode"]]
+            .groupby(combined["redundant_group"])
+            .transform("last")
+        )
+
+        # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
+        mask = (combined["skip_episode"] == False) & (
+            combined["skip_episode"].shift(-1) == True
+        )
+        mask_replace = (combined["skip_episode"] == True) & (
+            combined["skip_episode"].shift(1) == False
+        )
+        combined.loc[mask, ["DEC", "REC", "REASON_PLACE_CHANGE"]] = combined.loc[
+            mask_replace
+        ][["DEC", "REC", "REASON_PLACE_CHANGE"]].values
+
+        # Drop skip_episodes rows
+        combined = combined.drop(combined[combined["skip_episode"] == True].index)
 
         return combined
