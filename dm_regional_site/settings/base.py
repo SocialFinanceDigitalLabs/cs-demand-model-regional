@@ -221,7 +221,10 @@ MESSAGE_TAGS = {
     messages.ERROR: "alert-danger",
 }
 
-# Outputs log messages to the console
+
+# Configurable log level for console output
+LOG_LEVEL = config("LOG_LEVEL", default="INFO")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -232,6 +235,6 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "DEBUG",
+        "level": LOG_LEVEL,
     },
 }
