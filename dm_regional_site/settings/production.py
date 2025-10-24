@@ -1,5 +1,6 @@
 import sentry_sdk
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.types import Event, Hint
 
 from .base import *  # NOQA
 
@@ -7,11 +8,25 @@ from .base import *  # NOQA
 
 SENTRY_DSN = config("SENTRY_DSN", default=None)
 
+
+def before_send(event: Event, hint: Hint) -> Event | None:
+    exception_values = event.get("exception", {}).get("values", [])
+    for exception in exception_values:
+        stacktrace = exception.get("stacktrace", {})
+        frames = stacktrace.get("frames", [])
+        for frame in frames:
+            # Redact local variables to avoid sending sensitive information to Sentry
+            if "vars" in frame:
+                frame["vars"] = {k: "<redacted>" for k in frame["vars"].keys()}
+    return event
+
+
 sentry_sdk.init(
     dsn=SENTRY_DSN,
     integrations=[DjangoIntegration()],
     traces_sample_rate=0.1,
     send_default_pii=True,
+    before_send=before_send,
 )
 
 # Use WhiteNoise's runserver implementation instead of the Django default, for dev-prod parity.
