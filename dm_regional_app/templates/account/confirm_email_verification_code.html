@@ -1,0 +1,26 @@
+{% extends "dm_regional_app/base.html" %}
+{% load allauth account crispy_forms_tags %}
+{% block content %}
+    <h2>Enter Email Verification Code</h2>
+
+    {% setvar email_link %}
+        <a href="mailto:{{ email }}">{{ email }}</a>
+    {% endsetvar %}
+    <p class="mt-3">We’ve sent a code to {{ email_link }}. The code expires in 10 minutes, so please enter it soon.</p>
+    <p>
+        If you do not see the verification email in your main inbox, check your spam folder. Please contact us if you  do not receive the verification email within a
+        few minutes. </p>
+    <p>
+        A new code will be sent if you've entered your verification code after it expires.</p>
+    <div class="col-sm-6 mb-4">
+      <form method="post" action="{% url 'account_email_verification_sent' %}">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <div class="center-align">
+          <button type="submit" class="btn btn-primary">Confirm</button>
+        </div>
+        <input type="hidden" name="next" value="{{ next }}">
+      </form>
+    </div>
+
+{% endblock content %}
