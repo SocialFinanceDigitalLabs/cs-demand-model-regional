@@ -219,7 +219,21 @@ class DemandModellingDataContainer:
 
         """
         combined = self.combined_data
+        combined.to_csv("combined_before_redundant.csv")
+        count_before = combined.loc[
+            (combined["DECOM"] <= pd.to_datetime(self.data_end_date))
+            & ((combined["DEC"].isna()) | (combined["DEC"] > pd.to_datetime(self.data_end_date))),
+            "CHILD"
+        ].count()
+        print(f"Count of children before transformation = {count_before}")
         combined = self._remove_redundant_episodes(combined)
+        count_after = combined.loc[
+            (combined["DECOM"] <= pd.to_datetime(self.data_end_date))
+            & ((combined["DEC"].isna()) | (combined["DEC"] > pd.to_datetime(self.data_end_date))),
+            "CHILD"
+        ].count()
+        print(f"Count of children after transformation = {count_after}")
+        combined.to_csv("combined_after_redundant.csv")
         combined = self._add_ages(combined)
         combined = self._add_age_change_eps(combined)
         combined = self._add_placement_category(combined)
@@ -516,9 +530,9 @@ class DemandModellingDataContainer:
         """
 
         # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
-        # - only a change in legal status ("L")
-        # - or only placement status ("T")
-        # - or both ("U")
+        # - only a change in legal status ("L") or only placement status ("T") or both ("U")
+        # - and a previous episode exists for the same child
+        # - and there is continuity between episodes
         combined["skip_episode"] = (
             (combined["RNE"].isin(["L", "T", "U"]))
             & (combined["CHILD"] == combined["CHILD"].shift(1))
@@ -535,10 +549,12 @@ class DemandModellingDataContainer:
         ).cumsum()
 
         # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
-        combined.loc[combined["skip_episode"]] = (
-            combined.loc[combined["skip_episode"]]
-            .groupby(combined["redundant_group"])
-            .transform("last")
+        skip_idx = combined.index[combined["skip_episode"]]
+
+        combined.loc[skip_idx] = (
+            combined.loc[skip_idx].
+            groupby("redundant_group", group_keys=False)
+            .transform(lambda g: g.iloc[-1])
         )
 
         # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
