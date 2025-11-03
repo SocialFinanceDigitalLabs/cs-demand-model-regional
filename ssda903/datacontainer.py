@@ -219,21 +219,7 @@ class DemandModellingDataContainer:
 
         """
         combined = self.combined_data
-        combined.to_csv("combined_before_redundant.csv")
-        count_before = combined.loc[
-            (combined["DECOM"] <= pd.to_datetime(self.data_end_date))
-            & ((combined["DEC"].isna()) | (combined["DEC"] > pd.to_datetime(self.data_end_date))),
-            "CHILD"
-        ].count()
-        print(f"Count of children before transformation = {count_before}")
         combined = self._remove_redundant_episodes(combined)
-        count_after = combined.loc[
-            (combined["DECOM"] <= pd.to_datetime(self.data_end_date))
-            & ((combined["DEC"].isna()) | (combined["DEC"] > pd.to_datetime(self.data_end_date))),
-            "CHILD"
-        ].count()
-        print(f"Count of children after transformation = {count_after}")
-        combined.to_csv("combined_after_redundant.csv")
         combined = self._add_ages(combined)
         combined = self._add_age_change_eps(combined)
         combined = self._add_placement_category(combined)
@@ -330,6 +316,9 @@ class DemandModellingDataContainer:
         """
 
         age_df = combined.copy()
+
+        # Get pop count at end of data period
+        count_before = self._count_population_at_date(age_df, self.data_end_date)
 
         # Convert the AgeBrackets enum into a dataframe for more efficient access
         age_brackets_df = AgeBrackets.to_dataframe()
@@ -437,6 +426,16 @@ class DemandModellingDataContainer:
             attribute="label",
         )
 
+        # Count pop on data end date following transformation
+        count_after = self._count_population_at_date(age_df, self.data_end_date)
+        change_in_pop = count_after - count_before
+
+        if change_in_pop > 0:
+            log.debug(
+                "%s change to population on last day of data due to addition of age episodes.",
+                change_in_pop,
+            )
+
         combined = age_df
 
         return combined
@@ -529,6 +528,9 @@ class DemandModellingDataContainer:
         WARNING: This method modifies the dataframe in place.
         """
 
+        # Check the population count on the final date of the data period
+        count_before = self._count_population_at_date(combined, self.data_end_date)
+
         # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
         # - only a change in legal status ("L") or only placement status ("T") or both ("U")
         # - and a previous episode exists for the same child
@@ -571,4 +573,24 @@ class DemandModellingDataContainer:
         # Drop skip_episodes rows
         combined = combined.drop(combined[combined["skip_episode"] == True].index)
 
+        # Check the population count on the final date of the data period and calculate difference
+        count_after = self._count_population_at_date(combined, self.data_end_date)
+        change_in_pop = count_after - count_before
+
+        if change_in_pop > 0:
+            log.debug(
+                "%s change to population on last day of data due to removal of redundant episodes.",
+                change_in_pop,
+            )
+
         return combined
+    
+    @staticmethod
+    def _count_population_at_date(df: pd.DataFrame, date) -> int:
+        pop_count = df.loc[
+            (df["DECOM"] <= pd.to_datetime(date))
+            & ((df["DEC"].isna()) | (df["DEC"] > pd.to_datetime(date))),
+            "CHILD"
+        ].count()
+
+        return pop_count
