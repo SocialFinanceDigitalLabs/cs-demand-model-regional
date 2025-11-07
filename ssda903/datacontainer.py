@@ -219,9 +219,32 @@ class DemandModellingDataContainer:
 
         """
         combined = self.combined_data
+
+        # Remove redundant episodes; with logging to detect changes in end date population
+        pop_count_1 = self._count_population_at_date(combined, self.data_end_date)
         combined = self._remove_redundant_episodes(combined)
+        pop_count_2 = self._count_population_at_date(combined, self.data_end_date)
+        change_in_pop_1 = pop_count_2 - pop_count_1
+
+        if change_in_pop_1 > 0:
+            log.debug(
+                "%s change to population on last day of data due to removal of redundant episodes.",
+                change_in_pop_1,
+            )
+        
+        # Addition of age information, with logging to detect changes in end date population
         combined = self._add_ages(combined)
+        pop_count_3 = self._count_population_at_date(combined, self.data_end_date)
         combined = self._add_age_change_eps(combined)
+        pop_count_4 = self._count_population_at_date(combined, self.data_end_date)
+        change_in_pop_2 = pop_count_4 - pop_count_3
+
+        if change_in_pop_2 > 0:
+            log.debug(
+                "%s change to population on last day of data due to addition of ageing episodes.",
+                change_in_pop_2,
+            )
+        
         combined = self._add_placement_category(combined)
         combined = self._add_related_placement_type(
             combined, 1, "placement_type_before"
@@ -516,14 +539,18 @@ class DemandModellingDataContainer:
         """
 
         # Mark episodes to be removed based on RNE (reason for new episode) that represent either:
-        # - only a change in legal status ("L")
-        # - or only placement status ("T")
-        # - or both ("U")
+        # - only a change in legal status ("L") or only placement status ("T") or both ("U")
+        # - and a previous episode exists for the same child
+        # - and there is continuity between episodes
         combined["skip_episode"] = (
             (combined["RNE"].isin(["L", "T", "U"]))
             & (combined["CHILD"] == combined["CHILD"].shift(1))
             & (combined["DECOM"] == combined["DEC"].shift(1))
         )
+
+        # Early exit if no rows are marked as redundant
+        if not combined["skip_episode"].any():
+            return combined
 
         # Identify sequences of redundant episodes
         # These must be removed, but the information from the last episode in each sequence must be backfilled to the most recent valid episode
@@ -535,10 +562,12 @@ class DemandModellingDataContainer:
         ).cumsum()
 
         # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
-        combined.loc[combined["skip_episode"]] = (
-            combined.loc[combined["skip_episode"]]
-            .groupby(combined["redundant_group"])
-            .transform("last")
+        skip_idx = combined.index[combined["skip_episode"]]
+
+        combined.loc[skip_idx] = (
+            combined.loc[skip_idx].
+            groupby("redundant_group", group_keys=False)
+            .transform(lambda g: g.iloc[-1])
         )
 
         # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
@@ -556,3 +585,13 @@ class DemandModellingDataContainer:
         combined = combined.drop(combined[combined["skip_episode"] == True].index)
 
         return combined
+    
+    @staticmethod
+    def _count_population_at_date(df: pd.DataFrame, date) -> int:
+        pop_count = df.loc[
+            (df["DECOM"] <= pd.to_datetime(date))
+            & ((df["DEC"].isna()) | (df["DEC"] > pd.to_datetime(date))),
+            "CHILD"
+        ].count()
+
+        return pop_count
