@@ -29,14 +29,14 @@ class TestRemoveRedundantEpisodes(unittest.TestCase):
         self.assertEqual(first_row["REC"],"E15")
         self.assertEqual(first_row["REASON_PLACE_CHANGE"],"B")
 
-        # Test 2: 3 rows; 2 episodes to keep and 1 redundant; null data in DEC moved up
+        # Test 2: 4 rows; 2 episodes to keep and 2 redundant; null data in DEC moved up
         sample_2 = {
-            "CHILD": [2,2,2],
-            "DECOM": ["01/01/2020", "01/02/2020", "01/03/2020"],
-            "DEC": ["01/02/2020", "01/03/2020", None],
-            "RNE": ["S", "P", "T"],
-            "REC": ["X", "X", "E15"],
-            "REASON_PLACE_CHANGE": ["A", "B", "C"]
+            "CHILD": [2,2,2,2],
+            "DECOM": ["01/01/2020", "01/02/2020", "01/03/2020", "01/04/2020"],
+            "DEC": ["01/02/2020", "01/03/2020", "01/04/2020", None],
+            "RNE": ["S", "P", "T", "L"],
+            "REC": ["X", "X", "E15", "E17"],
+            "REASON_PLACE_CHANGE": ["A", "B", "C", "D"]
         }
         sample_2_df = pd.DataFrame(sample_2)
         sample_2_df["DECOM"] = pd.to_datetime(sample_2_df["DECOM"], format="%d/%m/%Y")
@@ -48,8 +48,8 @@ class TestRemoveRedundantEpisodes(unittest.TestCase):
         self.assertTrue(pd.isna(second_row["DEC"]))
         self.assertEqual(second_row["RNE"],"P")
         self.assertEqual(second_row["DECOM"].strftime("%d/%m/%Y"),"01/02/2020")
-        self.assertEqual(second_row["REC"],"E15")
-        self.assertEqual(second_row["REASON_PLACE_CHANGE"],"C")
+        self.assertEqual(second_row["REC"],"E17")
+        self.assertEqual(second_row["REASON_PLACE_CHANGE"],"D")
 
         # Test 3: 3 rows; 2 children, 1 with only a "U" row (so can't be removed as only one), 1 with "U", "P" concurrent, none removed as "U" is first
         sample_3 = {
