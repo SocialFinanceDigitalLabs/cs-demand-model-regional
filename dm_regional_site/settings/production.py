@@ -4,6 +4,13 @@ from sentry_sdk.types import Event, Hint
 
 from .base import *  # NOQA
 
+MIDDLEWARE.insert(
+    -1, "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware"
+)
+MIDDLEWARE.insert(
+    -1, "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware"
+)
+
 # heroku configuration - found on https://github.com/heroku/python-getting-started
 
 SENTRY_DSN = config("SENTRY_DSN", default=None)
