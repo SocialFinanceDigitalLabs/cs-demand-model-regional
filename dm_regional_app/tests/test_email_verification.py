@@ -2,7 +2,7 @@ from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase, modify_settings, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from dm_regional_app.builder import Builder
@@ -15,14 +15,6 @@ User = get_user_model()
     ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED=True,
     ACCOUNT_RATE_LIMITS={"login_failed": "100/m/ip,500/5m/key", "login": "100/m/ip"},
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
-)
-@modify_settings(
-    MIDDLEWARE={
-        "remove": [
-            "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware",
-            "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
-        ]
-    }
 )
 class EmailVerificationTestCase(TestCase):
     builder = Builder()

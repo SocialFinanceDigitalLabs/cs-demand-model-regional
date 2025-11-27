@@ -8,7 +8,7 @@ from dm_regional_app.builder import Builder
 # Remove the custom middleware that doesn't apply to this test suite
 @modify_settings(
     MIDDLEWARE={
-        "remove": "dm_regional_app.middleware.update_password_middleware.UpdatePasswordMiddleware",
+        "append": "dm_regional_app.middleware.force_mfa_middleware.ForceMFAMiddleware",
     }
 )
 class RequireMFATestCase(TestCase):
