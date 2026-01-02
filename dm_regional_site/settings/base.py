@@ -95,19 +95,22 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+ACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
+ACCOUNT_EMAIL_UNKNOWN_ACCOUNTS = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SESSION_REMEMBER = False
 ACCOUNT_FORMS = {
-    "login": "accounts.forms.CustomLoginForm",
     "change_password": "accounts.forms.CustomChangePasswordForm",
 }
 ACCOUNT_EMAIL_VERIFICATION = "none"
 MFA_SUPPORTED_TYPES = ["totp"]
 
-SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomUserAdapter"
+SOCIALACCOUNT_ADAPTER = "accounts.adapter.SocialAccountCustomUserAdapter"
 SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+
+PASSWORD_RESET_TIMEOUT = config("PASSWORD_RESET_TIMEOUT", default=1800, cast=int)
 
 
 ROOT_URLCONF = "dm_regional_site.urls"
