@@ -534,13 +534,14 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 name = "django-allauth"
-version = "65.12.1"
+version = "65.13.0"
 description = "Integrated set of Django applications addressing authentication, registration, account management as well as 3rd party (social) account authentication."
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "django_allauth-65.12.1.tar.gz", hash = "sha256:662666ff2d5c71766f66b1629ac7345c30796813221184e13e11ed7460940c6a"},
+    {file = "django_allauth-65.13.0-py3-none-any.whl", hash = "sha256:119c0cf1cc2e0d1a0fe2f13588f30951d64989256084de2d60f13ab9308f9fa0"},
+    {file = "django_allauth-65.13.0.tar.gz", hash = "sha256:7d7b7e7ad603eb3864c142f051e2cce7be2f9a9c6945a51172ec83d48c6c843b"},
 ]
 
 [package.dependencies]
@@ -553,6 +554,7 @@ qrcode = {version = ">=7.0.0,<9", optional = true, markers = "extra == \"mfa\""}
 requests = {version = ">=2.0.0,<3", optional = true, markers = "extra == \"socialaccount\""}
 
 [package.extras]
+headless = ["pyjwt[crypto] (>=2.0,<3)"]
 headless-spec = ["PyYAML (>=6,<7)"]
 idp-oidc = ["oauthlib (>=3.3.0,<4)", "pyjwt[crypto] (>=2.0,<3)"]
 mfa = ["fido2 (>=1.1.2,<3)", "qrcode (>=7.0.0,<9)"]
@@ -1885,4 +1887,4 @@ brotli = ["brotli"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "918c42219ba06364797a9910f3c4a7f733044d50fa9edad8d47ebe2a497d0b3e"
+content-hash = "3de46e1a6930c493cf60476685b32f7b08cd0e971a3dc39bfa083ae61652fc03"
