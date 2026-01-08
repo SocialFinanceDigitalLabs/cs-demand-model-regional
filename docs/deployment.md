@@ -14,7 +14,7 @@ fit together.
 
 ## Steps to Deploy
 1. Create required AWS infrastructure following the [infrastructure guide](../infrastructure/README.md#new-deployment).
-2. If using Microsoft for SSO, follow the [SSO configuration guide](SSO.md).
+2. If using Microsoft for SSO, follow the [SSO configuration guide](authentication.md#how-to-configure).
 3. Create a new Heroku app
    - Log in to your Heroku account
    - Create a new app in the desired team
