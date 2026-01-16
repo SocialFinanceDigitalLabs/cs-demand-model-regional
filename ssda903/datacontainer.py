@@ -103,13 +103,17 @@ class DemandModellingDataContainer:
         header["DOB"] = pd.to_datetime(header["DOB"], format="%Y-%m-%d")
 
         uasc = self.get_table(SSDA903TableType.UASC)
-        uasc["DUC"] = pd.to_datetime(uasc["DUC"], format="%Y-%m-%d")
+        # UASC flag to True for any child in UASC table: child becomes UASC in the model if UASC at any point
+        uasc["UASC"] = True
 
-        merged = header.merge(
-            uasc[["CHILD", "DUC", "YEAR"]], how="left", on=["CHILD", "YEAR"]
-        )
-        merged.sort_values(by="YEAR", ascending=False, inplace=True)
-        merged = merged.drop_duplicates(subset=["CHILD"])
+        # Keep most recent entry for CHILD for both header and UASC
+        uasc.sort_values(by="YEAR", ascending=False, inplace=True)
+        uasc = uasc.drop_duplicates(subset=["CHILD"])
+
+        header.sort_values(by="YEAR", ascending=False, inplace=True)
+        header = header.drop_duplicates(subset=["CHILD"])
+
+        merged_header = header.merge(uasc[["CHILD", "UASC"]], how="left", on=["CHILD"])
 
         # Merge into episodes file
         # TODO: convert to datetimes should be done when the table is first read
@@ -117,13 +121,12 @@ class DemandModellingDataContainer:
         episodes["DECOM"] = pd.to_datetime(episodes["DECOM"], format="%Y-%m-%d")
         episodes["DEC"] = pd.to_datetime(episodes["DEC"], format="%Y-%m-%d")
 
-        merged = episodes.merge(
-            merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
+        merged_episodes = episodes.merge(
+            merged_header[["CHILD", "SEX", "DOB", "ETHNIC", "UASC"]],
+            how="left",
+            on="CHILD",
         )
-
-        # create UASC flag if DUC
-        merged["UASC"] = merged["DUC"].notna()
-        return merged
+        return merged_episodes
 
     @cached_property
     def combined_data(self) -> pd.DataFrame:
@@ -231,7 +234,7 @@ class DemandModellingDataContainer:
                 "%s change to population on last day of data due to removal of redundant episodes.",
                 change_in_pop_1,
             )
-        
+
         # Addition of age information, with logging to detect changes in end date population
         combined = self._add_ages(combined)
         pop_count_3 = self._count_population_at_date(combined, self.data_end_date)
@@ -244,7 +247,7 @@ class DemandModellingDataContainer:
                 "%s change to population on last day of data due to addition of ageing episodes.",
                 change_in_pop_2,
             )
-        
+
         combined = self._add_placement_category(combined)
         combined = self._add_related_placement_type(
             combined, 1, "placement_type_before"
@@ -565,8 +568,8 @@ class DemandModellingDataContainer:
         skip_idx = combined.index[combined["skip_episode"]]
 
         combined.loc[skip_idx] = (
-            combined.loc[skip_idx].
-            groupby("redundant_group", group_keys=False)
+            combined.loc[skip_idx]
+            .groupby("redundant_group", group_keys=False)
             .transform(lambda g: g.iloc[-1])
         )
 
@@ -585,13 +588,13 @@ class DemandModellingDataContainer:
         combined = combined.drop(combined[combined["skip_episode"] == True].index)
 
         return combined
-    
+
     @staticmethod
     def _count_population_at_date(df: pd.DataFrame, date) -> int:
         pop_count = df.loc[
             (df["DECOM"] <= pd.to_datetime(date))
             & ((df["DEC"].isna()) | (df["DEC"] > pd.to_datetime(date))),
-            "CHILD"
+            "CHILD",
         ].count()
 
         return pop_count
