@@ -24,3 +24,7 @@ class SocialAccountCustomUserAdapter(DefaultSocialAccountAdapter):
         extra_context=None,
     ):
         capture_exception(exception)
+
+    def is_open_for_signup(self, request, sociallogin):
+        """Allow creation of new users through SSO"""
+        return True
