@@ -275,7 +275,9 @@ class PopulationStats:
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
         # Calculate the proportions in each detailed bin
-        proportion_population = pops.truncate(before=prop_start_date, after=prop_end_date)
+        proportion_population = pops.truncate(
+            before=prop_start_date, after=prop_end_date
+        )
         total_pops = proportion_population.sum()
         proportion_series = pd.Series(dtype="float64")
 
@@ -340,5 +342,7 @@ class PopulationStats:
         unique_transitions, unique_numbers = self.unique_transitions
         all_transitions = unique_numbers.union(df.index)
         df = df.reindex(all_transitions, fill_value=0)
+
+        print("daily_entry_probability", df.daily_entry_probability)
 
         return df.daily_entry_probability

@@ -136,6 +136,7 @@ class MultinomialPredictor(BaseModelPredictor):
         if transition_numbers is None:
             self._transition_numbers = pd.Series(0, index=self._matrix.index)
         else:
+            transition_numbers = transition_numbers.copy()
             transition_numbers.index.names = ["from", "to"]
 
             if number_adjustment is not None:
