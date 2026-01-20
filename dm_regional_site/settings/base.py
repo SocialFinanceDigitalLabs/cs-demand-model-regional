@@ -238,13 +238,44 @@ LOG_LEVEL = config("LOG_LEVEL", default="INFO")
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "default": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+        "security_console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
         },
     },
     "root": {
         "handlers": ["console"],
         "level": LOG_LEVEL,
+    },
+    "loggers": {
+        # Top-level logger for all security-related events
+        "security": {
+            "handlers": ["security_console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Specific logger for authentication events
+        "security.authentication": {
+            "handlers": ["security_console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Specific logger for admin events
+        "security.admin": {
+            "handlers": ["security_console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
