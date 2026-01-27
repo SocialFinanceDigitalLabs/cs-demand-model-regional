@@ -564,7 +564,12 @@ class DemandModellingDataContainer:
         # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
         skip_idx = combined.index[combined["skip_episode"]]
 
-        cols_to_update = ["DEC", "RNE", "REC"]  # your actual columns
+        cols_to_update = [
+            "DEC",
+            "RNE",
+            "REC",
+            "REASON_PLACE_CHANGE",
+        ]  # your actual columns
 
         # get literal last row per group (INCLUDING NaNs)
         last_rows = (
