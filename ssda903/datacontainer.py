@@ -231,7 +231,7 @@ class DemandModellingDataContainer:
                 "%s change to population on last day of data due to removal of redundant episodes.",
                 change_in_pop_1,
             )
-        
+
         # Addition of age information, with logging to detect changes in end date population
         combined = self._add_ages(combined)
         pop_count_3 = self._count_population_at_date(combined, self.data_end_date)
@@ -244,7 +244,7 @@ class DemandModellingDataContainer:
                 "%s change to population on last day of data due to addition of ageing episodes.",
                 change_in_pop_2,
             )
-        
+
         combined = self._add_placement_category(combined)
         combined = self._add_related_placement_type(
             combined, 1, "placement_type_before"
@@ -564,11 +564,32 @@ class DemandModellingDataContainer:
         # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
         skip_idx = combined.index[combined["skip_episode"]]
 
-        combined.loc[skip_idx] = (
-            combined.loc[skip_idx].
-            groupby("redundant_group", group_keys=False)
-            .transform(lambda g: g.iloc[-1])
+        cols_to_update = [
+            "DEC",
+            "RNE",
+            "REC",
+            "REASON_PLACE_CHANGE",
+        ]  # your actual columns
+
+        # get literal last row per group (INCLUDING NaNs)
+        last_rows = (
+            combined.loc[skip_idx, ["redundant_group"] + cols_to_update]
+            .groupby("redundant_group", as_index=False)
+            .nth(-1, dropna=False)
         )
+
+        # factorize groups in the slice
+        codes, uniques = pd.factorize(combined.loc[skip_idx, "redundant_group"])
+
+        # lookup table (ordered to match factorized codes)
+        lookup = (
+            last_rows.set_index("redundant_group")
+            .loc[uniques, cols_to_update]
+            .to_numpy()
+        )
+
+        # single NumPy assignment (shape preserved, NaNs preserved)
+        combined.loc[skip_idx, cols_to_update] = lookup[codes]
 
         # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
         mask = (combined["skip_episode"] == False) & (
@@ -585,13 +606,13 @@ class DemandModellingDataContainer:
         combined = combined.drop(combined[combined["skip_episode"] == True].index)
 
         return combined
-    
+
     @staticmethod
     def _count_population_at_date(df: pd.DataFrame, date) -> int:
         pop_count = df.loc[
             (df["DECOM"] <= pd.to_datetime(date))
             & ((df["DEC"].isna()) | (df["DEC"] > pd.to_datetime(date))),
-            "CHILD"
+            "CHILD",
         ].count()
 
         return pop_count
