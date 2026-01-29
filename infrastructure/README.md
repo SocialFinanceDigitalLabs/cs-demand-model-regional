@@ -83,3 +83,9 @@ variable):
 ```bash
 aws sso login
 ```
+
+If you get an error about the state file being locked and you are confident no one else
+is applying changes, you can manually unlock the state with:
+```bash
+terraform force-unlock <LOCK_ID>
+```
