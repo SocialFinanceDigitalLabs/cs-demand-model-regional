@@ -268,7 +268,7 @@ resource "datadog_integration_aws_account" "datadog_integration" {
     # and the arn is known. This is to avoid a circular dependency. Destroy should copy the same pattern in reverse.
     lambda_forwarder {
       lambdas = [module.datadog_forwarder.datadog_forwarder_arn]
-      sources = ["lambda", "s3"]
+      sources = ["lambda", "s3", "cloudtrail"]
     }
   }
   metrics_config {
@@ -283,4 +283,115 @@ module "datadog_forwarder" {
 
   dd_api_key = var.datadog_api_key
   dd_site    = var.datadog_site
+}
+
+
+### CloudTrail
+resource "aws_s3_bucket" "cloudtrail_logs" {
+  #checkov:skip=CKV_AWS_145:Data encrypted at rest via SSE-S3. In future consider KMS
+  #checkov:skip=CKV2_AWS_62:Passing cloudtrail logs to Datadog from S3 bucket directly, can skip SNS for now
+  #checkov:skip=CKV_AWS_144:Cross-region replication not needed for cloudtrail logs. Consider in future
+  #checkov:skip=CKV_AWS_18:ToDo - enable S3 access logging
+  bucket = "${var.app}-${var.environment}-cloudtrail-logs"
+}
+
+resource "aws_s3_bucket_public_access_block" "cloudtrail_logs_access" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_versioning" "cloudtrail_logs_versioning" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail_logs_lifecycle" {
+  # Must have bucket versioning enabled first
+  depends_on = [aws_s3_bucket_versioning.cloudtrail_logs_versioning]
+  bucket     = aws_s3_bucket.cloudtrail_logs.id
+
+  rule {
+    id = "expiration"
+
+    filter {}
+
+    expiration {
+      days = 90
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_policy" "cloudtrail_policy" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "CloudTrailAclCheck"
+        Effect    = "Allow"
+        Principal = { Service = "cloudtrail.amazonaws.com" }
+        Action    = "s3:GetBucketAcl"
+        Resource  = aws_s3_bucket.cloudtrail_logs.arn
+        Condition = {
+          StringEquals = {
+            # Construct the Source ARN for the CloudTrail trail to prevent a circular dependency
+            "AWS:SourceArn" = "arn:aws:cloudtrail:eu-west-2:${var.account_id}:trail/${local.trail_name}",
+          }
+        }
+      },
+      {
+        Sid       = "CloudTrailWriteManagementAccount"
+        Effect    = "Allow"
+        Principal = { Service = "cloudtrail.amazonaws.com" }
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.cloudtrail_logs.arn}/AWSLogs/${var.account_id}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl"  = "bucket-owner-full-control"
+            "AWS:SourceArn" = "arn:aws:cloudtrail:eu-west-2:${var.account_id}:trail/${local.trail_name}",
+          }
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_cloudtrail" "s3_data_trail" {
+  #checkov:skip=CKV_AWS_252:No SNS topic needed currently as we'll be forwarding logs to Datadog from S3
+  #checkov:skip=CKV_AWS_35:Data encrypted at rest via SSE-S3. In future consider KMS
+  #checkov:skip=CKV2_AWS_10:Passing cloudtrail logs to Datadog from S3 bucket directly, can skip Cloudwatch for now
+  name                          = local.trail_name
+  is_multi_region_trail         = true
+  include_global_service_events = true
+  enable_log_file_validation    = true
+  s3_bucket_name                = aws_s3_bucket.cloudtrail_logs.bucket
+  enable_logging                = true
+
+  event_selector {
+    include_management_events = false
+    read_write_type           = "All"
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["${aws_s3_bucket.bucket.arn}/"]
+    }
+  }
+
+  depends_on = [aws_s3_bucket_policy.cloudtrail_policy]
+}
+
+locals {
+  trail_name = "${var.app}-${var.environment}-s3-cloudtrail"
 }
