@@ -2,11 +2,11 @@ import ast
 import json
 from datetime import date, datetime
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 
-from ssda903.config import PlacementCategories, AgeBrackets
+from ssda903.config import AgeBrackets, PlacementCategories
 
 
 def apply_filters(data: pd.DataFrame, filters: dict):
@@ -174,7 +174,7 @@ def remove_age_transitions(df):
 
     df = df[df["from_ages"] == df["to_ages"]]
 
-    df.drop(columns=["from_ages", "to_ages"], inplace=True)
+    df = df.drop(columns=["from_ages", "to_ages"])
 
     return df
 
@@ -196,7 +196,9 @@ def rate_table_sort(df, bin_col, transition=False):
     df["age_bin"] = df["split"].str[0]
     df["age_bin"] = pd.Categorical(df["age_bin"], categories=age_list, ordered=True)
     df["start_place"] = df["split"].str[-1]
-    df["start_place"] = pd.Categorical(df["start_place"], categories=place_list, ordered=True)
+    df["start_place"] = pd.Categorical(
+        df["start_place"], categories=place_list, ordered=True
+    )
 
     # Sorts entry and exit rate tables by age then placement
     if transition == False:
@@ -208,9 +210,13 @@ def rate_table_sort(df, bin_col, transition=False):
     elif transition:
         df["to_split"] = df["To"].str.split(" - ")
         df["end_age_bin"] = df["to_split"].str[0]
-        df["end_age_bin"] = pd.Categorical(df["end_age_bin"], categories=age_list, ordered=True)
+        df["end_age_bin"] = pd.Categorical(
+            df["end_age_bin"], categories=age_list, ordered=True
+        )
         df["end_place"] = df["to_split"].str[-1]
-        df["end_place"] = pd.Categorical(df["end_place"], categories=place_list, ordered=True)
+        df["end_place"] = pd.Categorical(
+            df["end_place"], categories=place_list, ordered=True
+        )
 
         df.sort_values(
             ["age_bin", "start_place", "end_age_bin", "end_place"],
@@ -223,7 +229,7 @@ def rate_table_sort(df, bin_col, transition=False):
                 "start_place",
                 "to_split",
                 "end_age_bin",
-                "end_place"
+                "end_place",
             ],
             inplace=True,
         )
@@ -272,12 +278,12 @@ def apply_variances(forecast_by_type: dict, ci_by_type: dict) -> dict:
     for care_type in care_types:
         # square root of variance gives standard deviation
         # currently multiplying by 2 (should really parameterise this)
-        ci_by_type[care_type]["upper"] = (
-            forecast_by_type[care_type]["pop_size"] + 2 * np.sqrt(ci_by_type[care_type]["variance"])
-        )
-        ci_by_type[care_type]["lower"] = (
-            forecast_by_type[care_type]["pop_size"] - 2 * np.sqrt(ci_by_type[care_type]["variance"])
-        )
+        ci_by_type[care_type]["upper"] = forecast_by_type[care_type][
+            "pop_size"
+        ] + 2 * np.sqrt(ci_by_type[care_type]["variance"])
+        ci_by_type[care_type]["lower"] = forecast_by_type[care_type][
+            "pop_size"
+        ] - 2 * np.sqrt(ci_by_type[care_type]["variance"])
 
     return ci_by_type
 
@@ -304,8 +310,8 @@ def add_traces(fig: go.Figure, traces_list: list) -> go.Figure:
                 go.Scatter(
                     x=care_dict[care_type]["date"],
                     y=care_dict[care_type]["pop_size"],
-                    name=f"{care_dict['type']} ({care_type})",
-                    legendgroup=f"{care_dict['type']} {care_type}",
+                    name=f"{care_type} ({care_dict['type']})",
+                    legendgroup=f"{care_type} ({care_dict['type']})",
                     line=dict(color=colour, width=1.5, dash=care_dict["dash"]),
                 )
             )
@@ -339,6 +345,7 @@ def add_ci_traces(fig: go.Figure, ci_traces_list: list) -> go.Figure:
                     line_color="rgba(255,255,255,0)",
                     legendgroup=f"{ci_dict['type']} {care_type}",
                     showlegend=False,
+                    hoverinfo="skip",
                 )
             )
 
@@ -352,6 +359,7 @@ def add_ci_traces(fig: go.Figure, ci_traces_list: list) -> go.Figure:
                     line_color="rgba(255,255,255,0)",
                     legendgroup=f"{ci_dict['type']} {care_type}",
                     showlegend=False,
+                    hoverinfo="skip",
                 )
             )
 
@@ -365,3 +373,23 @@ def save_data_if_not_empty(session_scenario, data, attribute_name):
     if isinstance(data, (pd.DataFrame, pd.Series)) and not data.empty:
         setattr(session_scenario, attribute_name, data)
         session_scenario.save()
+
+
+def weekly_care_type_dfs(
+    df,
+    *,
+    value_col: str,
+    round_int: bool = False,
+):
+    df = df.copy()
+    df.index = pd.to_datetime(df.index)
+
+    weekly = df.resample("W").first()
+
+    if round_int:
+        weekly = weekly.round().astype(int)
+
+    out = weekly.unstack().reset_index()
+    out.columns = ["bin", "date", value_col]
+
+    return care_type_organiser(out, value_col, "bin")
