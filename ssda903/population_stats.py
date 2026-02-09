@@ -1,7 +1,8 @@
 from datetime import date
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from itertools import product
 
+import numpy as np
 import pandas as pd
 
 from ssda903.config import Costs, PlacementCategories
@@ -26,7 +27,7 @@ class PopulationStats:
     def df(self):
         return self.__df
 
-    @property
+    @cached_property
     def stock(self):
         """
         Calculates the daily transitions for each age bin and placement type by
@@ -35,26 +36,25 @@ class PopulationStats:
         """
         df = self.df.copy()
 
-        df["bin"] = df.apply(
-            lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
-            axis=1,
+        df["bin"] = (
+            df["age_bin"].astype(str) + " - " + df["placement_type"].str.capitalize()
         )
 
-        endings = df.groupby(["DEC", "bin"]).size()
-        endings.name = "nof_decs"
+        # Count beginnings and endings
+        beginnings = df.groupby(["DECOM", "bin"]).size().rename("nof_decoms")
+        endings = df.groupby(["DEC", "bin"]).size().rename("nof_decs")
 
-        beginnings = df.groupby(["DECOM", "bin"]).size()
-        beginnings.name = "nof_decoms"
+        # Rename the first level to 'date' to match
+        beginnings.index = beginnings.index.set_names(["date", "bin"])
+        endings.index = endings.index.set_names(["date", "bin"])
 
-        endings.index.names = ["date", "bin"]
-        beginnings.index.names = ["date", "bin"]
-
-        pops = pd.merge(
-            left=beginnings,
-            right=endings,
-            left_index=True,
-            right_index=True,
-            how="outer",
+        # Align indexes and combine into a DataFrame
+        all_index = beginnings.index.union(endings.index)
+        pops = pd.DataFrame(
+            {
+                "nof_decoms": beginnings.reindex(all_index, fill_value=0),
+                "nof_decs": endings.reindex(all_index, fill_value=0),
+            }
         )
 
         pops = pops.fillna(0).sort_values("date")
@@ -66,7 +66,7 @@ class PopulationStats:
         # Ensure the last date of the return is present
         if self.data_end_date > pops.index.max():
             # Add the row to the end of the dataframe with this date
-            pops.loc[self.data_end_date] = None
+            pops.loc[self.data_end_date] = np.nan
 
         # Resample to daily counts and forward-fill in missing days
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
@@ -97,21 +97,25 @@ class PopulationStats:
         Transitions do not include entrants to care
         """
         transitions = self.df.copy()
-        transitions["start_bin"] = transitions.apply(
-            lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
-            axis=1,
+        transitions["start_bin"] = (
+            transitions["age_bin"].astype(str)
+            + " - "
+            + transitions["placement_type"].str.capitalize()
         )
-        transitions["end_bin"] = transitions.apply(
-            lambda c: f"{c.end_age_bin} - {c.placement_type_after.capitalize()}",
-            axis=1,
+
+        transitions["end_bin"] = (
+            transitions["end_age_bin"].astype(str)
+            + " - "
+            + transitions["placement_type_after"].str.capitalize()
         )
+
         transitions = transitions.groupby(["start_bin", "end_bin", "DEC"]).size()
         transitions = transitions.unstack(level=["start_bin", "end_bin"])
 
         # Ensure the last date of the return is present
         if self.data_end_date > transitions.index.max():
             # Add the row to the end of the dataframe with this date
-            transitions.loc[self.data_end_date] = None
+            transitions.loc[self.data_end_date] = np.nan
 
         transitions = transitions.fillna(0).asfreq("D", fill_value=0)
 
@@ -122,7 +126,7 @@ class PopulationStats:
 
         return transitions
 
-    @property
+    @cached_property
     def unique_transitions(self):
         """
         Finds all possible transitions between placement types in the data for each age bin
@@ -243,10 +247,7 @@ class PopulationStats:
 
         df = self.df.copy()
 
-        df["bin"] = df.apply(
-            lambda c: f"{c.placement_type_detail}",
-            axis=1,
-        )
+        df["bin"] = df["placement_type_detail"]
 
         endings = df.groupby(["DEC", "bin"]).size()
         endings.name = "nof_decs"
@@ -275,7 +276,9 @@ class PopulationStats:
         pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
 
         # Calculate the proportions in each detailed bin
-        proportion_population = pops.truncate(before=prop_start_date, after=prop_end_date)
+        proportion_population = pops.truncate(
+            before=prop_start_date, after=prop_end_date
+        )
         total_pops = proportion_population.sum()
         proportion_series = pd.Series(dtype="float64")
 
@@ -312,9 +315,8 @@ class PopulationStats:
 
         # Only look at episodes starting in analysis period
         df = df[(df["DECOM"] >= start_date) & (df["DECOM"] <= end_date)].copy()
-        df["to"] = df.apply(
-            lambda c: f"{c.age_bin} - {c.placement_type.capitalize()}",
-            axis=1,
+        df["to"] = (
+            df["age_bin"].astype(str) + " - " + df["placement_type"].str.capitalize()
         )
 
         # Group by age bin and placement type
@@ -333,7 +335,7 @@ class PopulationStats:
 
         df["period_duration"] = (end_date - start_date).days
         df["daily_entry_probability"] = df["entrants"] / df["period_duration"]
-        df["from"] = df.period_duration.apply(lambda x: tuple())
+        df["from"] = [()] * len(df)
 
         df = df.set_index(["from", "to"])
 

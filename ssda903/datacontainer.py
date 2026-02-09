@@ -103,13 +103,17 @@ class DemandModellingDataContainer:
         header["DOB"] = pd.to_datetime(header["DOB"], format="%Y-%m-%d")
 
         uasc = self.get_table(SSDA903TableType.UASC)
-        uasc["DUC"] = pd.to_datetime(uasc["DUC"], format="%Y-%m-%d")
+        # UASC flag to True for any child in UASC table: child becomes UASC in the model if UASC at any point
+        uasc["UASC"] = True
 
-        merged = header.merge(
-            uasc[["CHILD", "DUC", "YEAR"]], how="left", on=["CHILD", "YEAR"]
-        )
-        merged.sort_values(by="YEAR", ascending=False, inplace=True)
-        merged = merged.drop_duplicates(subset=["CHILD"])
+        # Keep most recent entry for CHILD for both header and UASC
+        uasc.sort_values(by="YEAR", ascending=False, inplace=True)
+        uasc = uasc.drop_duplicates(subset=["CHILD"])
+
+        header.sort_values(by="YEAR", ascending=False, inplace=True)
+        header = header.drop_duplicates(subset=["CHILD"])
+
+        merged_header = header.merge(uasc[["CHILD", "UASC"]], how="left", on=["CHILD"])
 
         # Merge into episodes file
         # TODO: convert to datetimes should be done when the table is first read
@@ -117,13 +121,12 @@ class DemandModellingDataContainer:
         episodes["DECOM"] = pd.to_datetime(episodes["DECOM"], format="%Y-%m-%d")
         episodes["DEC"] = pd.to_datetime(episodes["DEC"], format="%Y-%m-%d")
 
-        merged = episodes.merge(
-            merged[["CHILD", "SEX", "DOB", "ETHNIC", "DUC"]], how="left", on="CHILD"
+        merged_episodes = episodes.merge(
+            merged_header[["CHILD", "SEX", "DOB", "ETHNIC", "UASC"]],
+            how="left",
+            on="CHILD",
         )
-
-        # create UASC flag if DUC
-        merged["UASC"] = merged["DUC"].notna()
-        return merged
+        return merged_episodes
 
     @cached_property
     def combined_data(self) -> pd.DataFrame:
@@ -569,7 +572,7 @@ class DemandModellingDataContainer:
             "RNE",
             "REC",
             "REASON_PLACE_CHANGE",
-        ]  # your actual columns
+        ]
 
         # get literal last row per group (INCLUDING NaNs)
         last_rows = (
