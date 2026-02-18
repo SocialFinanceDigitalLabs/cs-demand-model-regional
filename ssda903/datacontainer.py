@@ -567,11 +567,32 @@ class DemandModellingDataContainer:
         # Backfill the info in DEC, REC and REASON_PLACE_CHANGE from last in sequence to all in sequence
         skip_idx = combined.index[combined["skip_episode"]]
 
-        combined.loc[skip_idx] = (
-            combined.loc[skip_idx]
-            .groupby("redundant_group", group_keys=False)
-            .transform(lambda g: g.iloc[-1])
+        cols_to_update = [
+            "DEC",
+            "RNE",
+            "REC",
+            "REASON_PLACE_CHANGE",
+        ]
+
+        # get literal last row per group (INCLUDING NaNs)
+        last_rows = (
+            combined.loc[skip_idx, ["redundant_group"] + cols_to_update]
+            .groupby("redundant_group", as_index=False)
+            .nth(-1, dropna=False)
         )
+
+        # factorize groups in the slice
+        codes, uniques = pd.factorize(combined.loc[skip_idx, "redundant_group"])
+
+        # lookup table (ordered to match factorized codes)
+        lookup = (
+            last_rows.set_index("redundant_group")
+            .loc[uniques, cols_to_update]
+            .to_numpy()
+        )
+
+        # single NumPy assignment (shape preserved, NaNs preserved)
+        combined.loc[skip_idx, cols_to_update] = lookup[codes]
 
         # Identify the boundary between kept and skipped episode and transfer DEC, REC and REASON_PLACE_CHANGE from skipped to kept
         mask = (combined["skip_episode"] == False) & (
