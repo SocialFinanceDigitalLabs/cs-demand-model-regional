@@ -139,12 +139,6 @@ def costs(request):
         historic_population, session_scenario.adjusted_costs
     )
 
-    stats = PopulationStats(
-        df=historic_data,
-        data_start_date=datacontainer.data_start_date,
-        data_end_date=datacontainer.data_end_date,
-    )
-
     base_prediction = predict(stats=stats, **session_scenario.prediction_parameters)
 
     base_costs = convert_population_to_cost(
@@ -589,12 +583,6 @@ def entry_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_numbers")
 
-            stats = PopulationStats(
-                df=historic_data,
-                data_start_date=datacontainer.data_start_date,
-                data_end_date=datacontainer.data_end_date,
-            )
-
             adjusted_prediction = predict(
                 stats=stats,
                 **session_scenario.prediction_parameters,
@@ -714,12 +702,6 @@ def exit_rates(request):
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_rates")
 
-            stats = PopulationStats(
-                df=historic_data,
-                data_start_date=datacontainer.data_start_date,
-                data_end_date=datacontainer.data_end_date,
-            )
-
             adjusted_prediction = predict(
                 stats=stats,
                 **session_scenario.prediction_parameters,
@@ -837,12 +819,6 @@ def transition_rates(request):
             else:
                 # Check that the dataframe or series saved in the form is not empty, then save
                 save_data_if_not_empty(session_scenario, data, "adjusted_rates")
-
-            stats = PopulationStats(
-                df=historic_data,
-                data_start_date=datacontainer.data_start_date,
-                data_end_date=datacontainer.data_end_date,
-            )
 
             adjusted_prediction = predict(
                 stats=stats,
@@ -1016,12 +992,6 @@ def adjusted(request):
             session_scenario.adjusted_numbers is not None
             or session_scenario.adjusted_rates is not None
         ):
-            stats = PopulationStats(
-                df=historic_data,
-                data_start_date=datacontainer.data_start_date,
-                data_end_date=datacontainer.data_end_date,
-            )
-
             adjusted_prediction = predict(
                 stats=stats,
                 **session_scenario.prediction_parameters,
