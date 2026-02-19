@@ -343,6 +343,4 @@ class PopulationStats:
         all_transitions = unique_numbers.union(df.index)
         df = df.reindex(all_transitions, fill_value=0)
 
-        print("daily_entry_probability", df.daily_entry_probability)
-
         return df.daily_entry_probability
