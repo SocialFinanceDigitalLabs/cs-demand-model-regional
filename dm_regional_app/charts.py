@@ -9,6 +9,7 @@ from dm_regional_app.utils import (
     care_type_organiser,
     rate_table_sort,
     remove_age_transitions,
+    weekly_care_type_dfs,
 )
 from ssda903.config import Costs
 from ssda903.costs import CostForecast
@@ -43,86 +44,71 @@ def year_one_costs(df: CostForecast):
 
 def area_chart_cost(df_historic, prediction: CostForecast):
     df_forecast = prediction.costs
+    prediction_start_date = df_forecast.index[0]
 
-    df_forecast = df_forecast.melt(
-        var_name="Placement",
-        value_name="Cost",
-        ignore_index=False,
-    )
+    df_historic = df_historic.loc[:prediction_start_date]
 
-    # extract prediction start date
-    prediction_start_date = df_forecast.index.min()
+    combined_df = pd.concat([df_historic, df_forecast], copy=False)
 
-    # repeat transformation for historic data
-    df_historic = df_historic.melt(
-        var_name="Placement",
-        value_name="Cost",
-        ignore_index=False,
-    )
+    combined_df.index = pd.to_datetime(combined_df.index)
 
-    # filter any data after the prediction start date
-    df_historic = df_historic[df_historic.index <= prediction_start_date]
-
-    # combine Costs
-    combined_df = df_forecast.combine_first(df_historic)
+    combined_df_weekly = combined_df.resample("W").first()
 
     fig = px.area(
-        combined_df,
-        x=combined_df.index,
-        y="Cost",
-        color="Placement",
-        labels={"index": "Date", "Cost": "Cost in £"},
+        combined_df_weekly,
+        x=combined_df_weekly.index,
+        y=combined_df_weekly.columns,
+        labels={"variable": "", "value": "Cost in £", "index": "Date"},
     )
+
     fig.add_vline(
-        x=prediction_start_date, line_width=1, line_dash="dash", line_color="black"
+        x=prediction_start_date,
+        line_width=1,
+        line_dash="dash",
+        line_color="black",
     )
+
     fig.update_layout(title="Child placement costs")
-    fig_html = fig.to_html(full_html=False)
+    fig_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
+
     return fig_html
 
 
 def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast):
-    df_forecast = prediction.proportional_population
-
-    df_forecast = df_forecast.melt(
-        var_name="Placement",
-        value_name="Population",
-        ignore_index=False,
-    )
+    # Forecast
+    df_forecast = prediction.proportional_population.round().astype(int)
     df_forecast.index = pd.to_datetime(df_forecast.index)
+    weekly_forecast = df_forecast.resample("W").first()
 
-    # extract prediction start date
-    prediction_start_date = df_forecast.index.min()
-
-    # repeat transformation for historic data
+    # Historic
     df_historic = historic_data
-    df_historic = df_historic.melt(
-        var_name="Placement",
-        value_name="Population",
-        ignore_index=False,
-    )
     df_historic.index = pd.to_datetime(df_historic.index)
+    weekly_historic = df_historic.resample("W").first()
 
-    # filter any data after the prediction start date
-    df_historic = df_historic[df_historic.index <= prediction_start_date]
+    # Only keep historic dates before forecast starts
+    prediction_start_date = weekly_forecast.index[0]
+    weekly_historic = weekly_historic.loc[:prediction_start_date]
 
-    # combine populations
-    combined_df = df_forecast.combine_first(df_historic)
+    # Combine
+    combined_df = pd.concat([weekly_historic, weekly_forecast], copy=False)
 
+    # Plot (wide-form)
     fig = px.area(
         combined_df,
         x=combined_df.index,
-        y="Population",
-        color="Placement",
-        labels={
-            "index": "Date",
-        },
+        y=combined_df.columns,
+        labels={"variable": "", "value": "Population", "index": "Date"},
     )
+
     fig.add_vline(
         x=prediction_start_date, line_width=1, line_dash="dash", line_color="black"
     )
+
     fig.update_layout(title="Child placement numbers")
-    fig_html = fig.to_html(full_html=False)
+
+    # Fast HTML generation with CDN
+    fig_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
+
     return fig_html
 
 
@@ -197,25 +183,25 @@ def prediction_chart(
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
 
-    # Dataframe containing total children in prediction
-    df = prediction.population.unstack().reset_index()
+    prediction.population.index = pd.to_datetime(prediction.population.index)
 
-    df.columns = ["bin", "date", "pop_size"]
-    # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df, "pop_size", "bin")
+    forecast_care_by_type_dfs = weekly_care_type_dfs(
+        prediction.population,
+        value_col="pop_size",
+        round_int=True,
+    )
 
     # Dataframe containing total children in historic data
-    df_hd = historic_data.stock.unstack().reset_index()
-    df_hd.columns = ["bin", "date", "pop_size"]
-    # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "pop_size", "bin")
+    historic_care_by_type_dfs = weekly_care_type_dfs(
+        historic_data.stock,
+        value_col="pop_size",
+    )
 
     # Dataframe containing upper and lower confidence intervals
-    df_ci = prediction.variance.unstack().reset_index()
-    df_ci.columns = ["bin", "date", "variance"]
-    # Organises confidence interval data into dict of dfs by care type bucket
-    df_ci = care_type_organiser(df_ci, "variance", "bin")
-
+    df_ci = weekly_care_type_dfs(
+        prediction.variance,
+        value_col="variance",
+    )
     df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
     # Visualise prediction using unstacked dataframe
@@ -260,7 +246,9 @@ def prediction_chart(
         title="Forecast child population over time",
         xaxis_title="Date",
         yaxis_title="Number of children",
+        hovermode="x unified",
     )
+    fig.update_traces(xhoverformat="%d %b %Y")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -271,9 +259,10 @@ def historic_chart(data: PopulationStats) -> str:
     Outputs an html figure of the historic child population over time from the stock in population stats
     """
     # Organise the stock dataframe into a dictionary of dataframes split by the categories in an enum
-    df_hd = data.stock.unstack().reset_index()
-    df_hd.columns = ["bin", "date", "pop_size"]
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "pop_size", "bin")
+    historic_care_by_type_dfs = weekly_care_type_dfs(
+        data.stock,
+        value_col="pop_size",
+    )
 
     fig = go.Figure()
 
@@ -284,7 +273,12 @@ def historic_chart(data: PopulationStats) -> str:
     # Add historical traces
     fig = add_traces(fig, [historic_care_by_type_dfs])
 
-    fig.update_layout(title="Historic child population over time")
+    fig.update_layout(
+        title="Historic child population over time",
+        xaxis_title="Date",
+        yaxis_title="Number of children",
+        hovermode="x unified",
+    )
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -294,121 +288,60 @@ def placement_starts_chart(data: PopulationStats) -> str:
     """
     Outputs an html figure of placement counts over time from the stock in population stats
     """
-    df_stats_data = data.df.copy()
-    start_date, end_date = pd.to_datetime([data.data_start_date, data.data_end_date])
+    df = data.df.copy()
 
-    # filter dataset to:
-    # - data start and end dates
-    # - remove episodes that are just due to age transitions
-    df_filtered = df_stats_data[
-        (df_stats_data["DECOM"] >= start_date)
-        & (df_stats_data["DECOM"] <= end_date)
-        & (df_stats_data["RNE"] != "Age")
-    ]
+    start_date = pd.to_datetime(data.data_start_date)
+    end_date = pd.to_datetime(data.data_end_date)
 
-    # Change DECOMs to beginning of each month to facilitate graph showing events by month
-    df_filtered["DECOM"] = df_filtered["DECOM"].dt.to_period("M").dt.to_timestamp()
+    # --- filter ---
+    df = df.loc[
+        (df["DECOM"].between(start_date, end_date)) & (df["RNE"] != "Age")
+    ].copy()
 
-    # calculate placement duration (end_age - age)
-    df_filtered.loc[:, "placement_duration"] = (
-        df_filtered["end_age"] - df_filtered["age"]
+    # --- normalise to month start ---
+    df["date"] = df["DECOM"].dt.to_period("M").dt.to_timestamp()
+
+    # all months in the range
+    all_months = pd.date_range(df["date"].min(), df["date"].max(), freq="MS")
+
+    # all unique placement types
+    all_types = df["placement_type"].unique()
+
+    # create full combination
+    full_index = pd.MultiIndex.from_product(
+        [all_months, all_types], names=["date", "placement_type"]
     )
 
-    # calc count and avg duration of each placement type
-    df_entrants = (
-        df_filtered.groupby(["DECOM", "placement_type"])
-        .agg(count=("CHILD", "size"), avg_duration=("placement_duration", "mean"))
-        .reset_index()
+    # group and reindex to full grid, fill missing with 0
+    monthly_counts = (
+        df.groupby(["date", "placement_type"])
+        .size()
+        .reindex(full_index, fill_value=0)
+        .reset_index(name="count")
     )
 
-    # convert avg_duration to weeks (52.14 weeks per year)
-    df_entrants["avg_duration_weeks"] = (df_entrants["avg_duration"] * 52.14).round(2)
+    monthly_counts.columns = ["date", "bin", "pop_size"]
+    print(monthly_counts)
 
-    # for each care type trace
-    colours = {
-        "Fostering": "rgba(159, 0, 160, 1)",  # purple
-        "Residential": "rgba(0, 160, 36, 1)",  # green
-        "Supported": "rgba(6, 0, 160, 1)",  # blue
-        "Other": "rgba(241, 0, 0, 1)",  # red
-        "Total": "rgba(0, 0, 0, 1)",  # black
-    }
+    monthly_counts_org = care_type_organiser(monthly_counts, "pop_size", "bin")
+
+    # Append graph info to historic data dictionary
+    monthly_counts_org["type"] = "Placement starts"
+    monthly_counts_org["dash"] = "dot"
 
     fig = go.Figure()
 
-    # each placement type trace(incl. total)
-    for placement_type, colour in colours.items():
-        if placement_type == "Total":
-            # calc total summing across placement types
-            df_type = df_entrants.groupby("DECOM")["count"].sum().reset_index()
-            max_total_count = df_type[
-                "count"
-            ].max()  # used to constrain/coerce chart x boundary
+    fig = add_traces(fig, [monthly_counts_org])
 
-        else:
-            # filter individual placement type
-            df_type = df_entrants[df_entrants["placement_type"] == placement_type]
-
-        if not df_type.empty:
-            fig.add_trace(
-                go.Scatter(
-                    x=df_type["DECOM"],
-                    y=df_type["count"],
-                    mode="lines",
-                    name=placement_type,
-                    line=dict(color=colour, width=1.5, dash="dot"),
-                    hovertemplate="%{x|%b %Y}, %{y}",  # re-align hover-tick inconsistency
-                )
-            )
-
-    # config layout and axis labels
-    quarterly_months = df_entrants[
-        df_entrants["DECOM"].dt.month.isin([1, 4, 7, 10])
-    ]  # reduce labels only Jan, Apr, Jul, Oct for clarity
-
-    # chart constraints
-    min_date = df_entrants["DECOM"].min()
-    max_date = df_entrants["DECOM"].max()
+    fig.update_yaxes(rangemode="tozero")
 
     fig.update_layout(
-        xaxis=dict(
-            tickvals=quarterly_months["DECOM"],
-            ticktext=[
-                f"{d:%b}" for d in quarterly_months["DECOM"]
-            ],  # qtr/mth abbr labels (Jan, Apr, Jul, Oct)
-            tickangle=45,
-            tickmode="array",
-            title=dict(text="Month", standoff=40),
-            range=[
-                min_date,
-                max_date,
-            ],  # coerce the stop point on x due to labelling qtr mths
-        ),
-        yaxis=dict(
-            title_text="Placements",
-            tickvals=list(
-                range(0, int(max_total_count) + 10, 10)
-            ),  # interval 10 up to max count(Total)
-            ticktext=[
-                str(i) for i in range(0, int(max_total_count) + 10, 10)
-            ],  # align with tick intervals
-            range=[0, max_total_count * 1.1],  # 10% upper padding
-        ),
         title="Placement starts per month",
-        font=dict(size=12),
-        hovermode="closest",  # show info for nearest line
+        xaxis_title="Month",
+        yaxis_title="Placements",
+        hovermode="x unified",
     )
-
-    # add year annotations & center year labels
-    for year in df_entrants["DECOM"].dt.year.unique():
-        fig.add_annotation(
-            x=f"{year}-07-01",  # coerce center year labels
-            y=-0.18,
-            text=str(year),
-            showarrow=False,
-            xref="x",
-            yref="paper",
-            align="center",
-        )
+    fig.update_traces(xhoverformat="%d %b %Y")
 
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -546,52 +479,51 @@ def compare_forecast(
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
 
-    # dataframe containing total children in historic data
-    df_hd = historic_data.stock.unstack().reset_index()
-    df_hd.columns = ["bin", "date", "pop_size"]
-    # Organises historic data into dict of dfs by care type bucket
-    historic_care_by_type_dfs = care_type_organiser(df_hd, "pop_size", "bin")
+    # historic data organised into dict of dfs by care type bucket
+    historic_care_by_type_dfs = weekly_care_type_dfs(
+        historic_data.stock,
+        value_col="pop_size",
+    )
 
     # dataframe containing total children in base forecast
-    df_base = base_forecast.population.unstack().reset_index()
-
-    df_base.columns = ["bin", "date", "pop_size"]
-    # Organises forecast data into dict of dfs by care type bucket
-    forecast_care_by_type_dfs = care_type_organiser(df_base, "pop_size", "bin")
+    forecast_care_by_type_dfs = weekly_care_type_dfs(
+        base_forecast.population,
+        value_col="pop_size",
+        round_int=True,
+    )
 
     # dataframe containing upper and lower confidence intervals for base forecast
-    df_ci = base_forecast.variance.unstack().reset_index()
-    df_ci.columns = ["bin", "date", "variance"]
-    # Organises confidence interval data into dict of dfs by care type bucket
-    df_ci = care_type_organiser(df_ci, "variance", "bin")
-
+    df_ci = weekly_care_type_dfs(
+        base_forecast.variance,
+        value_col="variance",
+    )
     df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
     # dataframe containing total children in adjusted forecast
-    df_af = adjusted_forecast.population.unstack().reset_index()
-    df_af.columns = ["bin", "date", "pop_size"]
-    adjusted_care_by_type_dfs = care_type_organiser(df_af, "pop_size", "bin")
+    adjusted_care_by_type_dfs = weekly_care_type_dfs(
+        adjusted_forecast.population,
+        value_col="pop_size",
+        round_int=True,
+    )
 
     # dataframe containing upper and lower confidence intervals for adjusted forecast
-    df_af_ci = adjusted_forecast.variance.unstack().reset_index()
-    df_af_ci.columns = ["bin", "date", "variance"]
-    # Organises adjusted confidence interval data into dict of dfs by care type bucket
-    df_af_ci = care_type_organiser(df_af_ci, "variance", "bin")
-
+    df_af_ci = weekly_care_type_dfs(
+        adjusted_forecast.variance,
+        value_col="variance",
+    )
     df_af_ci = apply_variances(adjusted_care_by_type_dfs, df_af_ci)
 
     # visualise prediction using unstacked dataframe
     fig = go.Figure()
 
     # Append graph info to population data dictionaries
-    historic_care_by_type_dfs["type"] = "Historic"
-    historic_care_by_type_dfs["dash"] = "dot"
-
-    forecast_care_by_type_dfs["type"] = "Base forecast"
-    forecast_care_by_type_dfs["dash"] = None
-
-    adjusted_care_by_type_dfs["type"] = "Adjusted forecast"
-    adjusted_care_by_type_dfs["dash"] = "dash"
+    for d, label, dash in [
+        (historic_care_by_type_dfs, "Historic", "dot"),
+        (forecast_care_by_type_dfs, "Base forecast", None),
+        (adjusted_care_by_type_dfs, "Adjusted forecast", "dash"),
+    ]:
+        d["type"] = label
+        d["dash"] = dash
 
     # Add historical and forecast data to figure
     fig = add_traces(
@@ -628,6 +560,7 @@ def compare_forecast(
         fillcolor="rgba(105,105,105,0.1)",
         layer="above",
     )
+    fig.update_traces(xhoverformat="%d %b %Y")
 
     fig.update_layout(
         title="Base and adjusted child population over time",
