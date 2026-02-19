@@ -248,6 +248,7 @@ def prediction_chart(
         yaxis_title="Number of children",
         hovermode="x unified",
     )
+    fig.update_traces(xhoverformat="%d %b %Y")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -340,6 +341,7 @@ def placement_starts_chart(data: PopulationStats) -> str:
         yaxis_title="Placements",
         hovermode="x unified",
     )
+    fig.update_traces(xhoverformat="%d %b %Y")
 
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -558,12 +560,12 @@ def compare_forecast(
         fillcolor="rgba(105,105,105,0.1)",
         layer="above",
     )
+    fig.update_traces(xhoverformat="%d %b %Y")
 
     fig.update_layout(
         title="Base and adjusted child population over time",
         xaxis_title="Date",
         yaxis_title="Number of children",
-        hovermode="x unified",
     )
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
