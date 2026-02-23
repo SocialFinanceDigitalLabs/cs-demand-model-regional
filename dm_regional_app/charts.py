@@ -69,6 +69,11 @@ def area_chart_cost(df_historic, prediction: CostForecast):
         line_dash="dash",
         line_color="black",
     )
+    fig.update_traces(
+        hovertemplate="%{fullData.name}<br>"
+        "<b>Date:</b> %{x|%d %B %Y}<br>"
+        "<b>Cost:</b> £%{y:,.2f}<extra></extra>"
+    )
 
     fig.update_layout(title="Child placement costs")
     fig_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
@@ -104,6 +109,12 @@ def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast)
 
     fig.add_vline(
         x=prediction_start_date, line_width=1, line_dash="dash", line_color="black"
+    )
+
+    fig.update_traces(
+        hovertemplate="%{fullData.name}<br>"
+        "<b>Date:</b> %{x|%d %B %Y}<br>"
+        "<b>Cost:</b> £%{y:,.2f}<extra></extra>"
     )
 
     fig.update_layout(title="Child placement numbers")
