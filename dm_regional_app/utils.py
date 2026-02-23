@@ -380,11 +380,16 @@ def weekly_care_type_dfs(
     *,
     value_col: str,
     round_int: bool = False,
+    historic=False,
+    reference_end_date=None,
 ):
     df = df.copy()
     df.index = pd.to_datetime(df.index)
 
-    weekly = df.resample("W").first()
+    if historic and reference_end_date is not None:
+        df = df.loc[df.index < pd.to_datetime(reference_end_date)]
+
+    weekly = df.resample("7D", origin=reference_end_date).first()
 
     if round_int:
         weekly = weekly.round().astype(int)

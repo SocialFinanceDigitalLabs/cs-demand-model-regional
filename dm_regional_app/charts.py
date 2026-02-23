@@ -52,7 +52,9 @@ def area_chart_cost(df_historic, prediction: CostForecast):
 
     combined_df.index = pd.to_datetime(combined_df.index)
 
-    combined_df_weekly = combined_df.resample("W").first()
+    combined_df_weekly = combined_df.resample(
+        "7D", origin=prediction_start_date
+    ).first()
 
     fig = px.area(
         combined_df_weekly,
@@ -78,12 +80,12 @@ def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast)
     # Forecast
     df_forecast = prediction.proportional_population.round().astype(int)
     df_forecast.index = pd.to_datetime(df_forecast.index)
-    weekly_forecast = df_forecast.resample("W").first()
+    weekly_forecast = df_forecast.resample("7D", origin=df_forecast.index[0]).first()
 
     # Historic
     df_historic = historic_data
     df_historic.index = pd.to_datetime(df_historic.index)
-    weekly_historic = df_historic.resample("W").first()
+    weekly_historic = df_historic.resample("7D", origin=df_historic.index[0]).first()
 
     # Only keep historic dates before forecast starts
     prediction_start_date = weekly_forecast.index[0]
@@ -195,12 +197,14 @@ def prediction_chart(
     historic_care_by_type_dfs = weekly_care_type_dfs(
         historic_data.stock,
         value_col="pop_size",
+        reference_end_date=reference_end_date,
     )
 
     # Dataframe containing upper and lower confidence intervals
     df_ci = weekly_care_type_dfs(
         prediction.variance,
         value_col="variance",
+        reference_end_date=reference_end_date,
     )
     df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
@@ -279,6 +283,7 @@ def historic_chart(data: PopulationStats) -> str:
         yaxis_title="Number of children",
         hovermode="x unified",
     )
+    fig.update_traces(xhoverformat="%d %b %Y")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
@@ -321,7 +326,6 @@ def placement_starts_chart(data: PopulationStats) -> str:
     )
 
     monthly_counts.columns = ["date", "bin", "pop_size"]
-    print(monthly_counts)
 
     monthly_counts_org = care_type_organiser(monthly_counts, "pop_size", "bin")
 
@@ -483,6 +487,8 @@ def compare_forecast(
     historic_care_by_type_dfs = weekly_care_type_dfs(
         historic_data.stock,
         value_col="pop_size",
+        reference_end_date=reference_end_date,
+        historic=True,
     )
 
     # dataframe containing total children in base forecast
@@ -490,6 +496,7 @@ def compare_forecast(
         base_forecast.population,
         value_col="pop_size",
         round_int=True,
+        reference_end_date=reference_end_date,
     )
 
     # dataframe containing upper and lower confidence intervals for base forecast
@@ -504,6 +511,7 @@ def compare_forecast(
         adjusted_forecast.population,
         value_col="pop_size",
         round_int=True,
+        reference_end_date=reference_end_date,
     )
 
     # dataframe containing upper and lower confidence intervals for adjusted forecast
