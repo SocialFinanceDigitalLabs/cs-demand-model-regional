@@ -114,7 +114,7 @@ def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast)
     fig.update_traces(
         hovertemplate="%{fullData.name}<br>"
         "<b>Date:</b> %{x|%d %B %Y}<br>"
-        "<b>Cost:</b> £%{y:,.2f}<extra></extra>"
+        "<b>Children:</b> %{y:,}<extra></extra>"
     )
 
     fig.update_layout(title="Child placement numbers")
