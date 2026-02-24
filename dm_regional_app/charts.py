@@ -209,6 +209,7 @@ def prediction_chart(
         historic_data.stock,
         value_col="pop_size",
         reference_end_date=reference_end_date,
+        historic=True,
     )
 
     # Dataframe containing upper and lower confidence intervals
