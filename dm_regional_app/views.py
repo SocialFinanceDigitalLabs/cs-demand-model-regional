@@ -88,6 +88,7 @@ def costs(request):
     p = psutil.Process(os.getpid())
 
     def snap(msg):
+        print("SNAP")
         rss = p.memory_info().rss / (1024**2)
         log.debug(f"[costs] {msg} | rss_mb={rss:.1f}")
 
