@@ -1,8 +1,10 @@
 import json
 import logging
+import os
 from pathlib import Path
 
 import pandas as pd
+import psutil
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -83,9 +85,16 @@ def home(request):
 
 @login_required
 def costs(request):
+    p = psutil.Process(os.getpid())
+
+    def snap(msg):
+        rss = p.memory_info().rss / (1024**2)
+        log.info(f"[costs] {msg} | rss_mb={rss:.1f}")
+
+    snap("start")
     pk = request.session["session_scenario_id"]
     session_scenario = get_object_or_404(SessionScenario, pk=pk)
-
+    snap("add origin page to session")
     # Used to return user to this page when accessing rate change pages
     request.session["rate_change_origin_page"] = reverse("costs")
 
@@ -100,14 +109,15 @@ def costs(request):
         form = InflationForm(initial=inflation_parameters)
 
     # read data
+    snap("read data")
     datacontainer = read_data(source=settings.DATA_SOURCE)
-
+    snap("apply filters")
     historic_data = apply_filters(
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
     historic_filters = session_scenario.historic_filters
-
+    snap("Pop stats")
     stats = PopulationStats(
         df=historic_data,
         data_start_date=datacontainer.data_start_date,
@@ -115,6 +125,7 @@ def costs(request):
     )
 
     # Call predict function
+    snap("predict")
     prediction = predict(
         stats=stats,
         **session_scenario.prediction_parameters,
@@ -127,6 +138,7 @@ def costs(request):
         historic_population,
     ) = stats.placement_proportions(**session_scenario.prediction_parameters)
 
+    snap("convert population to cost")
     costs = convert_population_to_cost(
         prediction,
         historic_placement_proportions,
@@ -134,13 +146,13 @@ def costs(request):
         session_scenario.adjusted_proportions,
         **session_scenario.inflation_parameters,
     )
-
+    snap("convert historic population to cost")
     historic_costs = convert_historic_population_to_cost(
         historic_population, session_scenario.adjusted_costs
     )
-
+    snap("predict base scenario")
     base_prediction = predict(stats=stats, **session_scenario.prediction_parameters)
-
+    snap("convert base prediction to cost")
     base_costs = convert_population_to_cost(
         base_prediction,
         historic_placement_proportions,
@@ -154,11 +166,13 @@ def costs(request):
             "Weekly cost": costs.cost_summary.values,
         }
     )
-
+    snap("area chart population")
     area_numbers = area_chart_population(historic_population, costs)
 
+    snap("area chart costs")
     area_costs = area_chart_cost(historic_costs, costs)
 
+    snap("tables")
     proportions = placement_proportion_table(historic_placement_proportions, costs)
 
     summary_table = summary_tables(costs.summary_table)
@@ -190,6 +204,7 @@ def costs(request):
         entry_rate_table = entry_rate_changes(
             base_prediction.entry_rates, prediction.entry_rates
         )
+    snap("render page")
 
     return render(
         request,
