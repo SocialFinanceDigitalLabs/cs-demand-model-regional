@@ -89,7 +89,7 @@ def costs(request):
 
     def snap(msg):
         rss = p.memory_info().rss / (1024**2)
-        log.info(f"[costs] {msg} | rss_mb={rss:.1f}")
+        print(f"[costs] {msg} | rss_mb={rss:.1f}")
 
     snap("start")
     pk = request.session["session_scenario_id"]
