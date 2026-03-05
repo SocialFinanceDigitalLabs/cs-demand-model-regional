@@ -264,20 +264,11 @@ class DemandModellingDataContainer:
         """
         Returns the first date of the first SSDA903 return uploaded
         This will always be 1st April
-        Note that this will not be the earliest date shown in DECOM, as a child's entry to care may have been prior to the start of the earliest return
+        Note that this method relies on the YEAR field which is only present in data platform outputs and not part of the original SSDA903 returns
         """
-        # Find the minimum value in the 'DEC' column
-        min_dec = self.combined_data["DEC"].min()
-
-        # Extract the month and year from the min_dec date
-        min_dec_month = min_dec.month
-        min_dec_year = min_dec.year
-
-        # Determine the start_date based on the month of min_dec
-        if 4 <= min_dec_month <= 12:  # April to December
-            data_start_date = date(min_dec_year, 4, 1)
-        else:  # January to March
-            data_start_date = date(min_dec_year - 1, 4, 1)
+        # Find the minimum value in the 'YEAR' column
+        min_year = self.combined_data["YEAR"].min()
+        data_start_date = date(min_year - 1, 4, 1)
 
         return data_start_date
 
