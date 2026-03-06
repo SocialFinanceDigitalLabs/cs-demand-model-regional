@@ -92,17 +92,22 @@ class MemoryLoggingMiddleware:
     def __call__(self, request):
         proc = psutil.Process(os.getpid())
 
+        import resource
+
         def get_total_mb():
             rss = proc.memory_info().rss
             children = sum(c.memory_info().rss for c in proc.children(recursive=True))
-            return (rss + children) / 1024 / 1024
+            peak = (
+                resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
+            )  # peak RSS ever
+            return (rss + children) / 1024 / 1024, peak
 
-        before = get_total_mb()
+        before, _ = get_total_mb()
         response = self.get_response(request)
-        after = get_total_mb()
+        after, peak = get_total_mb()
 
         logger.info(
             f"[MEM] {request.method} {request.path} → "
-            f"before={before:.1f}MB after={after:.1f}MB delta={after - before:.1f}MB"
+            f"before={before:.1f}MB after={after:.1f}MB delta={after - before:.1f}MB peak_ever={peak:.1f}MB"
         )
         return response
