@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 from contextlib import contextmanager
@@ -34,6 +35,11 @@ class StorageDataStore(DataStore):
     def open(self, file: DataFile) -> BinaryIO:
         with self.__storage.open(file.metadata.path, "rb") as f:
             yield f
+
+    @property
+    def source_fingerprint(self):
+        files = [str(file.metadata.size) for file in self.files]
+        return hashlib.md5("|".join(files).encode()).hexdigest()
 
 
 class LocalDataStore(DataStore):
