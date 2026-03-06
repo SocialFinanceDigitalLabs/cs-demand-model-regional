@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 from contextlib import contextmanager
@@ -26,7 +27,12 @@ class StorageDataStore(DataStore):
             yield DataFile(
                 name=name,
                 metadata=Metadata(
-                    name=name, size=self.__storage.size(filepath), path=filepath
+                    name=name,
+                    size=self.__storage.size(filepath),
+                    path=filepath,
+                    modified_time=self.__storage.get_modified_time(filepath).strftime(
+                        "%Y%m%d%H%M%S"
+                    ),
                 ),
             )
 
@@ -34,6 +40,11 @@ class StorageDataStore(DataStore):
     def open(self, file: DataFile) -> BinaryIO:
         with self.__storage.open(file.metadata.path, "rb") as f:
             yield f
+
+    @property
+    def source_fingerprint(self):
+        files = [str(file.metadata.modified_time) for file in self.files]
+        return hashlib.md5("|".join(files).encode()).hexdigest()
 
 
 class LocalDataStore(DataStore):
