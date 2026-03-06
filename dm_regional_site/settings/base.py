@@ -74,6 +74,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "dm_regional_app.middleware.scenario_middleware.SessionScenarioMiddleware",
+    "dm_regional_app.middleware.scenario_middleware.MemoryLoggingMiddleware",
 ]
 
 MICROSOFT_CLIENT_ID = config("MICROSOFT_CLIENT_ID", default="")
