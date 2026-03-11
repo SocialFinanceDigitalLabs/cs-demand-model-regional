@@ -20,6 +20,7 @@ class Metadata:
     year: int = None
     table: TableType = None
     path: str = None
+    modified_time: str = None
 
 
 @dataclass
