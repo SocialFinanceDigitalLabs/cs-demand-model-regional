@@ -14,33 +14,40 @@
             </button>
     <br><br>
     <p><i>Filter the population in the SSDA903 dataset to match your target population forecast</i></p>
+    {% if empty_dataframe is True %}
+        <div class="alert alert-warning" role="alert">
+            <h2>There are no children in the historic dataset that match this filter selection</h2>
+        </div>
+    {% endif %}
     {{ form.media }}
     <form method="POST">
         {% csrf_token %}
         {% crispy form %}
     </form>
     <br>
-    <div class="row">
-        <div class="col">
-            <h1>Total # of entry into care</h1>
-            <p><h1 class="display-2">{{ entry_into_care_count }}</h1></p>
+    {% if empty_dataframe is False %}
+        <div class="row">
+            <div class="col">
+                <h1>Total # of entry into care</h1>
+                <p><h1 class="display-2">{{ entry_into_care_count }}</h1></p>
+            </div>
+            <div class="col">
+                <h1>Total # of exiting care</h1>
+                <p><h1 class="display-2">{{ exiting_care_count }}</h1></p>
+            </div>
         </div>
-        <div class="col">
-            <h1>Total # of exiting care</h1>
-            <p><h1 class="display-2">{{ exiting_care_count }}</h1></p>
+        <br>
+
+        <!-- Historic Chart - ref: was historic_chart -->
+        <div class="alert alert-primary" role="alert">
+            {{ historic_chart|safe }}
         </div>
-    </div>
-    <br>
 
-    <!-- Historic Chart - ref: was historic_chart -->
-    <div class="alert alert-primary" role="alert">
-        {{ historic_chart|safe }}
-    </div>
-
-    <!-- Placement Starts Chart -->
-    <div class="alert alert-primary" role="alert">
-        {{ placement_starts_chart|safe }}
-    </div>
+        <!-- Placement Starts Chart -->
+        <div class="alert alert-primary" role="alert">
+            {{ placement_starts_chart|safe }}
+        </div>
+    {% endif %}
 
 <div class="d-flex bd-highlight mb-3">
     <div class="ms-auto p-2 bd-highlight"><a class="btn btn-primary" href="{% url 'prediction' %}">Next</a></div>
