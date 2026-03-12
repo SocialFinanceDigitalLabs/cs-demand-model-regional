@@ -106,6 +106,13 @@ def costs(request):
         datacontainer.enriched_view, session_scenario.historic_filters
     )
 
+    if historic_data.empty:
+        messages.warning(
+            request,
+            "There are no children in the historic dataset that match the current filter selection, costs cannot be calculated. Please adjust the historic filters to include some data.",
+        )
+        return redirect("adjusted")
+
     historic_filters = session_scenario.historic_filters
 
     stats = PopulationStats(
@@ -1180,23 +1187,33 @@ def historic_data(request):
         )
         data = apply_filters(datacontainer.enriched_view, form.initial)
 
-    entry_into_care_count = data.loc[
-        (data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label)
-        & (data.DECOM >= pd.to_datetime(datacontainer.data_start_date))
-    ]["CHILD"].count()
-    exiting_care_count = data.loc[
-        (data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label)
-        & (data.DEC <= pd.to_datetime(datacontainer.data_end_date))
-    ]["CHILD"].count()
+    if data.empty:
+        empty_dataframe = True
+        chart = None
+        entry_into_care_count = None
+        exiting_care_count = None
+        plmt_starts_chart = None
 
-    stats = PopulationStats(
-        df=data,
-        data_start_date=datacontainer.data_start_date,
-        data_end_date=datacontainer.data_end_date,
-    )
+    else:
+        empty_dataframe = False
 
-    chart = historic_chart(stats)
-    plmt_starts_chart = placement_starts_chart(stats)
+        entry_into_care_count = data.loc[
+            (data.placement_type_before == PlacementCategories.NOT_IN_CARE.value.label)
+            & (data.DECOM >= pd.to_datetime(datacontainer.data_start_date))
+        ]["CHILD"].count()
+        exiting_care_count = data.loc[
+            (data.placement_type_after == PlacementCategories.NOT_IN_CARE.value.label)
+            & (data.DEC <= pd.to_datetime(datacontainer.data_end_date))
+        ]["CHILD"].count()
+
+        stats = PopulationStats(
+            df=data,
+            data_start_date=datacontainer.data_start_date,
+            data_end_date=datacontainer.data_end_date,
+        )
+
+        chart = historic_chart(stats)
+        plmt_starts_chart = placement_starts_chart(stats)
 
     return render(
         request,
@@ -1208,6 +1225,7 @@ def historic_data(request):
             "historic_chart": chart,
             "placement_starts_chart": plmt_starts_chart,
             "show_filtering_instructions": show_filtering_instructions,
+            "empty_dataframe": empty_dataframe,
         },
     )
 
