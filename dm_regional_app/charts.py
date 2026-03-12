@@ -197,18 +197,20 @@ def prediction_chart(
     reference_end_date = kwargs.pop("reference_end_date")
 
     prediction.population.index = pd.to_datetime(prediction.population.index)
+    prediction_start_date = prediction.population.index.min()
 
     forecast_care_by_type_dfs = weekly_care_type_dfs(
         prediction.population,
         value_col="pop_size",
         round_int=True,
+        prediction_start_date=prediction_start_date,
     )
 
     # Dataframe containing total children in historic data
     historic_care_by_type_dfs = weekly_care_type_dfs(
         historic_data.stock,
         value_col="pop_size",
-        reference_end_date=reference_end_date,
+        prediction_start_date=prediction_start_date,
         historic=True,
     )
 
@@ -216,7 +218,7 @@ def prediction_chart(
     df_ci = weekly_care_type_dfs(
         prediction.variance,
         value_col="variance",
-        reference_end_date=reference_end_date,
+        prediction_start_date=prediction_start_date,
     )
     df_ci = apply_variances(forecast_care_by_type_dfs, df_ci)
 
@@ -494,12 +496,13 @@ def compare_forecast(
     # pop start and end dates to visualise reference period
     reference_start_date = kwargs.pop("reference_start_date")
     reference_end_date = kwargs.pop("reference_end_date")
+    prediction_start_date = base_forecast.population.index.min()
 
     # historic data organised into dict of dfs by care type bucket
     historic_care_by_type_dfs = weekly_care_type_dfs(
         historic_data.stock,
         value_col="pop_size",
-        reference_end_date=reference_end_date,
+        prediction_start_date=prediction_start_date,
         historic=True,
     )
 
@@ -508,7 +511,7 @@ def compare_forecast(
         base_forecast.population,
         value_col="pop_size",
         round_int=True,
-        reference_end_date=reference_end_date,
+        prediction_start_date=prediction_start_date,
     )
 
     # dataframe containing upper and lower confidence intervals for base forecast
@@ -523,7 +526,7 @@ def compare_forecast(
         adjusted_forecast.population,
         value_col="pop_size",
         round_int=True,
-        reference_end_date=reference_end_date,
+        prediction_start_date=prediction_start_date,
     )
 
     # dataframe containing upper and lower confidence intervals for adjusted forecast
