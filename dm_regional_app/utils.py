@@ -381,15 +381,17 @@ def weekly_care_type_dfs(
     value_col: str,
     round_int: bool = False,
     historic=False,
-    reference_end_date=None,
+    prediction_start_date=None,
 ):
     df = df.copy()
     df.index = pd.to_datetime(df.index)
 
-    if historic and reference_end_date is not None:
-        df = df.loc[df.index <= pd.to_datetime(reference_end_date)]
+    if historic and prediction_start_date is not None:
+        df = df.loc[df.index < pd.to_datetime(prediction_start_date)]
 
-    weekly = df.resample("7D", origin=reference_end_date).first()
+    weekly = df.resample(
+        "7D", origin=pd.to_datetime(prediction_start_date) - pd.Timedelta(days=1)
+    ).first()
 
     if round_int:
         weekly = weekly.round().astype(int)
