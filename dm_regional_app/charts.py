@@ -76,6 +76,8 @@ def area_chart_cost(df_historic, prediction: CostForecast):
     )
 
     fig.update_layout(title="Child placement costs")
+    # Set hover label to show full placement type without truncation
+    fig.update_layout(hoverlabel=dict(namelength=-1))
     fig_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
 
     return fig_html
@@ -118,6 +120,8 @@ def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast)
     )
 
     fig.update_layout(title="Child placement numbers")
+    # Set hover label to show full placement type without truncation
+    fig.update_layout(hoverlabel=dict(namelength=-1))
 
     # Fast HTML generation with CDN
     fig_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
@@ -268,6 +272,8 @@ def prediction_chart(
     )
     fig.update_traces(xhoverformat="%d %b %Y")
     fig.update_yaxes(rangemode="tozero")
+    # Set hover label to show full placement type without truncation
+    fig.update_layout(hoverlabel=dict(namelength=-1))
     fig_html = fig.to_html(full_html=False)
     return fig_html
 
@@ -297,6 +303,8 @@ def historic_chart(data: PopulationStats) -> str:
         yaxis_title="Number of children",
         hovermode="x unified",
     )
+    # Set hover label to show full placement type without truncation
+    fig.update_layout(hoverlabel=dict(namelength=-1))
     fig.update_traces(xhoverformat="%d %b %Y")
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
@@ -359,6 +367,8 @@ def placement_starts_chart(data: PopulationStats) -> str:
         yaxis_title="Placements",
         hovermode="x unified",
     )
+    # Set hover label to show full placement type without truncation
+    fig.update_layout(hoverlabel=dict(namelength=-1))
     fig.update_traces(xhoverformat="%d %b %Y")
 
     fig_html = fig.to_html(full_html=False)
@@ -590,6 +600,8 @@ def compare_forecast(
         xaxis_title="Date",
         yaxis_title="Number of children",
     )
+    # Set hover label to show full placement type without truncation
+    fig.update_layout(hoverlabel=dict(namelength=-1))
     fig.update_yaxes(rangemode="tozero")
     fig_html = fig.to_html(full_html=False)
     return fig_html
