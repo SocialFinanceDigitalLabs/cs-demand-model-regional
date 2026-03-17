@@ -67,14 +67,15 @@ def home(request):
         most_recent_datasource = DataSource.objects.latest("uploaded")
         start_date = most_recent_datasource.data_start_date.date()
         end_date = most_recent_datasource.data_end_date.date()
-        region = config("REGION", default="your region")
-        regional_data_sharing = config(
-            "REGIONAL_DATA_SHARING", default="regional data sharing agreement"
-        )
 
     except DataSource.DoesNotExist:
         start_date = None
         end_date = None
+
+    region = config("REGION", default="your region")
+    regional_data_sharing = config(
+        "REGIONAL_DATA_SHARING", default="regional data sharing agreement"
+    )
 
     return render(
         request,
