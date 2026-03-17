@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 import pandas as pd
+from decouple import config
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -66,6 +67,10 @@ def home(request):
         most_recent_datasource = DataSource.objects.latest("uploaded")
         start_date = most_recent_datasource.data_start_date.date()
         end_date = most_recent_datasource.data_end_date.date()
+        region = config("REGION", default="your region")
+        regional_data_sharing = config(
+            "REGIONAL_DATA_SHARING", default="regional data sharing agreement"
+        )
 
     except DataSource.DoesNotExist:
         start_date = None
@@ -77,6 +82,8 @@ def home(request):
         {
             "start_date": start_date,
             "end_date": end_date,
+            "region": region,
+            "regional_data_sharing": regional_data_sharing,
         },
     )
 
