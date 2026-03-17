@@ -295,7 +295,7 @@ class DemandModellingDataContainer:
 
     @cached_property
     def unique_las(self) -> pd.Series:
-        return self.combined_data.LA.unique()
+        return self.combined_data.LA.sort_values().unique()
 
     @cached_property
     def unique_placement_types(self) -> pd.Series:
@@ -307,7 +307,7 @@ class DemandModellingDataContainer:
 
     @cached_property
     def unique_ethnicity(self) -> pd.Series:
-        return self.enriched_view.ethnicity.unique()
+        return self.enriched_view.ethnicity.sort_values().unique()
 
     def _add_ages(self, combined: pd.DataFrame) -> pd.DataFrame:
         """
