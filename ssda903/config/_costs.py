@@ -104,6 +104,7 @@ class Costs(Enum):
         placement_types=(
             "H5",
             "P2",
+            "K3",
         ),
         place_provider=(),
         defaults=CostDefaults(cost_per_week=1000),
