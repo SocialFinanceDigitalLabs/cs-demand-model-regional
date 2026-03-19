@@ -394,7 +394,7 @@ def weekly_care_type_dfs(
     ).first()
 
     if round_int:
-        weekly = weekly.round().astype(int)
+        weekly = weekly.round()
 
     out = weekly.unstack().reset_index()
     out.columns = ["bin", "date", value_col]
