@@ -99,7 +99,7 @@ class Costs(Enum):
         defaults=CostDefaults(cost_per_week=1000),
     )
     SUPPORTED = CostItem(
-        label="Supported accomodation",
+        label="Supported accommodation",
         category=PlacementCategories.SUPPORTED.value,
         placement_types=(
             "H5",
