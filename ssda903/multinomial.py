@@ -121,8 +121,6 @@ def combine_rates(
     - Excludes cases where original_rate is missing.
     - If 'numbers' remains at False, normalizes rates to ensure that the sum of rates for each 'from' state is 1.
     """
-    print(original_rate)
-    print(rate_adjustment)
     # Align original_rate and rate_adjustment DataFrame with a left join to retain all indices from original_rates
     original_rate, rate_adjustment = original_rate.align(rate_adjustment, join="left")
 
