@@ -114,6 +114,7 @@ class DemandModellingDataContainer:
         header = header.drop_duplicates(subset=["CHILD"])
 
         merged_header = header.merge(uasc[["CHILD", "UASC"]], how="left", on=["CHILD"])
+        merged_header.UASC = merged_header.UASC.fillna(False)
 
         # Merge into episodes file
         # TODO: convert to datetimes should be done when the table is first read
@@ -390,6 +391,7 @@ class DemandModellingDataContainer:
 
         # Expand each row into one row for each bracket
         age_df = age_df.explode("age_brackets", ignore_index=True)
+        age_df["age_brackets"] = pd.to_numeric(age_df["age_brackets"], errors="raise")
         # Add end value for age bracket of each row
         age_df = get_age_bracket_attribute(
             df=age_df,

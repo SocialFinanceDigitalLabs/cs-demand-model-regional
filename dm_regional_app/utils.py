@@ -387,11 +387,16 @@ def weekly_care_type_dfs(
     df.index = pd.to_datetime(df.index)
 
     if historic and prediction_start_date is not None:
-        df = df.loc[df.index < pd.to_datetime(prediction_start_date)]
+        df = df.loc[df.index <= pd.to_datetime(prediction_start_date)]
+        if df.index[-1] == prediction_start_date - pd.Timedelta(days=1):
+            # ffill to prediction_start_date so there's no gap in the chart
+            df = df.reindex(
+                pd.date_range(
+                    df.index[0], prediction_start_date + pd.Timedelta(days=1), freq="D"
+                )
+            ).ffill()
 
-    weekly = df.resample(
-        "7D", origin=pd.to_datetime(prediction_start_date) - pd.Timedelta(days=1)
-    ).first()
+    weekly = df.resample("7D", origin=pd.to_datetime(prediction_start_date)).first()
 
     if round_int:
         weekly = weekly.round()
