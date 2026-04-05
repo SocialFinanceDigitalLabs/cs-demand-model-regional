@@ -85,7 +85,7 @@ def area_chart_cost(df_historic, prediction: CostForecast):
 
 def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast):
     # Forecast
-    df_forecast = prediction.proportional_population.round().astype(int)
+    df_forecast = prediction.proportional_population.round()
     df_forecast.index = pd.to_datetime(df_forecast.index)
     weekly_forecast = df_forecast.resample("7D", origin=df_forecast.index[0]).first()
 
