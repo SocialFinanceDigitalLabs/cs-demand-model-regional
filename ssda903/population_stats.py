@@ -69,7 +69,7 @@ class PopulationStats:
             pops.loc[self.data_end_date] = np.nan
 
         # Resample to daily counts and forward-fill in missing days
-        pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
+        pops = pops.resample("D").first().ffill().fillna(0)
 
         # Truncate the dataset to cut out dates earlier than the start date and later than the end date
         pops = pops.truncate(before=self.data_start_date, after=self.data_end_date)
@@ -218,7 +218,7 @@ class PopulationStats:
 
         # Calculate the transition rates
         stock, transitions = stock.align(transitions)
-        transition_rates = transitions / stock.shift(1).fillna(method="bfill")
+        transition_rates = transitions / stock.shift(1).bfill()
         # in rare cases when we truncate data we can end up with 0/0 leading to NANs
         transition_rates = transition_rates.fillna(0)
 
@@ -275,7 +275,7 @@ class PopulationStats:
         pops = pops.unstack(level=1)
 
         # Resample to daily counts and forward-fill in missing days
-        pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
+        pops = pops.resample("D").first().ffill().fillna(0)
 
         # Calculate the proportions in each detailed bin
         proportion_population = pops.truncate(
