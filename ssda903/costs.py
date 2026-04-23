@@ -130,6 +130,8 @@ def convert_population_to_cost(
     elif isinstance(data, PopulationStats):
         input_population = data.stock
 
+    input_population = input_population.round()
+
     proportions = pd.Series(dtype="float64")
     cost_summary = pd.Series(dtype="float64")
 
