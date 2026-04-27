@@ -96,7 +96,7 @@ def resample_summary_table(summary_table):
     """
 
     summary_table.index = pd.to_datetime(summary_table.index)
-    summary_table = summary_table.resample("Q").sum()
+    summary_table = summary_table.resample("QE").sum()
 
     # Convert the DatetimeIndex to a PeriodIndex representing quarters
     summary_table.index = summary_table.index.to_period("Q")
