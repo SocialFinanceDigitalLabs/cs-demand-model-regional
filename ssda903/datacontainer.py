@@ -114,6 +114,7 @@ class DemandModellingDataContainer:
         header = header.drop_duplicates(subset=["CHILD"])
 
         merged_header = header.merge(uasc[["CHILD", "UASC"]], how="left", on=["CHILD"])
+        merged_header.UASC = merged_header.UASC.fillna(False)
 
         # Merge into episodes file
         # TODO: convert to datetimes should be done when the table is first read
