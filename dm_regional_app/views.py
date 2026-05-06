@@ -523,6 +523,45 @@ def load_saved_scenario(request, pk):
         # update the request session
         request.session["session_scenario_id"] = session_scenario.pk
 
+        most_recent_datasource = DataSource.objects.latest("uploaded")
+        data_start_date = most_recent_datasource.data_start_date.date()
+        data_end_date = most_recent_datasource.data_end_date.date()
+
+        if (
+            session_scenario.prediction_parameters["reference_start_date"]
+            < data_start_date
+            or session_scenario.prediction_parameters["reference_start_date"]
+            > data_end_date
+        ):
+            messages.warning(
+                request,
+                f"The scenario you have loaded has a reference start date ({session_scenario.prediction_parameters['reference_start_date']}) that is outside the parameters of the most recent data upload. "
+                "The reference start date has been automatically updated to the start date of the most recent data upload, but you can adjust this further on the current page.",
+            )
+            session_scenario.prediction_parameters[
+                "reference_start_date"
+            ] = data_start_date
+            session_scenario.save(update_fields=["prediction_parameters"])
+        if (
+            session_scenario.prediction_parameters["reference_end_date"]
+            < data_start_date
+            or session_scenario.prediction_parameters["reference_end_date"]
+            > data_end_date
+        ):
+            messages.warning(
+                request,
+                f"The scenario you have loaded has a reference end date ({session_scenario.prediction_parameters['reference_end_date']}) that is outside the parameters of the most recent data upload. "
+                "The reference end date has been automatically updated to the end date of the most recent data upload, but you can adjust this further on the current page.",
+            )
+            session_scenario.prediction_parameters["reference_end_date"] = data_end_date
+            session_scenario.save(update_fields=["prediction_parameters"])
+
+        if most_recent_datasource.uploaded > saved_scenario.updated_at:
+            messages.warning(
+                request,
+                "The scenario you have loaded was last updated before the most recent data upload, this means that the model output may have changed since the scenario was last viewed.",
+            )
+
         messages.success(
             request,
             "Scenario loaded. Current page will not show additional adjustments, click 'next' or navigate to Adjust Forecast to view these.",
