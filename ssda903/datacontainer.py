@@ -453,8 +453,6 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-        combined = combined.sort_values(["CHILD", "DECOM", "DEC"], na_position="first")
-
         # Group by child and set next/preceding placement based on offset
         # Set any blank values (where next/preceding episode is not the same child) as Not in Care
         combined[new_column_name] = (
