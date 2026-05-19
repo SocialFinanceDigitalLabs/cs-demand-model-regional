@@ -340,7 +340,8 @@ class PopulationStats:
         # Reset index
         df = df.reset_index()
 
-        df["period_duration"] = (end_date - start_date).days
+        # Calculate period duration inclusive of start and end date
+        df["period_duration"] = (end_date - start_date).days + 1
         df["daily_entry_probability"] = df["entrants"] / df["period_duration"]
         df["from"] = [()] * len(df)
 
