@@ -7,6 +7,69 @@ import pandas as pd
 
 from ssda903.config import Costs, PlacementCategories
 
+def _calculate_raw_transition_rates(
+        stock: pd.DataFrame,
+        transitions: pd.DataFrame,
+        unique_transitions: pd.MultiIndex,
+        reference_start_date: date,
+        reference_end_date: date,
+) -> pd.Series:
+    """
+    Calculates transition rates for each transition using:
+    - stock
+    - transitions
+    - reference dates
+    - series with all possible transition types
+
+    Rules:
+    - Denominator is previous-day stock (shifted before truncation)
+    - 0/0 yields NaN and is ignored in the mean (expected behaviour)
+    - transitions > 0 with previous-day stock == 0 is considered invalid -> raise ValueError (should be impossible)
+    - A transition with no valid observations -> rate 0.0 (expected behaviour)
+    - Reindex to include all possible transitions with fill_value=0.0
+    """
+    stock.columns.name = "start_bin"
+
+    # Shift stock prior to truncation to ensure that we have a value for reference_start_date - 1
+    stock_shift = stock.shift(1)
+
+    stock_trunc = stock_shift.truncate(
+        before=reference_start_date, after=reference_end_date
+    )
+    transitions_trunc = transitions.truncate(
+        before=reference_start_date, after=reference_end_date
+    )
+
+    # Ensure we can calculate the transition rates by aligning the dataframes
+    transitions_trunc, stock_trunc = transitions_trunc.align(stock_trunc, join="left", axis=0)
+
+    # Catch issues where shifted stock = 0 but transitions is a positive number
+    # This should be impossible, but will cause the model to break
+    inf_transitions = (transitions_trunc.gt(0) & stock_trunc.eq(0))
+    if inf_transitions.any().any():
+        inf_locs = inf_transitions.stack()
+        inf_locs = inf_locs[inf_locs].index
+        sample_locs = list(inf_locs[:10])
+        raise ValueError(
+            "Invalid calculation: found transitions > 0 where previous stock == 0. " \
+            f"Count = {len(inf_locs)}. Sample locations = {sample_locs}"
+        )
+
+    # Calculate the daily transition rates
+    daily_rates = transitions_trunc / stock_trunc
+
+    # Use the mean rates, not counting NaNs (default pandas behaviour)
+    transition_rates = daily_rates.mean(axis=0)
+
+    # If a transition has no valid rate observations, convert to 0
+    transition_rates = transition_rates.fillna(0.0)
+
+    all_transitions = unique_transitions.union(transition_rates.index)
+    transition_rates = transition_rates.reindex(all_transitions, fill_value=0.0)
+
+    transition_rates.name = "transition_rate"
+    return transition_rates
+
 
 class PopulationStats:
     """
@@ -201,37 +264,14 @@ class PopulationStats:
     def raw_transition_rates(
         self, reference_start_date: date, reference_end_date: date
     ):
-        """
-        Calculates transition rates for each transition using:
-        - stock
-        - transitions
-        - reference dates
-        """
-        # Ensure we can calculate the transition rates by aligning the dataframes
-        stock = self.stock.truncate(
-            before=reference_start_date, after=reference_end_date
+        unique_transitions, _ = self.unique_transitions
+        return _calculate_raw_transition_rates(
+            stock = self.stock,
+            transitions = self.transitions,
+            unique_transitions = unique_transitions,
+            reference_start_date = reference_start_date,
+            reference_end_date = reference_end_date,
         )
-        stock.columns.name = "start_bin"
-        transitions = self.transitions.truncate(
-            before=reference_start_date, after=reference_end_date
-        )
-
-        # Calculate the transition rates
-        stock, transitions = stock.align(transitions)
-        transition_rates = transitions / stock.shift(1).fillna(method="bfill")
-        # in rare cases when we truncate data we can end up with 0/0 leading to NANs
-        transition_rates = transition_rates.fillna(0)
-
-        # Use the mean rates
-        transition_rates = transition_rates.mean(axis=0)
-
-        unique_transitions, unique_numbers = self.unique_transitions
-        all_transitions = unique_transitions.union(transition_rates.index)
-        transition_rates = transition_rates.reindex(all_transitions, fill_value=0)
-
-        transition_rates.name = "transition_rate"
-
-        return transition_rates
 
     @lru_cache(maxsize=5)
     def placement_proportions(
