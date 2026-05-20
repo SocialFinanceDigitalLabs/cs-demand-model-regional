@@ -275,7 +275,13 @@ class PopulationStats:
         pops = pops.unstack(level=1)
 
         # Resample to daily counts and forward-fill in missing days
-        pops = pops.resample("D").first().ffill().fillna(0)
+        pops = (
+            pops.resample("D")
+            .first()
+            .reindex(pd.date_range(pops.index.min(), prop_end_date, freq="D"))
+            .ffill()
+            .fillna(0)
+        )
 
         # Calculate the proportions in each detailed bin
         proportion_population = pops.truncate(
