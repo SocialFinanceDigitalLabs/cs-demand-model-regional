@@ -396,7 +396,7 @@ def weekly_care_type_dfs(
                 )
             ).ffill()
 
-    weekly = df.resample("7D", origin=pd.to_datetime(prediction_start_date)).first()
+    weekly = df.resample("7D").first()
 
     if round_int:
         weekly = weekly.round()

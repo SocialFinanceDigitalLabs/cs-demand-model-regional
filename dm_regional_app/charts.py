@@ -52,9 +52,7 @@ def area_chart_cost(df_historic, prediction: CostForecast):
 
     combined_df.index = pd.to_datetime(combined_df.index)
 
-    combined_df_weekly = combined_df.resample(
-        "7D", origin=prediction_start_date
-    ).first()
+    combined_df_weekly = combined_df.resample("7D").first()
 
     fig = px.area(
         combined_df_weekly,
@@ -87,12 +85,12 @@ def area_chart_population(historic_data: pd.DataFrame, prediction: CostForecast)
     # Forecast
     df_forecast = prediction.proportional_population.round()
     df_forecast.index = pd.to_datetime(df_forecast.index)
-    weekly_forecast = df_forecast.resample("7D", origin=df_forecast.index[0]).first()
+    weekly_forecast = df_forecast.resample("7D").first()
 
     # Historic
     df_historic = historic_data
     df_historic.index = pd.to_datetime(df_historic.index)
-    weekly_historic = df_historic.resample("7D", origin=df_historic.index[0]).first()
+    weekly_historic = df_historic.resample("7D").first()
 
     # Only keep historic dates before forecast starts
     prediction_start_date = weekly_forecast.index[0]
