@@ -28,7 +28,7 @@ class NextPrediction:
 
 def populate_same_state_transition(transition_rates: pd.Series) -> pd.DataFrame:
     """
-    Fill transition rates between the same states with 1 minus the sum of all the out rates.
+    Fill transition rates between the same states with 1 minus the sum of all the other rates.
     If the transition rate between the same state is not present, it will be added with the value of 1.
     """
     _transition_rates = transition_rates.copy()
