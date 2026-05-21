@@ -278,7 +278,7 @@ class PopulationStats:
         pops = (
             pops.resample("D")
             .first()
-            .reindex(pd.date_range(pops.index.min(), prop_end_date, freq="D"))
+            .reindex(pd.date_range(pops.index.min(), data_end_date, freq="D"))
             .ffill()
             .fillna(0)
         )
