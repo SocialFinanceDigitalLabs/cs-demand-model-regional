@@ -8,9 +8,8 @@ packages = []
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.13"
 Django = "^4.2.29"
-demand-model = "^0.2.0"
 plotly = "^5.18.0"
 django-crispy-forms = "^2.1"
 crispy-bootstrap5 = "^2024.2"
@@ -21,7 +20,6 @@ django-select2 = "^8.4.1"
 django-tables2 = "^2.7.0"
 django-filter = "^24.3"
 whitenoise = "^6.6.0"
-psycopg2 = "^2.9.9"
 dj-database-url = "^2.1.0"
 django-sekizai = "^4.1.0"
 gunicorn = "^23.0.0"
@@ -29,6 +27,8 @@ django-allauth = {extras = ["mfa", "socialaccount"], version = "^65.14.1"}
 django-storages = {extras = ["s3"], version = "^1.14.4"}
 sentry-sdk = "^2.17.0"
 python-json-logger = "^4.0.0"
+pandas = "^3.0.1"
+psycopg2 = "^2.9.11"
 
 
 
