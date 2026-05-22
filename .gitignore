@@ -130,3 +130,6 @@ datauploads/
 
 .terraform
 .tfvars
+
+# mac metadata
+.DS_Store
