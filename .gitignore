@@ -131,8 +131,5 @@ datauploads/
 .terraform
 .tfvars
 
-# pyenv management
-.python-version
-
 # mac metadata
 .DS_Store
