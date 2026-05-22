@@ -132,7 +132,7 @@ class PopulationStats:
             pops.loc[self.data_end_date] = np.nan
 
         # Resample to daily counts and forward-fill in missing days
-        pops = pops.resample("D").first().fillna(method="ffill").fillna(0)
+        pops = pops.resample("D").first().ffill().fillna(0)
 
         # Truncate the dataset to cut out dates earlier than the start date and later than the end date
         pops = pops.truncate(before=self.data_start_date, after=self.data_end_date)
@@ -318,8 +318,9 @@ class PopulationStats:
         pops = (
             pops.resample("D")
             .first()
-            .reindex(pd.date_range(pops.index.min(), data_end_date))
+            .reindex(pd.date_range(pops.index.min(), data_end_date, freq="D"))
             .ffill()
+            .fillna(0)
         )
 
         # Calculate the proportions in each detailed bin
@@ -380,7 +381,8 @@ class PopulationStats:
         # Reset index
         df = df.reset_index()
 
-        df["period_duration"] = (end_date - start_date).days
+        # Calculate period duration inclusive of start and end date
+        df["period_duration"] = (end_date - start_date).days + 1
         df["daily_entry_probability"] = df["entrants"] / df["period_duration"]
         df["from"] = [()] * len(df)
 

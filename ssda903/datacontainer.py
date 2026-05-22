@@ -391,6 +391,7 @@ class DemandModellingDataContainer:
 
         # Expand each row into one row for each bracket
         age_df = age_df.explode("age_brackets", ignore_index=True)
+        age_df["age_brackets"] = pd.to_numeric(age_df["age_brackets"], errors="raise")
         # Add end value for age bracket of each row
         age_df = get_age_bracket_attribute(
             df=age_df,
@@ -453,8 +454,6 @@ class DemandModellingDataContainer:
 
         WARNING: This method modifies the dataframe in place.
         """
-        combined = combined.sort_values(["CHILD", "DECOM", "DEC"], na_position="first")
-
         # Group by child and set next/preceding placement based on offset
         # Set any blank values (where next/preceding episode is not the same child) as Not in Care
         combined[new_column_name] = (
