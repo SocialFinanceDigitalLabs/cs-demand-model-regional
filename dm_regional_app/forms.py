@@ -94,7 +94,9 @@ class PredictFilter(forms.Form):
 
         # if prediction end date is not blank and more than 4 years after prediction start date, raise error
         if prediction_start_date and prediction_end_date:
-            if prediction_end_date > prediction_start_date + pd.DateOffset(years=4):
+            if pd.Timestamp(
+                prediction_end_date
+            ) > prediction_start_date + pd.DateOffset(years=4):
                 raise forms.ValidationError(
                     "Prediction end date must be within 4 years of prediction start date."
                 )
