@@ -333,13 +333,14 @@ class DemandModellingDataContainer:
         WARNING: This method modifies the dataframe in place.
         """
 
-        age_df = combined.copy()
+        age_df = combined
 
         # Convert the AgeBrackets enum into a dataframe for more efficient access
         age_brackets_df = AgeBrackets.to_dataframe()
-        age_bins = sorted(
-            set(age_brackets_df["start"].to_list() + age_brackets_df["end"].to_list())
+        age_bins = np.sort(
+            np.unique(age_brackets_df[["start", "end"]].values.ravel())
         )
+        age_bounds = np.array([b.value.end for b in AgeBrackets if b.value.end])
 
         def get_age_bracket_attribute(
             df: pd.DataFrame,
@@ -369,6 +370,81 @@ class DemandModellingDataContainer:
             df[return_col] = age_brackets_df.loc[df["bracket_index"], attribute].values
 
             return df.drop(columns=["bracket_index"])
+        
+        def update_boundary_dates(
+                df: pd.DataFrame,
+                condition: str,
+                anchor_date: str,
+                boundary: str,
+                input_date: str,
+                ) -> pd.DataFrame:
+            '''
+            Updates an input date column based on an anchor date and a boundary age
+
+            Args:
+                df (pd.DataFrame): Dataframe containing an age column (or an integer that stands in for age)
+                condition (str): The filter condition for the dataset
+                anchor_date (str): The field with the date that the boundary will be added to
+                boundary (str): The field containing the relevant boundary in years that will alter the input date
+                input_date (str): The date field that is changing due to the new boundary
+
+            Returns:
+                pd.DataFrame: The original df with new values for the input date
+            '''
+            filtered = df.loc[condition]
+            target_year = filtered[anchor_date].dt.year + filtered[boundary].astype(int)
+
+            # Get the last possible date in the month assigned to detect where we might assign 29/02 in a non-leap year
+            # We set day = 1 here to avoid setting a date that will be set to NaT
+            days_in_month = pd.to_datetime({
+                "year": target_year,
+                "month": filtered[anchor_date].dt.month,
+                "day": 1,
+            }).dt.days_in_month
+
+            df.loc[condition, input_date] = pd.to_datetime({
+                "year": target_year,
+                "month": filtered[anchor_date].dt.month,
+                "day": filtered[anchor_date].dt.day.clip(upper=days_in_month)
+            })
+
+            return df
+
+        def prepare_age_brackets(
+                df: pd.DataFrame,
+                age_bounds: np.ndarray
+        ) -> pd.DataFrame:
+            '''
+            Prepares a dataframe for explode based on age transitions
+            
+            Args:
+                df (pd.DataFrame): Dataframe containing age and end_age columns
+                age_bounds (np.ndarray): an array containing age boundaries crossed in an AgeBrackets enum
+
+            Returns:
+                pd.Dataframe: the Dataframe with a new field with all boundaries crossed for each episode
+
+            '''
+            mask = (age_bounds[None, :] > df["age"].values[:, None]) & (
+                age_bounds[None, :] <= df["end_age"].values[:, None]
+            )
+            boundaries = [age_bounds[m] for m in mask]
+
+            # Combine start brackets and boundaries into a single list to give all relevant start brackets for the episode
+            df["age_brackets"] = [
+                np.concatenate(([start], bounds))
+                for start, bounds in zip(df["start_bracket"].values, boundaries)
+            ]
+
+            return df
+        
+        def ensure_numeric(series: pd.Series) -> pd.Series:
+            '''
+            Converts non-numeric values in a series into numbers or raises error
+            '''
+            if not np.issubdtype(series.dtype, np.number):
+                return pd.to_numeric(series, errors="raise")
+            return series
 
         # Get bracket start value for the age bracket each episode starts in
         age_df = get_age_bracket_attribute(
@@ -379,19 +455,12 @@ class DemandModellingDataContainer:
             attribute="start",
         )
         # Get all age boundaries crossed by each episode
-        age_bounds = np.array(sorted([b.value.end for b in AgeBrackets if b.value.end]))
-        mask = (age_bounds[None, :] > age_df["age"].values[:, None]) & (
-            age_bounds[None, :] <= age_df["end_age"].values[:, None]
-        )
-        age_df["age_brackets"] = [age_bounds[m].tolist() for m in mask]
-        # Combine start brackets and boundaries into a single list to give all relevant start brackets for the episode
-        age_df["age_brackets"] = (
-            age_df["start_bracket"].map(lambda x: [x]) + age_df["age_brackets"]
-        )
+        age_df = prepare_age_brackets(age_df, age_bounds)
 
-        # Expand each row into one row for each bracket
+        # Expand each row into one row for each bracket and ensure each resulting bracket is numeric
         age_df = age_df.explode("age_brackets", ignore_index=True)
-        age_df["age_brackets"] = pd.to_numeric(age_df["age_brackets"], errors="raise")
+        age_df["age_brackets"] = ensure_numeric(age_df["age_brackets"])
+
         # Add end value for age bracket of each row
         age_df = get_age_bracket_attribute(
             df=age_df,
@@ -405,10 +474,14 @@ class DemandModellingDataContainer:
         # RNE = Reason for new episode
         age_condition = age_df["age_brackets"] > age_df["age"]
 
-        age_df.loc[age_condition, "DECOM"] = age_df.loc[age_condition].apply(
-            lambda row: row["DOB"] + relativedelta(years=int(row["age_brackets"])),
-            axis=1,
+        age_df = update_boundary_dates(
+            df=age_df,
+            condition=age_condition,
+            anchor_date="DOB",
+            boundary="age_brackets",
+            input_date="DECOM"
         )
+
         age_df.loc[age_condition, "RNE"] = "Age"
         age_df.loc[age_condition, "age"] = age_df.loc[age_condition, "age_brackets"]
 
@@ -416,10 +489,14 @@ class DemandModellingDataContainer:
         # Set DEC and end_age to the first day and age of the next age bracket so that end_age_bin will pick up the next age_bin
         end_age_condition = age_df["end_bracket"] < age_df["end_age"]
 
-        age_df.loc[end_age_condition, "DEC"] = age_df.loc[end_age_condition].apply(
-            lambda row: row["DOB"] + relativedelta(years=int(row["end_bracket"])),
-            axis=1,
+        age_df = update_boundary_dates(
+            df=age_df,
+            condition=end_age_condition,
+            anchor_date="DOB",
+            boundary="end_bracket",
+            input_date="DEC"
         )
+
         age_df.loc[end_age_condition, "REC"] = "Age"
         age_df.loc[end_age_condition, "REASON_PLACE_CHANGE"] = ""
         age_df.loc[end_age_condition, "end_age"] = age_df.loc[
@@ -441,7 +518,6 @@ class DemandModellingDataContainer:
             return_col="end_age_bin",
             attribute="label",
         )
-
         combined = age_df
 
         return combined
