@@ -9,6 +9,9 @@ User = get_user_model()
 
 
 class SavedScenarioFilter(django_filters.FilterSet):
+    """
+    Creates the User filter for scenario table"""
+
     user = django_filters.ModelChoiceFilter(queryset=User.objects.none())
 
     class Meta:

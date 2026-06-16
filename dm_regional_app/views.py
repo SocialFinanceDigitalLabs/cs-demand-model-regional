@@ -1281,9 +1281,9 @@ def historic_data(request):
 def scenarios(request):
     user_la = request.user.profile.la
 
-    queryset = SavedScenario.objects.filter(user__profile__la=user_la)
+    scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
 
-    filterset = SavedScenarioFilter(request.GET, queryset=queryset)
+    filterset = SavedScenarioFilter(request.GET, queryset=scenarios)
 
     table = SavedScenarioTable(filterset.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
@@ -1292,7 +1292,7 @@ def scenarios(request):
         request,
         "dm_regional_app/views/scenarios.html",
         {
-            "scenarios": scenarios,
+            "scenarios": filterset.qs,
             "table": table,
             "filter": filterset,
         },
