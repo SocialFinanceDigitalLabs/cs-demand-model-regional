@@ -1284,24 +1284,15 @@ def scenarios(request):
     scenarios = SavedScenario.objects.filter(user__profile__la=user_la)
 
     filterset = SavedScenarioFilter(request.GET, queryset=scenarios)
-    filtered_scenarios = filterset.qs
 
-    # Check for the presence of filters
-    if not request.GET or not any(request.GET.values()):
-        # No filters applied, or query parameters are empty or invalid
-        filtered_scenarios = scenarios
-    else:
-        # Apply filters if they are present and valid
-        filtered_scenarios = filterset.qs
-
-    table = SavedScenarioTable(filtered_scenarios)
+    table = SavedScenarioTable(filterset.qs)
     RequestConfig(request, paginate={"per_page": 10}).configure(table)
 
     return render(
         request,
         "dm_regional_app/views/scenarios.html",
         {
-            "scenarios": scenarios,
+            "scenarios": filterset.qs,
             "table": table,
             "filter": filterset,
         },
