@@ -446,6 +446,8 @@ class DemandModellingDataContainer:
         age_df = combined
 
         # Convert the AgeBrackets enum into a dataframe for more efficient access
+        # age_bins is used as a simple reference to the bins defined in the enum
+        # age_bounds is used to determine when an episode crosses the boundary of two bins
         age_brackets_df = AgeBrackets.to_dataframe()
         age_bins = np.sort(np.unique(age_brackets_df[["start", "end"]].values.ravel()))
         age_bounds = np.array([b.value.end for b in AgeBrackets if b.value.end])
@@ -477,7 +479,6 @@ class DemandModellingDataContainer:
         )
 
         # Update episode start information for relevant episodes
-        # RNE = Reason for new episode
         age_condition = age_df["age_brackets"] > age_df["age"]
 
         age_df = _update_boundary_dates(
@@ -488,6 +489,7 @@ class DemandModellingDataContainer:
             input_date="DECOM",
         )
 
+        # RNE = Reason for new episode
         age_df.loc[age_condition, "RNE"] = "Age"
         age_df.loc[age_condition, "age"] = age_df.loc[age_condition, "age_brackets"]
 
