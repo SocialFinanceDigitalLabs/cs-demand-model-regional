@@ -1,5 +1,10 @@
 name: Notify Slack on Dependabot PR
 
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
 on:
   pull_request:
     types: [opened]
@@ -8,13 +13,8 @@ on:
 
 jobs:
   notify:
-    if: github.actor == 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Slack Notification
-        uses: slackapi/slack-github-action@v2.1.0
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            text: "📦 A new Dependabot PR opened in *${{ github.repository }}*: <${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>"
+    uses: SocialFinanceDigitalLabs/.github/.github/workflows/dependabot_slack.yml@main
+    with:
+      slack_user_ids: ${{ vars.SLACK_USER_IDS }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
