@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from django.conf import settings
+from urllib.parse import urlparse
+
 from ssda903.config import AgeBrackets, PlacementCategories
 
 
@@ -405,3 +408,18 @@ def weekly_care_type_dfs(
     out.columns = ["bin", "date", value_col]
 
     return care_type_organiser(out, value_col, "bin")
+
+
+def is_url_redirect_safe(url):
+    """
+    Checks if a URL is safe to redirect to, based on the allowed hosts in Django settings.
+    """
+    parsed_url = urlparse(url)
+
+    # Check if the URL has a scheme and domain (i.e., it's an absolute URL)
+    if parsed_url.scheme and parsed_url.netloc:
+        # Check if the domain is in the allowed hosts
+        return parsed_url.netloc in settings.ALLOWED_HOSTS
+
+    # If it's a relative URL, it's considered safe
+    return True
