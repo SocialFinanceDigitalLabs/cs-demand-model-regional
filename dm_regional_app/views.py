@@ -14,6 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django_tables2 import RequestConfig
 
+from accounts.signals import get_client_ip
 from dm_regional_app.charts import (
     area_chart_cost,
     area_chart_population,
@@ -60,6 +61,7 @@ from ssda903.predictor import predict
 from ssda903.reader import read_data, read_local_data
 
 log = logging.getLogger(__name__)
+log_security = logging.getLogger("security")
 
 
 def home(request):
@@ -320,6 +322,20 @@ def clear_proportion_adjustments(request):
 
         if is_url_redirect_safe(next_url_name):
             redirect(next_url_name)
+        else:
+            user = request.user
+            log_security.warning(
+                f"{user.email} attempted unsafe redirect",
+                extra={
+                    "category": "tampering",
+                    "event": "url_redirect",
+                    "status": "failure",
+                    "user_id": user.id,
+                    "user_email": user.email,
+                    "ip": get_client_ip(request),
+                    "url_name": next_url_name,
+                },
+            )
 
     return redirect("home")
 
@@ -594,6 +610,20 @@ def clear_rate_adjustments(request):
 
     if is_url_redirect_safe(next_url_name):
         return redirect(next_url_name)
+    else:
+        user = request.user
+        log_security.warning(
+            f"{user.email} attempted unsafe redirect",
+            extra={
+                "category": "tampering",
+                "event": "url_redirect",
+                "status": "failure",
+                "user_id": user.id,
+                "user_email": user.email,
+                "ip": get_client_ip(request),
+                "url_name": next_url_name,
+            },
+        )
 
     return redirect("home")
 
