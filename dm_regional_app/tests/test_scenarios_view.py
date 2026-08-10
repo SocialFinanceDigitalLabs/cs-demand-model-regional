@@ -30,7 +30,7 @@ class ScenariosTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dm_regional_app/views/scenarios.html")
         self.assertContains(response, "Test Scenario")
-        self.assertQuerysetEqual(response.context["scenarios"], [self.scenario])
+        self.assertQuerySetEqual(response.context["scenarios"], [self.scenario])
 
     def test_scenarios_view_no_user(self):
         self.client.logout()
@@ -43,7 +43,7 @@ class ScenariosTestCase(TestCase):
         response = self.client.get(reverse("scenarios"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dm_regional_app/views/scenarios.html")
-        self.assertQuerysetEqual(response.context["scenarios"], [])
+        self.assertQuerySetEqual(response.context["scenarios"], [])
 
     def test_different_user_only_sees_scenarios_from_their_la(self):
         other_user = self.builder.user(
@@ -56,4 +56,4 @@ class ScenariosTestCase(TestCase):
         response = self.client.get(reverse("scenarios"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dm_regional_app/views/scenarios.html")
-        self.assertQuerysetEqual(response.context["scenarios"], [other_scenario])
+        self.assertQuerySetEqual(response.context["scenarios"], [other_scenario])
